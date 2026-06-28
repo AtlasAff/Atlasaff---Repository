@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- O título vai se atualizar sozinho com o JS abaixo -->
     <title>Promoción Oficial</title>
     <style>
         :root {
             --primary-color: #22c55e; /* Verde promocional */
-            --button-color: #ff4747;  /* Vermelho escuro para urgência */
+            --button-color: #ff4747;  /* Vermelho de urgência */
             --bg-color: #f8fafc;
         }
         body {
@@ -49,6 +48,12 @@
             margin: 0 0 10px 0;
             color: #0f172a;
         }
+        .promo-text {
+            font-size: 16px;
+            color: #475569;
+            margin: 15px 0 25px 0;
+            line-height: 1.5;
+        }
         .timer-box {
             background: #f1f5f9;
             padding: 10px;
@@ -62,20 +67,6 @@
             font-size: 18px;
             display: inline-block;
             letter-spacing: 1px;
-        }
-        .price-box {
-            margin: 25px 0;
-        }
-        .old-price {
-            text-decoration: line-through;
-            color: #94a3b8;
-            font-size: 16px;
-        }
-        .new-price {
-            color: var(--primary-color);
-            font-size: 36px;
-            font-weight: 800;
-            margin: 5px 0;
         }
         .btn {
             display: block;
@@ -113,14 +104,12 @@
     <div class="badge">🔥 ¡Oferta Exclusiva por Tiempo Limitado!</div>
     <h1 id="prod-title">Cargando...</h1>
     
-    <div class="timer-box">
-        ⏳ La oferta expira en: <span id="timer">15:00</span>
+    <div class="promo-text">
+        Presione el botón de abajo para verificar la disponibilidad del <strong>descuento de fábrica del 50%</strong> aplicado directamente en su moneda local.
     </div>
 
-    <div class="price-box">
-        <div class="old-price">Precio regular: <span id="old-val">--</span></div>
-        <div class="new-price" id="new-val">--</div>
-        <div style="font-size: 13px; color: #22c55e; font-weight: bold;" id="discount-text">Ahorras --</div>
+    <div class="timer-box">
+        ⏳ Su cupón de descuento expira en: <span id="timer">15:00</span>
     </div>
     
     <a href="#" id="checkout-btn" class="btn">Acceder Al Descuento Ahora</a>
@@ -135,11 +124,8 @@
     // ⚙️ SECCIÓN DE CONFIGURACIÓN (CAMBIE AQUÍ)
     // ==========================================
     const CONFIG = {
-        nombreProducto: "MelaminaPRO",     // Nome do produto na tela
-        precioOriginal: "R$ 197",          // Preço antigo (riscado)
-        precioDescuento: "R$ 97",          // Preço com desconto final
-        porcentajeDescuento: "50%",        // Porcentagem para o texto de aviso
-        linkAfiliado: "https://go.hotmart.com/V106526209Y" // Seu link da Hotmart
+        nombreProducto: "MelaminaPRO", 
+        linkAfiliado: "https://go.hotmart.com/V106526209Y?ap=eee4"
     };
 
     // ==========================================
@@ -147,9 +133,6 @@
     // ==========================================
     document.title = `Promoción Oficial | ${CONFIG.nombreProducto}`;
     document.getElementById("prod-title").innerText = CONFIG.nombreProducto;
-    document.getElementById("old-val").innerText = CONFIG.precioOriginal;
-    document.getElementById("new-val").innerText = CONFIG.precioDescuento;
-    document.getElementById("discount-text").innerText = `¡Ahorras un ${CONFIG.porcentajeDescuento} HOY!`;
     document.getElementById("checkout-btn").href = CONFIG.linkAfiliado;
 
     // Timer de 15 Minutos Correndo
@@ -165,7 +148,7 @@
             display.textContent = minutes + ":" + seconds;
 
             if (--timer < 0) {
-                timer = duration; // Reseta se chegar a zero
+                timer = duration;
             }
         }, 1000);
     }
