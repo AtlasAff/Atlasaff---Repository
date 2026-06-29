@@ -3,162 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Promoción Oficial</title>
+    <title>MelanimaPro - Oferta Exclusiva</title>
     <style>
         :root {
-            --primary-color: #22c55e; /* Verde promocional */
-            --button-color: #ff4747;  /* Vermelho de urgência */
-            --bg-color: #f8fafc;
+            --accent: #dc2626;
+            --primary: #10b981;
+            --primary-hover: #059669;
+            --dark: #1e293b;
+            --light: #f1f5f9;
         }
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background-color: var(--bg-color);
-            color: #1e293b;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-        .card {
-            background: white;
-            padding: 35px 25px;
-            border-radius: 16px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-            max-width: 440px;
-            width: 100%;
-            text-align: center;
-            border-top: 6px solid var(--primary-color);
-        }
-        .badge {
-            background-color: #fef08a;
-            color: #854d0e;
-            padding: 6px 16px;
-            border-radius: 99px;
-            font-size: 13px;
-            font-weight: bold;
-            text-transform: uppercase;
-            display: inline-block;
-            margin-bottom: 15px;
-        }
-        h1 {
-            font-size: 26px;
-            margin: 0 0 10px 0;
-            color: #0f172a;
-        }
-        .promo-text {
-            font-size: 16px;
-            color: #475569;
-            margin: 15px 0 25px 0;
-            line-height: 1.5;
-        }
-        .timer-box {
-            background: #f1f5f9;
-            padding: 10px;
-            border-radius: 8px;
-            margin: 20px 0;
-            font-weight: bold;
-            color: #ef4444;
-            font-size: 15px;
-        }
-        #timer {
-            font-size: 18px;
-            display: inline-block;
-            letter-spacing: 1px;
-        }
-        .btn {
-            display: block;
-            background-color: var(--button-color);
-            color: white;
-            text-decoration: none;
-            padding: 16px 20px;
-            font-weight: bold;
-            font-size: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(255, 71, 71, 0.3);
-            animation: pulse 2s infinite;
-            transition: transform 0.2s;
-        }
-        .btn:hover {
-            transform: scale(1.02);
-        }
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(255, 71, 71, 0.5); }
-            70% { box-shadow: 0 0 0 12px rgba(255, 71, 71, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(255, 71, 71, 0); }
-        }
-        .secure-footer {
-            margin-top: 30px;
-            font-size: 12px;
-            color: #64748b;
-            border-top: 1px solid #e2e8f0;
-            padding-top: 15px;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--light); color: #334155; line-height: 1.5; }
+        .promo-banner { background-color: var(--accent); color: white; text-align: center; padding: 10px 20px; font-weight: bold; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
+        .wrapper { max-width: 650px; margin: 40px auto; padding: 0 20px; }
+        .card { background: white; padding: 40px 30px; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border: 2px solid #e2e8f0; text-align: center; }
+        h1 { color: #0f172a; font-size: 2.2rem; margin-bottom: 10px; }
+        .subtitle { color: #64748b; font-size: 1.1rem; margin-bottom: 30px; }
+        .price-box { background-color: #f8fafc; padding: 25px; border-radius: 12px; margin-bottom: 30px; border: 1px dashed #cbd5e1; }
+        .old-price { text-decoration: line-through; color: #94a3b8; font-size: 1.2rem; }
+        .new-price { color: var(--primary); font-size: 2.8rem; font-weight: 800; margin: 5px 0; }
+        .badge { display: inline-block; background-color: #fef3c7; color: #d97706; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; margin-bottom: 20px; }
+        .btn { display: block; background-color: var(--primary); color: white; text-decoration: none; padding: 20px; font-size: 1.4rem; font-weight: bold; border-radius: 10px; transition: all 0.3s ease; box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.4); }
+        .btn:hover { background-color: var(--primary-hover); transform: translateY(-2px); }
+        .security { display: flex; justify-content: center; gap: 20px; margin-top: 25px; color: #94a3b8; font-size: 0.85rem; }
+        footer { text-align: center; padding: 40px 20px; color: #94a3b8; font-size: 0.8rem; margin-top: 40px; }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <div class="badge">🔥 ¡Oferta Exclusiva por Tiempo Limitado!</div>
-    <h1 id="prod-title">Cargando...</h1>
-    
-    <div class="promo-text">
-        Presione el botón de abajo para verificar la disponibilidad del <strong>descuento de fábrica del 50%</strong> aplicado directamente en su moneda local.
+    <div class="promo-banner">⚠ ATENCIÓN: Promoción por tiempo limitado o hasta agotar existencias</div>
+
+    <div class="wrapper">
+        <div class="card">
+            <span class="badge">🔥 DESCUENTO ACTIVADO</span>
+            <h1>¡Aprovecha el Precio Especial!</h1>
+            <p class="subtitle">Consigue MelanimaPro original hoy con acceso directo a la plataforma de distribución oficial.</p>
+            
+            <div class="price-box">
+                <p class="old-price">Precio Regular Anterior</p>
+                <p class="new-price">Descuento Especial Disponbile</p>
+                <p style="color: #64748b; font-size: 0.95rem; margin-top: 10px;">*El valor final con descuento se reflejará en la pantalla de pago seguro.</p>
+            </div>
+
+            <a href="https://go.hotmart.com/V106526209Y?ap=eee4" class="btn" target="_self">Comprar Con Descuento Ahora</a>
+
+            <div class="security">
+                <span>✓ Sitio Oficial</span>
+                <span>✓ Conexión Cifrada GSL</span>
+                <span>✓ Garantía de Entrega</span>
+            </div>
+        </div>
     </div>
 
-    <div class="timer-box">
-        ⏳ Su cupón de descuento expira en: <span id="timer">15:00</span>
-    </div>
-    
-    <a href="#" id="checkout-btn" class="btn">Acceder Al Descuento Ahora</a>
-
-    <div class="secure-footer">
-        🔒 Conexión segura y encriptada. Distribución oficial autorizada.
-    </div>
-</div>
-
-<script>
-    // ==========================================
-    // ⚙️ SECCIÓN DE CONFIGURACIÓN (CAMBIE AQUÍ)
-    // ==========================================
-    const CONFIG = {
-        nombreProducto: "MelaminaPRO", 
-        linkAfiliado: "https://go.hotmart.com/V106526209Y?ap=eee4"
-    };
-
-    // ==========================================
-    // 🧠 SCRIPT AUTOMÁTICO (NÃO MEXER EMBAIXO)
-    // ==========================================
-    document.title = `Promoción Oficial | ${CONFIG.nombreProducto}`;
-    document.getElementById("prod-title").innerText = CONFIG.nombreProducto;
-    document.getElementById("checkout-btn").href = CONFIG.linkAfiliado;
-
-    // Timer de 15 Minutos Correndo
-    function startTimer(duration, display) {
-        let timer = duration, minutes, seconds;
-        setInterval(function () {
-            minutes = parseInt(timer / 60, 10);
-            seconds = parseInt(timer % 60, 10);
-
-            minutes = minutes < 10 ? "0" + minutes : minutes;
-            seconds = seconds < 10 ? "0" + seconds : seconds;
-
-            display.textContent = minutes + ":" + seconds;
-
-            if (--timer < 0) {
-                timer = duration;
-            }
-        }, 1000);
-    }
-
-    window.onload = function () {
-        let fifteenMinutes = 60 * 15,
-            display = document.querySelector('#timer');
-        startTimer(fifteenMinutes, display);
-    };
-</script>
+    <footer>
+        <p>© 2026 MelanimaPro - Distribución Autorizada de Afiliados.</p>
+        <p style="margin-top: 15px; line-height: 1.4;">Este sitio web proporciona enlaces directos a la plataforma de pago del productor oficial. Google no es responsable de ninguna manera de las ofertas ni del contenido aquí presentado.</p>
+    </footer>
 
 </body>
 </html>
