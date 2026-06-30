@@ -26,11 +26,6 @@
         .box-product ul li::before { content: "✓"; color: var(--success); font-weight: bold; position: absolute; left: 0; }
 
         .timer-box { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 15px; border-radius: 6px; font-weight: bold; margin-bottom: 30px; font-size: 1.1rem; }
-        
-        .price-container { margin-bottom: 30px; }
-        .old-price { text-decoration: line-through; color: #999; font-size: 1.2rem; }
-        .current-price { font-size: 3.5rem; color: var(--success); font-weight: bold; margin: 5px 0; }
-        .payment-info { font-size: 0.9rem; color: #555; font-weight: bold; }
 
         .btn-checkout { display: block; background: var(--success); color: white; padding: 20px; font-size: 1.4rem; font-weight: bold; text-decoration: none; border-radius: 8px; box-shadow: 0 5px 15px rgba(39, 174, 96, 0.3); transition: 0.3s; margin-bottom: 15px; }
         .btn-checkout:hover { background: #219150; transform: translateY(-2px); }
@@ -46,7 +41,7 @@
     <div class="wrapper">
         <span class="badge">¡Oferta por tiempo limitado!</span>
         <h1>Completa tu Inscripción</h1>
-        <p class="subtitle">Accede al plugin, la biblioteca especializada y todos los bonos con descuento exclusivo.</p>
+        <p class="subtitle">Accede al plugin, la biblioteca especializada y todos los bonos con un descuento exclusivo de lanzamiento.</p>
 
         <div class="timer-box">
             ⏱️ Tu descuento vence en: 15:00 minutos
@@ -58,21 +53,15 @@
                 <li><strong>Plugin MelaminaPRO:</strong> Interfaz práctica dentro de SketchUp.</li>
                 <li><strong>Biblioteca Completa:</strong> Cocinas (manijas, gola, shaker), closets y roperos.</li>
                 <li><strong>Videotutoriales Paso a Paso:</strong> Desde instalación hasta despiece técnico.</li>
-                <li><strong>Plantillas y Descargables:</strong> Recursos de apoyo para Windows y Mac.</li>
+                <li><strong>Plantillas y Descargables:</strong> Recursos de apoio para Windows y Mac.</li>
                 <li><strong>Comunidad Vip:</strong> Acceso al grupo de soporte en WhatsApp.</li>
             </ul>
         </div>
 
-        <div class="price-container">
-            <p class="old-price">Antes: $97 USD</p>
-            <p class="current-price">$47 USD</p>
-            <p class="payment-info">PAGO ÚNICO - ACCESO DE POR VIDA</p>
-        </div>
-
         <!-- REEMPLAZA EL LINK DE ABAJO CON TU LINK DE CHECKOUT DE HOTMART -->
-        <a href="https://go.hotmart.com/V106526209Y?ap=eee4" class="btn-checkout">👉 ¡Comprar Ahora con Descuento!</a>
+        <a href="TU_LINK_DE_HOTMART_AQUÍ" class="btn-checkout">👉 ¡Ver Descuento y Obtener Acceso!</a>
         
-        <p style="font-size: 0.8rem; color: #777;">🔒 Compra 100% segura y protegida. El acceso es inmediato a tu correo.</p>
+        <p style="font-size: 0.8rem; color: #777; margin-top: 15px;">🔒 Compra 100% segura y protegida. El acceso es inmediato a tu correo.</p>
 
         <div class="guarantee">
             <div class="guarantee-badge">🛡️</div>
@@ -87,7 +76,6 @@
     </footer>
 
     <script>
-        // Script simples de contagem regressiva para dar urgência (15 minutos fictícios que resetam)
         let time = 15 * 60;
         const timerElement = document.querySelector('.timer-box');
         
