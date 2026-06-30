@@ -3,62 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MelanimaPro - Oferta Exclusiva</title>
+    <title>Oferta Especial - MelaminaPRO</title>
     <style>
         :root {
-            --accent: #dc2626;
-            --primary: #10b981;
-            --primary-hover: #059669;
-            --dark: #1e293b;
-            --light: #f1f5f9;
+            --primary: #e67e22;
+            --dark: #2c3e50;
+            --light: #f8f9fa;
+            --text: #333;
+            --success: #27ae60;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: var(--light); color: #334155; line-height: 1.5; }
-        .promo-banner { background-color: var(--accent); color: white; text-align: center; padding: 10px 20px; font-weight: bold; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
-        .wrapper { max-width: 650px; margin: 40px auto; padding: 0 20px; }
-        .card { background: white; padding: 40px 30px; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border: 2px solid #e2e8f0; text-align: center; }
-        h1 { color: #0f172a; font-size: 2.2rem; margin-bottom: 10px; }
-        .subtitle { color: #64748b; font-size: 1.1rem; margin-bottom: 30px; }
-        .price-box { background-color: #f8fafc; padding: 25px; border-radius: 12px; margin-bottom: 30px; border: 1px dashed #cbd5e1; }
-        .old-price { text-decoration: line-through; color: #94a3b8; font-size: 1.2rem; }
-        .new-price { color: var(--primary); font-size: 2.8rem; font-weight: 800; margin: 5px 0; }
-        .badge { display: inline-block; background-color: #fef3c7; color: #d97706; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; margin-bottom: 20px; }
-        .btn { display: block; background-color: var(--primary); color: white; text-decoration: none; padding: 20px; font-size: 1.4rem; font-weight: bold; border-radius: 10px; transition: all 0.3s ease; box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.4); }
-        .btn:hover { background-color: var(--primary-hover); transform: translateY(-2px); }
-        .security { display: flex; justify-content: center; gap: 20px; margin-top: 25px; color: #94a3b8; font-size: 0.85rem; }
-        footer { text-align: center; padding: 40px 20px; color: #94a3b8; font-size: 0.8rem; margin-top: 40px; }
+        body { color: var(--text); background-color: var(--light); line-height: 1.6; text-align: center; }
+        .wrapper { max-width: 650px; margin: 40px auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .badge { display: inline-block; background: #e74c3c; color: white; padding: 5px 15px; font-size: 0.85rem; font-weight: bold; border-radius: 50px; margin-bottom: 20px; text-transform: uppercase; }
+        h1 { font-size: 2rem; color: var(--dark); margin-bottom: 10px; }
+        .subtitle { color: #666; font-size: 1.1rem; margin-bottom: 30px; }
+        
+        .box-product { background: var(--light); padding: 20px; border-radius: 8px; text-align: left; margin-bottom: 30px; border: 1px solid #ddd; }
+        .box-product h3 { color: var(--dark); margin-bottom: 10px; }
+        .box-product ul { list-style: none; }
+        .box-product ul li { margin-bottom: 8px; padding-left: 20px; position: relative; font-size: 0.95rem; }
+        .box-product ul li::before { content: "✓"; color: var(--success); font-weight: bold; position: absolute; left: 0; }
+
+        .timer-box { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 15px; border-radius: 6px; font-weight: bold; margin-bottom: 30px; font-size: 1.1rem; }
+        
+        .price-container { margin-bottom: 30px; }
+        .old-price { text-decoration: line-through; color: #999; font-size: 1.2rem; }
+        .current-price { font-size: 3.5rem; color: var(--success); font-weight: bold; margin: 5px 0; }
+        .payment-info { font-size: 0.9rem; color: #555; font-weight: bold; }
+
+        .btn-checkout { display: block; background: var(--success); color: white; padding: 20px; font-size: 1.4rem; font-weight: bold; text-decoration: none; border-radius: 8px; box-shadow: 0 5px 15px rgba(39, 174, 96, 0.3); transition: 0.3s; margin-bottom: 15px; }
+        .btn-checkout:hover { background: #219150; transform: translateY(-2px); }
+        
+        .guarantee { display: flex; align-items: center; justify-content: center; gap: 15px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 0.85rem; color: #666; text-align: left; }
+        .guarantee-badge { font-size: 2rem; }
+        
+        footer { margin-top: 40px; color: #aaa; font-size: 0.8rem; }
     </style>
 </head>
 <body>
 
-    <div class="promo-banner">⚠ ATENCIÓN: Promoción por tiempo limitado o hasta agotar existencias</div>
-
     <div class="wrapper">
-        <div class="card">
-            <span class="badge">🔥 DESCUENTO ACTIVADO</span>
-            <h1>¡Aprovecha el Precio Especial!</h1>
-            <p class="subtitle">Consigue MelanimaPro original hoy con acceso directo a la plataforma de distribución oficial.</p>
-            
-            <div class="price-box">
-                <p class="old-price">Precio Regular Anterior</p>
-                <p class="new-price">Descuento Especial Disponbile</p>
-                <p style="color: #64748b; font-size: 0.95rem; margin-top: 10px;">*El valor final con descuento se reflejará en la pantalla de pago seguro.</p>
-            </div>
+        <span class="badge">¡Oferta por tiempo limitado!</span>
+        <h1>Completa tu Inscripción</h1>
+        <p class="subtitle">Accede al plugin, la biblioteca especializada y todos los bonos con descuento exclusivo.</p>
 
-            <a href="https://go.hotmart.com/V106526209Y?ap=eee4" class="btn" target="_self">Comprar Con Descuento Ahora</a>
+        <div class="timer-box">
+            ⏱️ Tu descuento vence en: 15:00 minutos
+        </div>
 
-            <div class="security">
-                <span>✓ Sitio Oficial</span>
-                <span>✓ Conexión Cifrada GSL</span>
-                <span>✓ Garantía de Entrega</span>
+        <div class="box-product">
+            <h3>¿Qué recibirás hoy?</h3>
+            <ul>
+                <li><strong>Plugin MelaminaPRO:</strong> Interfaz práctica dentro de SketchUp.</li>
+                <li><strong>Biblioteca Completa:</strong> Cocinas (manijas, gola, shaker), closets y roperos.</li>
+                <li><strong>Videotutoriales Paso a Paso:</strong> Desde instalación hasta despiece técnico.</li>
+                <li><strong>Plantillas y Descargables:</strong> Recursos de apoyo para Windows y Mac.</li>
+                <li><strong>Comunidad Vip:</strong> Acceso al grupo de soporte en WhatsApp.</li>
+            </ul>
+        </div>
+
+        <div class="price-container">
+            <p class="old-price">Antes: $97 USD</p>
+            <p class="current-price">$47 USD</p>
+            <p class="payment-info">PAGO ÚNICO - ACCESO DE POR VIDA</p>
+        </div>
+
+        <!-- REEMPLAZA EL LINK DE ABAJO CON TU LINK DE CHECKOUT DE HOTMART -->
+        <a href="https://go.hotmart.com/V106526209Y?ap=eee4" class="btn-checkout">👉 ¡Comprar Ahora con Descuento!</a>
+        
+        <p style="font-size: 0.8rem; color: #777;">🔒 Compra 100% segura y protegida. El acceso es inmediato a tu correo.</p>
+
+        <div class="guarantee">
+            <div class="guarantee-badge">🛡️</div>
+            <div>
+                <strong>7 días de garantía:</strong> Pruébalo sin riesgo. Si no cumple con tus expectativas, te devolvemos el 100% de tu dinero sin preguntas.
             </div>
         </div>
     </div>
 
     <footer>
-        <p>© 2026 MelanimaPro - Distribución Autorizada de Afiliados.</p>
-        <p style="margin-top: 15px; line-height: 1.4;">Este sitio web proporciona enlaces directos a la plataforma de pago del productor oficial. Google no es responsable de ninguna manera de las ofertas ni del contenido aquí presentado.</p>
+        <p>&copy; 2026 MelaminaPRO - Distribuidor Autorizado. Todos los derechos reservados.</p>
     </footer>
+
+    <script>
+        // Script simples de contagem regressiva para dar urgência (15 minutos fictícios que resetam)
+        let time = 15 * 60;
+        const timerElement = document.querySelector('.timer-box');
+        
+        setInterval(() => {
+            let minutes = Math.floor(time / 60);
+            let seconds = time % 60;
+            seconds = seconds < 10 ? '0' + seconds : seconds;
+            timerElement.innerHTML = `⏱️ Tu descuento vence en: ${minutes}:${seconds} minutos`;
+            if (time > 0) time--;
+        }, 1000);
+    </script>
 
 </body>
 </html>
