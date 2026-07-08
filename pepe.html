@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Central do Afiliado — Pedro</title>
+<style>
+  :root {
+    --bg: #0d1117; --card: #161c26; --card-2: #1c2430; --line: #2a3442;
+    --text: #e6edf3; --muted: #8b98a9;
+    --green: #2ecc71; --green-dim: rgba(46,204,113,.12);
+    --amber: #f5b041; --amber-dim: rgba(245,176,65,.12);
+    --red: #ff6b6b; --red-dim: rgba(255,107,107,.12);
+    --blue: #4da3ff; --blue-dim: rgba(77,163,255,.12);
+    --purple: #b98aff; --purple-dim: rgba(185,138,255,.12);
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 15px; line-height: 1.5;
+    padding: 16px 14px 80px; max-width: 780px; margin: 0 auto;
+  }
+  header { margin-bottom: 14px; }
+  h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
+  h1 span { color: var(--green); }
+  .tagline { color: var(--muted); font-size: 13px; margin-top: 2px; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 6px; margin: 16px 0 14px; background: var(--card); padding: 5px; border-radius: 14px; border: 1px solid var(--line); }
+  .tab {
+    flex: 1; text-align: center; padding: 10px 4px; border-radius: 10px;
+    font-size: 13px; font-weight: 700; color: var(--muted); cursor: pointer;
+    border: none; background: transparent; transition: all .15s;
+  }
+  .tab.active { background: var(--green); color: #08130c; }
+  .tab .n { font-family: var(--mono); font-size: 11px; opacity: .8; }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .strip { display: flex; gap: 10px; margin: 0 0 14px; overflow-x: auto; padding-bottom: 4px; }
+  .chip { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; min-width: 105px; flex-shrink: 0; }
+  .chip .v { font-family: var(--mono); font-size: 19px; font-weight: 700; }
+  .chip .l { color: var(--muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: .5px; }
+  .chip.best .v { color: var(--green); font-size: 14px; }
+  .chip .v.pos { color: var(--green); } .chip .v.neg { color: var(--red); }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    background: var(--green); color: #08130c; border: none;
+    font-weight: 700; font-size: 15px; border-radius: 12px;
+    padding: 13px 18px; cursor: pointer; width: 100%; transition: transform .1s;
+  }
+  .btn:active { transform: scale(.98); }
+  .btn.ghost { background: var(--card); color: var(--text); border: 1px solid var(--line); }
+  .btn.small { width: auto; padding: 8px 14px; font-size: 13px; border-radius: 9px; }
+  .btn.danger { background: var(--red-dim); color: var(--red); border: 1px solid rgba(255,107,107,.3); }
+  .btn.blue { background: var(--blue-dim); color: var(--blue); border: 1px solid rgba(77,163,255,.3); }
+
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px 16px; margin: 14px 0; display: none; }
+  .panel.open { display: block; }
+  .panel h2 { font-size: 17px; margin-bottom: 14px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .grid .full { grid-column: 1 / -1; }
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
+  label b { color: var(--amber); }
+  input, select, textarea {
+    width: 100%; background: var(--bg); color: var(--text);
+    border: 1px solid var(--line); border-radius: 10px;
+    padding: 11px 12px; font-size: 15px; font-family: inherit;
+  }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--blue); border-color: transparent; }
+  .hint { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .form-actions { display: flex; gap: 10px; margin-top: 16px; }
+
+  .cards { display: flex; flex-direction: column; gap: 14px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; position: relative; overflow: hidden; }
+  .card .rank { position: absolute; top: 0; left: 0; background: var(--card-2); border-bottom-right-radius: 12px; padding: 4px 12px; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .card.top1 { border-color: rgba(46,204,113,.45); }
+  .card.top1 .rank { color: var(--green); font-weight: 700; }
+  .stamp {
+    position: absolute; top: 14px; right: 12px; font-weight: 900; font-size: 12px;
+    letter-spacing: 1px; padding: 5px 12px; border-radius: 8px; transform: rotate(3deg); border: 2px solid;
+  }
+  .stamp.otimo { color: var(--green); border-color: var(--green); background: var(--green-dim); }
+  .stamp.apertado { color: var(--amber); border-color: var(--amber); background: var(--amber-dim); }
+  .stamp.fuja { color: var(--red); border-color: var(--red); background: var(--red-dim); }
+  .card h3 { font-size: 18px; margin: 18px 0 2px; padding-right: 95px; }
+  .meta { color: var(--muted); font-size: 12px; margin-bottom: 10px; }
+  .status-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .status-row select { width: auto; padding: 6px 10px; font-size: 13px; font-weight: 700; border-radius: 8px; }
+  .status-badge { font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 800; letter-spacing: .3px; }
+  .st-Analisando { background: var(--blue-dim); color: var(--blue); }
+  .st-Testando { background: var(--amber-dim); color: var(--amber); }
+  .st-Rodando { background: var(--green-dim); color: var(--green); }
+  .st-Pausado { background: var(--purple-dim); color: var(--purple); }
+  .st-Descartado { background: var(--red-dim); color: var(--red); }
+
+  .kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  @media (min-width: 520px) { .kpis { grid-template-columns: repeat(4, 1fr); } }
+  .kpi { background: var(--bg); border-radius: 10px; padding: 9px 10px; }
+  .kpi .v { font-family: var(--mono); font-size: 15px; font-weight: 700; }
+  .kpi .l { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+  .kpi.good .v { color: var(--green); } .kpi.warn .v { color: var(--amber); } .kpi.bad .v { color: var(--red); }
+  .flags { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .flag { font-size: 11px; padding: 3px 9px; border-radius: 20px; font-weight: 600; }
+  .flag.red { background: var(--red-dim); color: var(--red); }
+  .flag.amber { background: var(--amber-dim); color: var(--amber); }
+  .flag.green { background: var(--green-dim); color: var(--green); }
+  .flag.blue { background: var(--blue-dim); color: var(--blue); }
+  .card-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+
+  .detail { display: none; margin-top: 16px; border-top: 1px dashed var(--line); padding-top: 14px; }
+  .detail.open { display: block; }
+  .detail h4 { font-size: 14px; margin: 14px 0 8px; color: var(--blue); }
+  .detail h4:first-child { margin-top: 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .4px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  td { padding: 8px; border-bottom: 1px solid rgba(42,52,66,.5); font-family: var(--mono); }
+  td:first-child { font-family: inherit; }
+  .pos { color: var(--green); font-weight: 700; } .neg { color: var(--red); font-weight: 700; }
+  .sim-row { display: flex; gap: 10px; align-items: flex-end; margin-bottom: 10px; }
+  .sim-row > div { flex: 1; }
+  .note-box { background: var(--bg); border-radius: 10px; padding: 10px 12px; font-size: 13px; color: var(--muted); margin-top: 10px; }
+  .note-box strong { color: var(--text); }
+
+  /* Checklist */
+  .check-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+  .check-item { display: flex; align-items: flex-start; gap: 10px; background: var(--bg); border-radius: 10px; padding: 10px 12px; cursor: pointer; }
+  .check-item input { width: 20px; height: 20px; margin-top: 1px; accent-color: var(--green); flex-shrink: 0; }
+  .check-item span { font-size: 13px; }
+  .check-veredicto { margin-top: 10px; padding: 12px; border-radius: 10px; font-weight: 700; font-size: 14px; text-align: center; }
+  .check-ok { background: var(--green-dim); color: var(--green); border: 1px solid rgba(46,204,113,.35); }
+  .check-nok { background: var(--red-dim); color: var(--red); border: 1px solid rgba(255,107,107,.3); }
+
+  /* Comparador */
+  .vs-selects { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; }
+  .vs-selects select { flex: 1; }
+  .vs-badge { font-weight: 900; color: var(--amber); font-size: 15px; }
+  .vs-table td.win { color: var(--green); font-weight: 700; }
+  .vs-table td { text-align: center; }
+  .vs-table td:first-child { text-align: left; }
+
+  .empty { text-align: center; padding: 44px 20px; color: var(--muted); border: 2px dashed var(--line); border-radius: 16px; }
+  .empty .big { font-size: 38px; margin-bottom: 10px; }
+  .loading { text-align: center; color: var(--muted); padding: 40px; }
+  .footer-note { margin-top: 28px; text-align: center; font-size: 11px; color: var(--muted); }
+  .backup-row { display: flex; gap: 8px; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Central do <span>Afiliado</span></h1>
+  <div class="tagline">Garimpa. Valida. Roda. Mede. Só continua o que dá lucro.</div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" data-view="garimpo">🔍 Garimpo <span class="n" id="n-garimpo"></span></button>
+  <button class="tab" data-view="andamento">🚀 Em andamento <span class="n" id="n-andamento"></span></button>
+  <button class="tab" data-view="vs">⚔️ Comparar</button>
+</div>
+
+<!-- ================= VIEW: GARIMPO ================= -->
+<div class="view active" id="view-garimpo">
+  <div class="strip" id="strip-garimpo"></div>
+  <button class="btn" id="btnNew">+ Adicionar produto</button>
+  <div class="backup-row">
+    <button class="btn ghost small" style="flex:1;" id="btnExport">⬇️ Backup geral</button>
+    <label class="btn ghost small" style="flex:1; cursor:pointer;">⬆️ Importar
+      <input type="file" id="fileImport" accept=".json" style="display:none;">
+    </label>
+  </div>
+
+  <div class="panel" id="formPanel">
+    <h2 id="formTitle">Novo produto</h2>
+    <div class="grid">
+      <div class="full"><label>Nome do produto <b>*</b></label><input id="f_nome" placeholder="Ex: MelaminaPRO"></div>
+      <div><label>Plataforma</label>
+        <select id="f_plataforma"><option>Hotmart</option><option>Digistore24</option><option>ClickBank</option><option>Kiwify</option><option>Monetizze</option><option>Eduzz</option><option>Outra</option></select>
+      </div>
+      <div><label>Mercado</label><select id="f_mercado"><option>Gringa</option><option>Brasil</option></select></div>
+      <div><label>Moeda do produto</label><select id="f_moeda"><option value="USD">Dólar (US$)</option><option value="EUR">Euro (€)</option><option value="BRL">Real (R$)</option></select></div>
+      <div><label>Cotação da moeda → R$</label><input id="f_cotacao" type="number" step="0.01" value="5.18"><div class="hint">Se produto em R$, deixe 1</div></div>
+      <div><label>Preço do produto (ticket)</label><input id="f_ticket" type="number" step="0.01" placeholder="Ex: 47"></div>
+      <div><label>Comissão (%)</label><input id="f_pct" type="number" step="0.1" placeholder="Ex: 60"><div class="hint">OU valor direto ↓</div></div>
+      <div><label>Comissão em valor direto</label><input id="f_comdireta" type="number" step="0.01" placeholder="Ex: 33.95"><div class="hint">Na moeda do produto</div></div>
+      <div><label>CPC estimado (R$) <b>*</b></label><input id="f_cpc" type="number" step="0.01" placeholder="Ex: 2.00"><div class="hint">Do Planejador de Palavras-chave</div></div>
+      <div><label>Volume de busca/mês</label><input id="f_volume" type="number" placeholder="Ex: 2500"></div>
+      <div><label>Concorrência</label><select id="f_conc"><option>Baixa</option><option>Média</option><option>Alta</option><option>Não sei</option></select></div>
+      <div><label>Gravity / Popularidade</label><input id="f_gravity" placeholder="Ex: 41"></div>
+      <div><label>Tenho página própria?</label><select id="f_pagina"><option>Ainda não</option><option>Sim</option></select></div>
+      <div class="full"><label>Anotações</label><textarea id="f_notas" rows="2" placeholder="Ex: promoção até agosto..."></textarea></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn" id="btnSave">Salvar produto</button>
+      <button class="btn ghost" id="btnCancel">Cancelar</button>
+    </div>
+  </div>
+
+  <div class="loading" id="loading">Carregando seus produtos…</div>
+  <div class="cards" id="cards-garimpo" style="margin-top:16px;"></div>
+  <div class="empty" id="empty-garimpo" style="display:none;">
+    <div class="big">🎣</div>
+    <strong>Nenhum produto no garimpo.</strong><br>
+    Adicione candidatos e a Central diz quais valem a pena.
+  </div>
+</div>
+
+<!-- ================= VIEW: EM ANDAMENTO ================= -->
+<div class="view" id="view-andamento">
+  <div class="strip" id="strip-andamento"></div>
+  <div class="cards" id="cards-andamento"></div>
+  <div class="empty" id="empty-andamento" style="display:none;">
+    <div class="big">🚀</div>
+    <strong>Nada rodando ainda.</strong><br>
+    Quando um produto do Garimpo passar no checklist,<br>mude o status dele pra <b>Testando</b> e ele aparece aqui.
+  </div>
+</div>
+
+<!-- ================= VIEW: COMPARADOR ================= -->
+<div class="view" id="view-vs">
+  <div class="vs-selects">
+    <select id="vsA"></select>
+    <span class="vs-badge">VS</span>
+    <select id="vsB"></select>
+  </div>
+  <div id="vs-out"></div>
+</div>
+
+<div class="footer-note">Central do Afiliado v4 · Pedro & Claude · dados salvos neste navegador · 📤 exporta o produto (com análise e resultados) pra revisar com o Claude · 🛟 backup semanal</div>
+
+<script>
+const KEY = 'central-afiliado:produtos';
+const STATUS = ['Analisando','Testando','Rodando','Pausado','Descartado'];
+const CHECKS = [
+  { k:'pagina',    t:'Tenho página própria com conteúdo de valor (NÃO é só um botão / ponte)' },
+  { k:'promessa',  t:'A copy não faz promessa irreal (ganho garantido, cura, resultado mágico)' },
+  { k:'negativas', t:'Lista de palavras negativas planejada (crack, grátis, free, download...)' },
+  { k:'nicho',     t:'O nicho não é restrito no Google (saúde, finanças e apostas exigem cuidado extra)' },
+  { k:'comissao',  t:'Comissão confirmada na plataforma (não estou contando com valor de promoção)' }
+];
+let produtos = [];
+let editingId = null;
+
+/* ---------- STORAGE HÍBRIDO ---------- */
+const temClaudeStorage = typeof window.storage !== 'undefined' && window.storage && typeof window.storage.get === 'function';
+async function loadData() {
+  try {
+    if (temClaudeStorage) {
+      const r = await window.storage.get(KEY);
+      produtos = r && r.value ? JSON.parse(r.value) : [];
+    } else {
+      const raw = localStorage.getItem(KEY);
+      produtos = raw ? JSON.parse(raw) : [];
+    }
+  } catch (e) { produtos = []; }
+  // migração de versões antigas
+  produtos.forEach(p => {
+    if (!p.status) p.status = 'Analisando';
+    if (!p.checklist) p.checklist = {};
+    if (!p.lancamentos) p.lancamentos = [];
+  });
+  document.getElementById('loading').style.display = 'none';
+  renderAll();
+}
+async function saveData() {
+  try {
+    if (temClaudeStorage) await window.storage.set(KEY, JSON.stringify(produtos));
+    else localStorage.setItem(KEY, JSON.stringify(produtos));
+  } catch (e) { alert('Não consegui salvar neste navegador. Baixe um backup pra não perder nada.'); }
+}
+
+/* ---------- CÁLCULOS ---------- */
+function calc(p) {
+  const cot = p.moeda === 'BRL' ? 1 : (parseFloat(p.cotacao) || 1);
+  let comMoeda = p.comdireta ? parseFloat(p.comdireta) : (parseFloat(p.ticket) || 0) * ((parseFloat(p.pct) || 0) / 100);
+  const comissaoBRL = comMoeda * cot;
+  const cpc = parseFloat(p.cpc) || 0;
+  const cliquesEmpate = cpc > 0 ? comissaoBRL / cpc : 0;
+  const convNecessaria = cliquesEmpate > 0 ? 100 / cliquesEmpate : 999;
+  const volume = parseInt(p.volume) || 0;
+  let veredito, cls;
+  if (convNecessaria <= 2) { veredito = 'ÓTIMO'; cls = 'otimo'; }
+  else if (convNecessaria <= 4) { veredito = 'APERTADO'; cls = 'apertado'; }
+  else { veredito = 'FUJA'; cls = 'fuja'; }
+  let ptsViab = Math.max(0, Math.min(60, (2 / convNecessaria) * 60));
+  let ptsVol = volume >= 10000 ? 30 : volume >= 3000 ? 24 : volume >= 1000 ? 16 : volume > 0 ? 6 : 0;
+  let ptsConc = p.conc === 'Baixa' ? 10 : p.conc === 'Média' ? 6 : p.conc === 'Alta' ? 2 : 5;
+  const nota = Math.round(ptsViab + ptsVol + ptsConc);
+  const flags = [];
+  if (volume > 0 && volume < 1000) flags.push({t:'🐟 Lago pequeno (<1.000 buscas)', c:'red'});
+  if (volume >= 3000) flags.push({t:'🌊 Volume bom', c:'green'});
+  if (convNecessaria > 4) flags.push({t:'⚠️ Precisa de ' + convNecessaria.toFixed(1) + '% só p/ empatar', c:'red'});
+  if (p.conc === 'Alta') flags.push({t:'🥊 Concorrência alta', c:'amber'});
+  if (p.conc === 'Baixa') flags.push({t:'🎯 Pouca concorrência', c:'green'});
+  if (comissaoBRL >= 150) flags.push({t:'💰 Comissão gorda', c:'green'});
+  if (comissaoBRL > 0 && comissaoBRL < 60) flags.push({t:'🪙 Comissão curta', c:'amber'});
+  return { comissaoBRL, cpc, cliquesEmpate, convNecessaria, volume, veredito, cls, nota, flags };
+}
+
+/* Resultados reais agregados */
+function reais(p) {
+  const L = p.lancamentos || [];
+  const gasto = L.reduce((s,x)=>s+(+x.gasto||0),0);
+  const cliques = L.reduce((s,x)=>s+(+x.cliques||0),0);
+  const vendas = L.reduce((s,x)=>s+(+x.vendas||0),0);
+  const c = calc(p);
+  const receita = vendas * c.comissaoBRL;
+  const lucro = receita - gasto;
+  const cpcReal = cliques > 0 ? gasto / cliques : 0;
+  const convReal = cliques > 0 ? (vendas / cliques) * 100 : 0;
+  const roi = gasto > 0 ? (lucro / gasto) * 100 : 0;
+  return { gasto, cliques, vendas, receita, lucro, cpcReal, convReal, roi, n: L.length };
+}
+
+const fmt = n => 'R$ ' + n.toFixed(2).replace('.', ',');
+const checklistOk = p => CHECKS.every(c => p.checklist && p.checklist[c.k]);
+
+/* ---------- RENDER GERAL ---------- */
+function renderAll() { renderGarimpo(); renderAndamento(); renderVS(); renderTabCounts(); }
+
+function renderTabCounts() {
+  const g = produtos.filter(p => p.status === 'Analisando' || p.status === 'Descartado').length;
+  const a = produtos.filter(p => ['Testando','Rodando','Pausado'].includes(p.status)).length;
+  document.getElementById('n-garimpo').textContent = g ? '('+g+')' : '';
+  document.getElementById('n-andamento').textContent = a ? '('+a+')' : '';
+}
+
+function statusSelect(p) {
+  return `<select data-act="status" data-id="${p.id}">` +
+    STATUS.map(s => `<option ${s===p.status?'selected':''}>${s}</option>`).join('') + `</select>`;
+}
+
+/* ---------- GARIMPO ---------- */
+function renderGarimpo() {
+  const wrap = document.getElementById('cards-garimpo');
+  wrap.innerHTML = '';
+  const lista = produtos.filter(p => p.status === 'Analisando' || p.status === 'Descartado')
+    .map(p => ({ p, c: calc(p) })).sort((a,b) => b.c.nota - a.c.nota);
+
+  const strip = document.getElementById('strip-garimpo');
+  if (lista.length) {
+    const best = lista.find(x => x.p.status === 'Analisando') || lista[0];
+    strip.innerHTML = `
+      <div class="chip"><div class="v">${lista.length}</div><div class="l">no garimpo</div></div>
+      <div class="chip best"><div class="v">🏆 ${best.p.nome}</div><div class="l">melhor aposta (nota ${best.c.nota})</div></div>
+      <div class="chip"><div class="v">${lista.filter(x=>x.c.cls==='otimo').length}</div><div class="l">veredito ótimo</div></div>`;
+  } else strip.innerHTML = '';
+  document.getElementById('empty-garimpo').style.display = lista.length ? 'none' : 'block';
+
+  lista.forEach(({p, c}, i) => {
+    const card = document.createElement('div');
+    card.className = 'card' + (i === 0 && lista.length > 1 && p.status==='Analisando' ? ' top1' : '');
+    card.innerHTML = `
+      <div class="rank">#${i+1} · nota ${c.nota}</div>
+      <div class="stamp ${c.cls}">${c.veredito}</div>
+      <h3>${p.nome}</h3>
+      <div class="meta">${p.plataforma} · ${p.mercado} · ticket ${p.moeda==='BRL'?'R$':p.moeda==='EUR'?'€':'US$'} ${p.ticket||'?'} ${p.gravity?'· gravity '+p.gravity:''}</div>
+      <div class="status-row"><span class="status-badge st-${p.status}">${p.status}</span>${statusSelect(p)}</div>
+      <div class="kpis">
+        <div class="kpi good"><div class="v">${fmt(c.comissaoBRL)}</div><div class="l">comissão real</div></div>
+        <div class="kpi"><div class="v">${fmt(c.cpc)}</div><div class="l">CPC estimado</div></div>
+        <div class="kpi ${c.cliquesEmpate>=50?'good':c.cliquesEmpate>=25?'warn':'bad'}"><div class="v">${c.cliquesEmpate.toFixed(0)}</div><div class="l">cliques p/ empatar</div></div>
+        <div class="kpi ${c.convNecessaria<=2?'good':c.convNecessaria<=4?'warn':'bad'}"><div class="v">${c.convNecessaria.toFixed(1)}%</div><div class="l">conversão p/ empatar</div></div>
+      </div>
+      <div class="flags">${c.flags.map(f=>`<span class="flag ${f.c}">${f.t}</span>`).join('')}
+        <span class="flag ${checklistOk(p)?'green':'amber'}">${checklistOk(p)?'✅ Liberado pra anunciar':'🛡️ Checklist pendente'}</span>
+      </div>
+      <div class="card-actions">
+        <button class="btn ghost small" data-act="detail" data-id="${p.id}">📊 Análise</button>
+        <button class="btn blue small" data-act="check" data-id="${p.id}">🛡️ Checklist</button>
+        <button class="btn ghost small" data-act="export1" data-id="${p.id}">📤</button>
+        <button class="btn ghost small" data-act="edit" data-id="${p.id}">✏️</button>
+        <button class="btn danger small" data-act="del" data-id="${p.id}">🗑</button>
+      </div>
+      <div class="detail" id="detail-${p.id}"></div>`;
+    wrap.appendChild(card);
+  });
+}
+
+/* ---------- DETALHE: ANÁLISE + SIMULADOR (Garimpo) ---------- */
+function renderDetail(id) {
+  const p = produtos.find(x => x.id === id);
+  const c = calc(p);
+  const box = document.getElementById('detail-' + id);
+  const open = box.classList.toggle('open');
+  if (!open) { box.innerHTML = ''; return; }
+  const orc = p.simOrc || 300;
+  box.innerHTML = `
+    <h4>💡 Leitura rápida</h4>
+    <div class="note-box">Cada venda paga <strong>${c.cliquesEmpate.toFixed(0)} cliques</strong>. Precisa converter
+      <strong>${c.convNecessaria.toFixed(1)}%</strong> só pra empatar (até 2% = fácil · 2–4% = apertado · +4% = quase impossível).
+      ${c.volume ? 'Lago: <strong>' + c.volume.toLocaleString('pt-BR') + ' buscas/mês</strong>.' : '⚠️ Volume não informado — valide no Planejador!'}</div>
+    <h4>🎛 Simulador de orçamento</h4>
+    <div class="sim-row">
+      <div><label>Orçamento mensal (R$)</label><input type="number" id="sim-${id}" value="${orc}" step="50"></div>
+      <button class="btn small" data-act="sim" data-id="${id}">Calcular</button>
+    </div>
+    <div id="simout-${id}"></div>`;
+  runSim(id);
+}
+function runSim(id) {
+  const p = produtos.find(x => x.id === id);
+  const c = calc(p);
+  const orc = parseFloat(document.getElementById('sim-' + id).value) || 0;
+  p.simOrc = orc; saveData();
+  const cliques = c.cpc > 0 ? orc / c.cpc : 0;
+  const vendasEmpate = c.comissaoBRL > 0 ? orc / c.comissaoBRL : 0;
+  const cen = [1, 1.5, 2, 3, 4].map(conv => {
+    const vendas = cliques * (conv/100), receita = vendas * c.comissaoBRL, lucro = receita - orc;
+    return { conv, vendas, receita, lucro };
+  });
+  document.getElementById('simout-' + id).innerHTML = `
+    <div class="note-box">Com <strong>${fmt(orc)}</strong>/mês → ~<strong>${cliques.toFixed(0)} cliques</strong>. Empate = <strong>${vendasEmpate.toFixed(1)} vendas</strong>.</div>
+    <table><tr><th>Se converter…</th><th>Vendas</th><th>Receita</th><th>Resultado</th></tr>
+    ${cen.map(s => `<tr><td>${s.conv}% ${s.conv<=1.5?'(realista)':s.conv<=2?'(bom)':s.conv<=3?'(muito bom)':'(raro)'}</td>
+      <td>${s.vendas.toFixed(1)}</td><td>${fmt(s.receita)}</td>
+      <td class="${s.lucro>=0?'pos':'neg'}">${s.lucro>=0?'+':''}${fmt(s.lucro)}</td></tr>`).join('')}</table>
+    <div class="note-box">⚖️ Se até a linha de <strong>2%</strong> for vermelho, dificilmente dá lucro. Se <strong>1,5%</strong> já é verde, candidato forte.</div>`;
+}
+
+/* ---------- CHECKLIST DE COMPLIANCE ---------- */
+function renderChecklist(id) {
+  const p = produtos.find(x => x.id === id);
+  const box = document.getElementById('detail-' + id);
+  const jaAberto = box.dataset.mode === 'check' && box.classList.contains('open');
+  if (jaAberto) { box.classList.remove('open'); box.innerHTML = ''; box.dataset.mode=''; return; }
+  box.classList.add('open'); box.dataset.mode = 'check';
+  const ok = checklistOk(p);
+  box.innerHTML = `
+    <h4>🛡️ Este produto pode ser anunciado como afiliado no Google Ads?</h4>
+    <div class="check-list">
+      ${CHECKS.map(c => `
+        <label class="check-item">
+          <input type="checkbox" data-act="checkitem" data-id="${p.id}" data-k="${c.k}" ${p.checklist[c.k]?'checked':''}>
+          <span>${c.t}</span>
+        </label>`).join('')}
+    </div>
+    <div class="check-veredicto ${ok?'check-ok':'check-nok'}" id="checkverd-${p.id}">
+      ${ok ? '✅ LIBERADO — este produto pode ir pra Testando/Rodando' : '⛔ AINDA NÃO — complete os itens antes de anunciar (proteção anti-ban)'}
+    </div>`;
+}
+
+/* ---------- EM ANDAMENTO ---------- */
+function renderAndamento() {
+  const wrap = document.getElementById('cards-andamento');
+  wrap.innerHTML = '';
+  const lista = produtos.filter(p => ['Testando','Rodando','Pausado'].includes(p.status));
+  document.getElementById('empty-andamento').style.display = lista.length ? 'none' : 'block';
+
+  // strip agregado
+  const strip = document.getElementById('strip-andamento');
+  if (lista.length) {
+    const tot = lista.reduce((a,p)=>{ const r=reais(p); a.g+=r.gasto; a.v+=r.vendas; a.l+=r.lucro; return a; },{g:0,v:0,l:0});
+    strip.innerHTML = `
+      <div class="chip"><div class="v">${lista.length}</div><div class="l">produtos ativos</div></div>
+      <div class="chip"><div class="v">${fmt(tot.g)}</div><div class="l">gasto total</div></div>
+      <div class="chip"><div class="v">${tot.v}</div><div class="l">vendas</div></div>
+      <div class="chip"><div class="v ${tot.l>=0?'pos':'neg'}">${tot.l>=0?'+':''}${fmt(tot.l)}</div><div class="l">resultado</div></div>`;
+  } else strip.innerHTML = '';
+
+  lista.forEach(p => {
+    const c = calc(p), r = reais(p);
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <h3 style="margin-top:4px;">${p.nome}</h3>
+      <div class="meta">${p.plataforma} · comissão ${fmt(c.comissaoBRL)}</div>
+      <div class="status-row"><span class="status-badge st-${p.status}">${p.status}</span>${statusSelect(p)}</div>
+      <div class="kpis">
+        <div class="kpi"><div class="v">${fmt(r.gasto)}</div><div class="l">gasto real</div></div>
+        <div class="kpi"><div class="v">${r.cliques}</div><div class="l">cliques reais</div></div>
+        <div class="kpi ${r.vendas>0?'good':''}"><div class="v">${r.vendas}</div><div class="l">vendas</div></div>
+        <div class="kpi ${r.lucro>=0?'good':'bad'}"><div class="v">${r.lucro>=0?'+':''}${fmt(r.lucro)}</div><div class="l">lucro/prejuízo</div></div>
+      </div>
+      <div class="card-actions">
+        <button class="btn small" data-act="lanc" data-id="${p.id}">➕ Registrar resultado</button>
+        <button class="btn ghost small" data-act="real" data-id="${p.id}">📈 Estimado × Real</button>
+        <button class="btn ghost small" data-act="export1" data-id="${p.id}">📤</button>
+      </div>
+      <div class="detail" id="detail-${p.id}"></div>`;
+    wrap.appendChild(card);
+  });
+}
+
+/* Form de lançamento de resultado */
+function renderLanc(id) {
+  const box = document.getElementById('detail-' + id);
+  const jaAberto = box.dataset.mode === 'lanc' && box.classList.contains('open');
+  if (jaAberto) { box.classList.remove('open'); box.innerHTML=''; box.dataset.mode=''; return; }
+  box.classList.add('open'); box.dataset.mode = 'lanc';
+  const hoje = new Date().toISOString().slice(0,10);
+  box.innerHTML = `
+    <h4>➕ Registrar resultado do período</h4>
+    <div class="grid">
+      <div><label>Data</label><input type="date" id="l_data-${id}" value="${hoje}"></div>
+      <div><label>Gasto no período (R$)</label><input type="number" step="0.01" id="l_gasto-${id}" placeholder="Ex: 70"></div>
+      <div><label>Cliques no período</label><input type="number" id="l_cliques-${id}" placeholder="Ex: 35"></div>
+      <div><label>Vendas no período</label><input type="number" id="l_vendas-${id}" placeholder="Ex: 1"></div>
+    </div>
+    <div class="form-actions"><button class="btn small" data-act="lancsave" data-id="${id}">Salvar registro</button></div>
+    <div class="hint" style="margin-top:8px;">Dica: registre 1x por semana. Pega os números no Google Ads (gasto e cliques) e na plataforma (vendas).</div>`;
+}
+async function saveLanc(id) {
+  const p = produtos.find(x => x.id === id);
+  const g = parseFloat(document.getElementById('l_gasto-'+id).value) || 0;
+  const cl = parseInt(document.getElementById('l_cliques-'+id).value) || 0;
+  const v = parseInt(document.getElementById('l_vendas-'+id).value) || 0;
+  const d = document.getElementById('l_data-'+id).value;
+  if (!g && !cl && !v) { alert('Preenche pelo menos um número 😉'); return; }
+  p.lancamentos.push({ data: d, gasto: g, cliques: cl, vendas: v });
+  await saveData(); renderAll();
+}
+
+/* Estimado × Real + Previsão */
+function renderReal(id) {
+  const p = produtos.find(x => x.id === id);
+  const box = document.getElementById('detail-' + id);
+  const jaAberto = box.dataset.mode === 'real' && box.classList.contains('open');
+  if (jaAberto) { box.classList.remove('open'); box.innerHTML=''; box.dataset.mode=''; return; }
+  box.classList.add('open'); box.dataset.mode = 'real';
+  const c = calc(p), r = reais(p);
+  if (!r.n) { box.innerHTML = '<div class="note-box">Ainda não há registros. Use "➕ Registrar resultado" primeiro.</div>'; return; }
+
+  // Previsão 30 dias com base no ritmo real
+  const datas = p.lancamentos.map(l => l.data).sort();
+  const d1 = new Date(datas[0]), d2 = new Date(datas[datas.length-1]);
+  const dias = Math.max(1, Math.round((d2 - d1) / 86400000) + 1);
+  const f = 30 / dias;
+  const prev = { gasto: r.gasto*f, vendas: r.vendas*f, receita: r.receita*f, lucro: r.lucro*f };
+
+  box.innerHTML = `
+    <h4>📈 Estimado × Real</h4>
+    <table>
+      <tr><th>Métrica</th><th>Estimado</th><th>Real</th></tr>
+      <tr><td>CPC</td><td>${fmt(c.cpc)}</td><td class="${r.cpcReal<=c.cpc?'pos':'neg'}">${r.cliques?fmt(r.cpcReal):'—'}</td></tr>
+      <tr><td>Conversão</td><td>${c.convNecessaria.toFixed(1)}% (p/ empatar)</td><td class="${r.convReal>=c.convNecessaria?'pos':'neg'}">${r.cliques?r.convReal.toFixed(1)+'%':'—'}</td></tr>
+      <tr><td>ROI</td><td>—</td><td class="${r.roi>=0?'pos':'neg'}">${r.roi.toFixed(0)}%</td></tr>
+    </table>
+    <div class="note-box">${
+      r.convReal >= c.convNecessaria
+        ? '✅ <strong>A conversão real está ACIMA da necessária.</strong> Este produto está pagando a conta. Candidato a escalar.'
+        : r.cliques < 50
+          ? '⏳ Ainda é cedo (' + r.cliques + ' cliques). Régua honesta: ~100 cliques antes de qualquer veredito.'
+          : '🔴 <strong>Conversão real abaixo da necessária com amostra razoável.</strong> Ajustar página/keywords ou considerar pausar.'
+    }</div>
+    <h4>🔮 Previsão 30 dias (no ritmo atual de ${dias} dia(s) registrados)</h4>
+    <table>
+      <tr><th>Gasto</th><th>Vendas</th><th>Receita</th><th>Resultado</th></tr>
+      <tr><td>${fmt(prev.gasto)}</td><td>${prev.vendas.toFixed(1)}</td><td>${fmt(prev.receita)}</td>
+      <td class="${prev.lucro>=0?'pos':'neg'}">${prev.lucro>=0?'+':''}${fmt(prev.lucro)}</td></tr>
+    </table>
+    <h4>🗂 Registros (${r.n})</h4>
+    <table>
+      <tr><th>Data</th><th>Gasto</th><th>Cliques</th><th>Vendas</th><th></th></tr>
+      ${p.lancamentos.map((l,i)=>`<tr><td>${l.data}</td><td>${fmt(+l.gasto)}</td><td>${l.cliques}</td><td>${l.vendas}</td>
+        <td><button class="btn danger small" data-act="lancdel" data-id="${id}" data-i="${i}">🗑</button></td></tr>`).join('')}
+    </table>`;
+}
+
+/* ---------- COMPARADOR ---------- */
+function renderVS() {
+  const a = document.getElementById('vsA'), b = document.getElementById('vsB');
+  const opts = produtos.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+  const va = a.value, vb = b.value;
+  a.innerHTML = '<option value="">— produto A —</option>' + opts;
+  b.innerHTML = '<option value="">— produto B —</option>' + opts;
+  if (va) a.value = va; if (vb) b.value = vb;
+  drawVS();
+}
+function drawVS() {
+  const out = document.getElementById('vs-out');
+  const pa = produtos.find(x => x.id === document.getElementById('vsA').value);
+  const pb = produtos.find(x => x.id === document.getElementById('vsB').value);
+  if (!pa || !pb) { out.innerHTML = '<div class="empty"><div class="big">⚔️</div>Escolha dois produtos pra botar na balança.</div>'; return; }
+  const ca = calc(pa), cb = calc(pb);
+  const ra = reais(pa), rb = reais(pb);
+  const row = (nome, va, vb, melhor, fmtFn) => {
+    const f = fmtFn || (x => x);
+    const aWin = melhor === 'a', bWin = melhor === 'b';
+    return `<tr><td>${nome}</td><td class="${aWin?'win':''}">${f(va)}</td><td class="${bWin?'win':''}">${f(vb)}</td></tr>`;
+  };
+  const m = (x,y,menorMelhor) => x===y ? '' : ((x<y) === !!menorMelhor ? 'a' : 'b');
+  out.innerHTML = `
+    <table class="vs-table">
+      <tr><th></th><th>${pa.nome}</th><th>${pb.nome}</th></tr>
+      ${row('Nota geral', ca.nota, cb.nota, m(ca.nota,cb.nota,false))}
+      ${row('Veredito', ca.veredito, cb.veredito, '')}
+      ${row('Comissão real', ca.comissaoBRL, cb.comissaoBRL, m(ca.comissaoBRL,cb.comissaoBRL,false), fmt)}
+      ${row('CPC estimado', ca.cpc, cb.cpc, m(ca.cpc,cb.cpc,true), fmt)}
+      ${row('Cliques p/ empatar', +ca.cliquesEmpate.toFixed(0), +cb.cliquesEmpate.toFixed(0), m(ca.cliquesEmpate,cb.cliquesEmpate,false))}
+      ${row('Conversão p/ empatar', ca.convNecessaria.toFixed(1)+'%', cb.convNecessaria.toFixed(1)+'%', m(ca.convNecessaria,cb.convNecessaria,true))}
+      ${row('Volume de busca', ca.volume.toLocaleString('pt-BR'), cb.volume.toLocaleString('pt-BR'), m(ca.volume,cb.volume,false))}
+      ${row('Status', pa.status, pb.status, '')}
+      ${row('Vendas reais', ra.vendas, rb.vendas, m(ra.vendas,rb.vendas,false))}
+      ${row('Lucro real', ra.lucro, rb.lucro, m(ra.lucro,rb.lucro,false), fmt)}
+    </table>
+    <div class="note-box">Verde = leva a melhor naquela linha. Lembra: <strong>nota geral</strong> pesa viabilidade (60), volume (30) e concorrência (10).</div>`;
+}
+document.getElementById('vsA').addEventListener('change', drawVS);
+document.getElementById('vsB').addEventListener('change', drawVS);
+
+/* ---------- BACKUP / EXPORT ---------- */
+function baixarJSON(dados, nome) {
+  const blob = new Blob([JSON.stringify(dados, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = nome; a.click();
+  URL.revokeObjectURL(a.href);
+}
+function exportarBackup() {
+  baixarJSON(produtos, 'central-afiliado-backup-' + new Date().toISOString().slice(0,10) + '.json');
+}
+function exportarProduto(id) {
+  const p = produtos.find(x => x.id === id);
+  if (!p) return;
+  baixarJSON([p], 'produto-' + p.nome.toLowerCase().replace(/[^a-z0-9]+/g,'-') + '.json');
+}
+function importarBackup(ev) {
+  const file = ev.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async e => {
+    try {
+      let dados = JSON.parse(e.target.result);
+      if (!Array.isArray(dados)) dados = [dados];
+      if (!dados.length || !dados[0].nome) throw new Error('x');
+      let add = 0, upd = 0;
+      dados.forEach(novo => {
+        if (!novo.status) novo.status = 'Analisando';
+        if (!novo.checklist) novo.checklist = {};
+        if (!novo.lancamentos) novo.lancamentos = [];
+        const i = produtos.findIndex(x => x.id === novo.id);
+        if (i >= 0) { produtos[i] = novo; upd++; }
+        else { if (!novo.id) novo.id = Date.now().toString(36)+Math.random().toString(36).slice(2,5); produtos.push(novo); add++; }
+      });
+      await saveData(); renderAll();
+      alert('Importado ✅ ' + add + ' adicionado(s), ' + upd + ' atualizado(s). Nada foi apagado.');
+    } catch (err) { alert('Arquivo inválido.'); }
+    ev.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+/* ---------- FORM PRODUTO ---------- */
+const $ = id => document.getElementById(id);
+const fields = ['nome','plataforma','mercado','moeda','cotacao','ticket','pct','comdireta','cpc','volume','conc','gravity','pagina','notas'];
+function openForm(p) {
+  editingId = p ? p.id : null;
+  $('formTitle').textContent = p ? 'Editar produto' : 'Novo produto';
+  fields.forEach(f => { $('f_'+f).value = p ? (p[f] ?? '') : ($('f_'+f).tagName==='SELECT' ? $('f_'+f).options[0].value : ''); });
+  if (!p) $('f_cotacao').value = '5.18';
+  $('formPanel').classList.add('open');
+  $('f_nome').focus();
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+function closeForm() { $('formPanel').classList.remove('open'); editingId = null; }
+$('btnNew').onclick = () => openForm(null);
+$('btnCancel').onclick = closeForm;
+$('btnSave').onclick = async () => {
+  const nome = $('f_nome').value.trim();
+  const cpc = parseFloat($('f_cpc').value);
+  if (!nome) { alert('Dá um nome pro produto 😉'); return; }
+  if (!cpc || cpc <= 0) { alert('O CPC estimado é obrigatório — sem ele nenhuma conta funciona.'); return; }
+  const data = {}; fields.forEach(f => data[f] = $('f_'+f).value);
+  if (editingId) {
+    const i = produtos.findIndex(x => x.id === editingId);
+    produtos[i] = { ...produtos[i], ...data };
+  } else {
+    produtos.push({ id: Date.now().toString(36), status: 'Analisando', checklist: {}, lancamentos: [], ...data });
+  }
+  await saveData(); closeForm(); renderAll();
+};
+
+/* ---------- TABS ---------- */
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
+  t.classList.add('active');
+  document.getElementById('view-' + t.dataset.view).classList.add('active');
+});
+
+/* ---------- AÇÕES GLOBAIS ---------- */
+document.body.addEventListener('click', async e => {
+  const btn = e.target.closest('button, input[type=checkbox]'); if (!btn) return;
+  const { act, id } = btn.dataset || {};
+  if (!act) return;
+  if (act === 'detail') { const b = document.getElementById('detail-'+id); b.dataset.mode='sim'; renderDetail(id); }
+  if (act === 'check') renderChecklist(id);
+  if (act === 'export1') exportarProduto(id);
+  if (act === 'edit') openForm(produtos.find(x => x.id === id));
+  if (act === 'sim') runSim(id);
+  if (act === 'lanc') renderLanc(id);
+  if (act === 'lancsave') saveLanc(id);
+  if (act === 'real') renderReal(id);
+  if (act === 'lancdel') {
+    const p = produtos.find(x => x.id === id);
+    p.lancamentos.splice(parseInt(btn.dataset.i), 1);
+    await saveData(); renderAll();
+  }
+  if (act === 'del') {
+    const p = produtos.find(x => x.id === id);
+    if (confirm('Excluir "' + p.nome + '"? Essa ação não volta.')) {
+      produtos = produtos.filter(x => x.id !== id);
+      await saveData(); renderAll();
+    }
+  }
+  if (act === 'checkitem') {
+    const p = produtos.find(x => x.id === id);
+    p.checklist[btn.dataset.k] = btn.checked;
+    await saveData();
+    const ok = checklistOk(p);
+    const verd = document.getElementById('checkverd-' + id);
+    if (verd) {
+      verd.className = 'check-veredicto ' + (ok ? 'check-ok' : 'check-nok');
+      verd.innerHTML = ok ? '✅ LIBERADO — este produto pode ir pra Testando/Rodando' : '⛔ AINDA NÃO — complete os itens antes de anunciar (proteção anti-ban)';
+    }
+    renderGarimpo(); // atualiza a flag do card
+    // reabre o checklist que o renderGarimpo fechou
+    const box = document.getElementById('detail-' + id);
+    if (box && !box.classList.contains('open')) renderChecklist(id);
+  }
+});
+
+/* Mudança de status com trava do checklist */
+document.body.addEventListener('change', async e => {
+  const sel = e.target.closest('select[data-act=status]'); if (!sel) return;
+  const p = produtos.find(x => x.id === sel.dataset.id);
+  const novo = sel.value;
+  if ((novo === 'Testando' || novo === 'Rodando') && !checklistOk(p)) {
+    alert('⛔ Trava de segurança: complete o Checklist (🛡️) antes de colocar este produto pra rodar. É sua proteção contra ban.');
+    sel.value = p.status;
+    return;
+  }
+  p.status = novo;
+  await saveData(); renderAll();
+});
+
+loadData();
+</script>
+</body>
+</html>
