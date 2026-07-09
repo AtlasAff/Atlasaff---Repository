@@ -5,6 +5,37 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TubeMagic — AI Tools for YouTube Creators | Write Scripts in Seconds</title>
 <meta name="description" content="TubeMagic is the AI toolkit built for YouTube creators: video ideas, full scripts, keyword research, and upload optimization — all in one place.">
+
+<!--
+  ✅ PEDRO — TAG BASE: montei ela aqui usando o ID que já veio no teu snippet (AW-18199435969).
+  Não precisa mais caçar no painel — o formato é padrão do Google, sempre igual.
+-->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-18199435969"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'AW-18199435969');
+</script>
+
+<!-- Event snippet for Compra conversion page -->
+<script>
+function gtag_report_conversion(url) {
+  var callback = function () {
+    if (typeof(url) != 'undefined') {
+      window.location = url;
+    }
+  };
+  gtag('event', 'conversion', {
+      'send_to': 'AW-18199435969/vCZpCNCUq8ccEMG1leZD',
+      'value': 1.0,
+      'currency': 'BRL',
+      'transaction_id': '',
+      'event_callback': callback
+  });
+  return false;
+}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
@@ -215,7 +246,7 @@
       <a href="#pricing">Pricing</a>
       <a href="#faq">FAQ</a>
     </div>
-    <a href="https://www.checkout-ds24.com/product/540531?aff=atlasaff" class="btn btn-primary" style="padding:10px 20px; font-size:14px;">Get Started</a>
+    <a href="https://www.checkout-ds24.com/product/540531?aff=atlasaff" onclick="gtag_report_conversion(this.href); return false;" class="btn btn-primary" style="padding:10px 20px; font-size:14px;">Get Started</a>
   </div>
 </header>
 
@@ -226,7 +257,7 @@
       <h1>Stop staring at a<br>blank script. <span>Start publishing.</span></h1>
       <p class="lead">TubeMagic turns hours of scripting, keyword research, and title guesswork into a workflow that takes minutes — so you can focus on filming, not formatting.</p>
       <div class="hero-ctas">
-        <a href="https://www.checkout-ds24.com/product/540531?aff=atlasaff" class="btn btn-primary">Try TubeMagic →</a>
+        <a href="https://www.checkout-ds24.com/product/540531?aff=atlasaff" onclick="gtag_report_conversion(this.href); return false;" class="btn btn-primary">Try TubeMagic →</a>
         <a href="#how" class="btn btn-ghost">See how it works</a>
       </div>
       <div class="hero-note">30-day money-back guarantee · Cancel anytime</div>
@@ -375,7 +406,7 @@
         <div class="plan">Monthly</div>
         <div class="amount">$47<span>/month</span></div>
         <div class="sub">Billed monthly. Cancel anytime.</div>
-        <a href="https://www.checkout-ds24.com/product/540531?aff=atlasaff" class="btn btn-ghost">Start monthly</a>
+        <a href="https://www.checkout-ds24.com/product/540531?aff=atlasaff" onclick="gtag_report_conversion(this.href); return false;" class="btn btn-ghost">Start monthly</a>
         <ul class="price-list">
           <li>Unlimited script generation</li>
           <li>Keyword & competition research</li>
@@ -388,7 +419,7 @@
         <div class="plan">Yearly</div>
         <div class="amount">$39<span>/month</span></div>
         <div class="sub">Billed as $497/year.</div>
-        <a href="https://www.checkout-ds24.com/product/540531?aff=atlasaff" class="btn btn-primary">Start yearly</a>
+        <a href="https://www.checkout-ds24.com/product/540531?aff=atlasaff" onclick="gtag_report_conversion(this.href); return false;" class="btn btn-primary">Start yearly</a>
         <ul class="price-list">
           <li>Everything in Monthly</li>
           <li>Lower effective monthly price</li>
@@ -440,7 +471,7 @@
     <div class="final-cta">
       <h2>Your next video shouldn't take all afternoon.</h2>
       <p>Join the creators who traded the blank page for a finished script in minutes.</p>
-      <a href="https://www.checkout-ds24.com/product/540531?aff=atlasaff" class="btn btn-primary" style="padding:16px 34px; font-size:16px;">Get Started with TubeMagic →</a>
+      <a href="https://www.checkout-ds24.com/product/540531?aff=atlasaff" onclick="gtag_report_conversion(this.href); return false;" class="btn btn-primary" style="padding:16px 34px; font-size:16px;">Get Started with TubeMagic →</a>
     </div>
   </div>
 </section>
