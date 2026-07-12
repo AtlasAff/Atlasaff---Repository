@@ -18,21 +18,22 @@
   gtag('config', 'AW-18199435969');
 </script>
 
-<!-- Event snippet for Compra conversion page -->
+<!-- Event snippet for Compra conversion page
+     🔧 CORRIGIDO em 12/jul: a versão anterior esperava um "callback" assíncrono antes
+     de redirecionar, e Safari/Brave bloqueavam isso como se fosse pop-up. Agora o
+     redirecionamento acontece na hora do clique (síncrono), e o sinal de conversão
+     é enviado em paralelo sem travar nada. Funciona em qualquer navegador. -->
 <script>
 function gtag_report_conversion(url) {
-  var callback = function () {
-    if (typeof(url) != 'undefined') {
-      window.location = url;
-    }
-  };
   gtag('event', 'conversion', {
       'send_to': 'AW-18199435969/vCZpCNCUq8ccEMG1leZD',
       'value': 1.0,
       'currency': 'BRL',
-      'transaction_id': '',
-      'event_callback': callback
+      'transaction_id': ''
   });
+  if (typeof(url) != 'undefined') {
+    window.location = url;
+  }
   return false;
 }
 </script>
