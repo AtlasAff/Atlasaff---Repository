@@ -3,6 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Event snippet for Compra (1) conversion page
+In your html page, add the snippet and call gtag_report_conversion when someone clicks on the chosen link or button. -->
+<script>
+function gtag_report_conversion(url) {
+  var callback = function () {
+    if (typeof(url) != 'undefined') {
+      window.location = url;
+    }
+  };
+  gtag('event', 'conversion', {
+      'send_to': 'AW-18199435969/rvjOCJL6480cEMG1leZD',
+      'value': 1.0,
+      'currency': 'BRL',
+      'transaction_id': '',
+      'event_callback': callback
+      // 'new_customer': true /* calculate dynamically, populate with true/false */,
+  });
+  return false;
+}
+</script>
+
 <title>PhotoKit Review — Is the AI Photo Editor Worth It? (2026 Hands-On Look)</title>
 <meta name="description" content="A practical look at PhotoKit, the browser-based AI photo editor: what it does well, who it's for, how it compares to Canva and Photoshop, and whether the one-time price holds up.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
