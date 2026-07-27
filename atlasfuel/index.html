@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Atlas // Fuel</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg: #0A0D12;
+  --panel: #12161D;
+  --panel-alt: #181D26;
+  --border: #232A35;
+  --accent: #2DE3C7;
+  --warn: #FFB020;
+  --danger: #FF3D71;
+  --macro-protein: #2DE3C7;
+  --macro-carb: #FFB020;
+  --macro-fat: #FF3D71;
+  --text: #E7ECEF;
+  --text-muted: #6E7887;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; padding-bottom: 40px; }
+.app-shell { max-width: 480px; margin: 0 auto; padding: 20px 16px 40px; }
+.app-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+.eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.12em; color: var(--accent); }
+.brand-name { font-family: 'JetBrains Mono', monospace; font-size: 26px; font-weight: 700; letter-spacing: 0.04em; }
+.icon-btn { background: var(--panel-alt); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 8px; display: inline-flex; align-items: center; cursor: pointer; }
+.icon-btn:hover { border-color: var(--accent); }
+.icon-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+.tab-bar { display: flex; gap: 6px; margin-bottom: 16px; background: var(--panel-alt); padding: 4px; border-radius: 10px; border: 1px solid var(--border); }
+.tab { flex: 1; background: transparent; border: none; color: var(--text-muted); font-family: 'Inter', sans-serif; font-weight: 600; font-size: 13px; padding: 8px; border-radius: 7px; cursor: pointer; }
+.tab.active { background: var(--panel); color: var(--accent); }
+.save-error { background: rgba(255,61,113,0.1); border: 1px solid var(--danger); color: var(--danger); font-size: 12px; padding: 8px 10px; border-radius: 8px; margin-bottom: 12px; }
+.date-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.date-label { font-family: 'JetBrains Mono', monospace; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+.today-badge { background: var(--accent); color: #06110D; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; letter-spacing: 0.05em; }
+.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 14px; }
+.panel-title { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 0.05em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 12px; }
+.gauge-panel { display: flex; align-items: center; justify-content: center; padding: 24px 18px; }
+.gauge-wrap { position: relative; width: 220px; height: 220px; }
+.gauge-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.gauge-num { font-family: 'JetBrains Mono', monospace; font-size: 42px; font-weight: 700; line-height: 1; }
+.gauge-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.gauge-remaining { font-family: 'JetBrains Mono', monospace; font-size: 12px; margin-top: 8px; font-weight: 500; }
+.macros-panel { display: flex; flex-direction: column; gap: 14px; }
+.macro-row { display: flex; align-items: center; gap: 10px; }
+.macro-label { display: flex; align-items: center; gap: 6px; font-size: 12px; width: 90px; flex-shrink: 0; color: var(--text-muted); }
+.macro-bar-track { flex: 1; height: 8px; background: var(--panel-alt); border-radius: 4px; overflow: hidden; }
+.macro-bar-fill { height: 100%; border-radius: 4px; transition: width .3s ease; }
+.macro-vals { font-family: 'JetBrains Mono', monospace; font-size: 12px; width: 90px; text-align: right; flex-shrink: 0; }
+.macro-goal { color: var(--text-muted); }
+.mode-toggle { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; font-size: 13px; font-weight: 500; }
+.toggle-buttons { display: flex; gap: 6px; }
+.toggle-btn { background: var(--panel-alt); border: 1px solid var(--border); color: var(--text-muted); border-radius: 7px; padding: 6px 10px; font-size: 12px; cursor: pointer; }
+.toggle-btn.active { border-color: var(--accent); color: var(--accent); }
+.food-input { background: var(--panel-alt); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 9px 10px; font-family: 'Inter', sans-serif; font-size: 13px; width: 100%; }
+.food-input:focus { outline: none; border-color: var(--accent); }
+.food-form { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.food-input.name, .btn-add.full { grid-column: 1 / -1; }
+.empty-state { color: var(--text-muted); font-size: 13px; padding: 12px 0; text-align: center; }
+.food-list { display: flex; flex-direction: column; gap: 8px; }
+.food-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--panel-alt); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+.food-item-name { font-size: 13px; font-weight: 500; flex: 1; }
+.food-item-macros { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+.dim { color: var(--text-muted); }
+.search-wrap { position: relative; margin-bottom: 10px; }
+.suggestion-list { position: absolute; top: 100%; left: 0; right: 0; background: var(--panel-alt); border: 1px solid var(--border); border-radius: 8px; margin-top: 4px; max-height: 220px; overflow-y: auto; z-index: 10; }
+.suggestion-item { padding: 10px 12px; cursor: pointer; font-size: 13px; display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--border); }
+.suggestion-item:last-child { border-bottom: none; }
+.suggestion-item:hover { background: var(--panel); color: var(--accent); }
+.suggestion-item .s-macro { color: var(--text-muted); font-family: 'JetBrains Mono', monospace; font-size: 11px; flex-shrink: 0; }
+.selected-food-box { background: var(--panel-alt); border: 1px solid var(--accent); border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+.selected-food-name { font-weight: 600; font-size: 13px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+.qty-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+.qty-row .food-input { flex: 1; }
+.unit-select { background: var(--panel); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 9px 8px; font-size: 13px; }
+.preview-macros { display: flex; gap: 12px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+.preview-macros b { color: var(--text); }
+.weight-form { display: flex; gap: 8px; margin-bottom: 14px; }
+.weight-form .food-input { flex: 1; }
+.history-list { display: flex; flex-direction: column; gap: 8px; }
+.history-row { display: flex; align-items: center; gap: 10px; }
+.history-date { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-muted); width: 40px; flex-shrink: 0; }
+.history-bar-track { flex: 1; height: 8px; background: var(--panel-alt); border-radius: 4px; overflow: hidden; }
+.history-bar-fill { height: 100%; border-radius: 4px; }
+.history-kcal { font-family: 'JetBrains Mono', monospace; font-size: 11px; width: 44px; text-align: right; flex-shrink: 0; }
+.btn-primary { background: var(--accent); color: #06110D; border: none; border-radius: 9px; padding: 10px 16px; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text-muted); border-radius: 9px; padding: 10px 16px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+.onboard-wrap { max-width: 480px; margin: 0 auto; padding: 24px 16px 40px; }
+.onboard-card { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 22px; }
+.onboard-title { font-family: 'JetBrains Mono', monospace; font-size: 22px; margin: 6px 0 4px; }
+.onboard-sub { color: var(--text-muted); font-size: 13px; margin-bottom: 18px; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.field { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--text-muted); }
+.field-wide { grid-column: 1 / -1; }
+.field input, .field select { background: var(--panel-alt); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 9px 10px; font-family: 'Inter', sans-serif; font-size: 13px; }
+.field input:focus, .field select:focus { outline: none; border-color: var(--accent); }
+.divider { height: 1px; background: var(--border); margin: 16px 0; }
+.onboard-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+.food-db-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--panel-alt); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+.food-db-name { font-size: 13px; font-weight: 500; }
+.food-db-macro { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-muted); }
+.custom-tag { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--accent); border: 1px solid var(--accent); border-radius: 4px; padding: 1px 5px; margin-left: 6px; }
+.builtin-tag { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-muted); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; margin-left: 6px; }
+.svg-icon { width: 15px; height: 15px; }
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+// ---------------- storage helpers ----------------
+const LS = {
+  get(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (e) { return fallback; }
+  },
+  set(key, val) {
+    try { localStorage.setItem(key, JSON.stringify(val)); return true; }
+    catch (e) { return false; }
+  }
+};
+
+// ---------------- constants ----------------
+const ACTIVITY = [
+  { key: "sedentario", label: "Sedentário (pouco ou nenhum exercício)", factor: 1.2 },
+  { key: "leve", label: "Leve (1-3x/semana)", factor: 1.375 },
+  { key: "moderado", label: "Moderado (3-5x/semana)", factor: 1.55 },
+  { key: "intenso", label: "Intenso (6-7x/semana)", factor: 1.725 },
+  { key: "muito_intenso", label: "Muito intenso (2x/dia, trabalho físico)", factor: 1.9 },
+];
+const GOALS = [
+  { key: "emagrecer", label: "Emagrecer", delta: -500 },
+  { key: "manter", label: "Manter peso", delta: 0 },
+  { key: "ganhar", label: "Ganhar massa", delta: 300 },
+];
+
+// Fallback list used ONLY if foods.json can't be loaded (e.g. opening the file directly
+// with file:// instead of through a real server). The real, editable list lives in foods.json.
+const FALLBACK_FOODS = [
+  ["Arroz branco cozido", 128, 2.5, 28, 0.2],
+  ["Feijão carioca cozido", 76, 4.8, 13.6, 0.5],
+  ["Peito de frango grelhado", 159, 32, 0, 3.6],
+  ["Ovo cozido", 155, 13, 1.1, 11],
+  ["Pão francês", 300, 8, 58, 3],
+  ["Banana prata", 98, 1.3, 26, 0.1],
+].map((f, i) => ({ name: f[0], kcal100: f[1], protein100: f[2], carb100: f[3], fat100: f[4] }));
+
+const SETTINGS_KEY = "atlas_settings";
+const DIARY_KEY = "atlas_food_diary";
+const WEIGHT_KEY = "atlas_weight_log";
+const FOODDB_KEY = "atlas_custom_foods"; // only the user's own custom foods live here now
+
+// ---------------- state ----------------
+let settings = LS.get(SETTINGS_KEY, null);
+let foodDiary = LS.get(DIARY_KEY, {});
+let weightLog = LS.get(WEIGHT_KEY, []);
+let customFoods = LS.get(FOODDB_KEY, []);
+let builtinFoods = [];
+let foodDbLoading = true;
+let foodDb = []; // builtinFoods + customFoods, rebuilt by rebuildFoodDb()
+
+function rebuildFoodDb() {
+  foodDb = [
+    ...builtinFoods.map((f, i) => ({ id: "b_" + String(i + 1).padStart(3, "0"), custom: false, ...f })),
+    ...customFoods,
+  ];
+}
+
+async function loadBuiltinFoods() {
+  try {
+    const res = await fetch("./foods.json");
+    if (!res.ok) throw new Error("fetch failed");
+    builtinFoods = await res.json();
+  } catch (e) {
+    // foods.json not reachable (e.g. opened as a local file:// instead of served over http) — use small fallback
+    builtinFoods = FALLBACK_FOODS;
+  }
+  foodDbLoading = false;
+  rebuildFoodDb();
+  render();
+}
+
+let tab = "hoje";
+let selectedDate = todayStr();
+let showSettingsScreen = !settings;
+let saveError = "";
+
+let addMode = "db"; // 'db' | 'manual'
+let searchQuery = "";
+let selectedFoodId = null;
+let qty = "";
+let qtyUnit = "g";
+let manualForm = { name: "", kcal: "", protein: "", carb: "", fat: "" };
+
+let newFoodForm = { name: "", kcal100: "", protein100: "", carb100: "", fat100: "" };
+let newFoodFormError = "";
+let showNewFoodForm = false;
+let foodTabSearch = "";
+
+let onboardForm = settings ? { ...settings } : {
+  sex: "m", age: 23, heightCm: 175, weightKg: 75, activity: "leve", goal: "emagrecer",
+  calorieMode: "auto", manualCalories: 2000, macroMode: "auto", manualProtein: 150, manualCarb: 200, manualFat: 60,
+};
+
+// ---------------- helpers ----------------
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+function fmtDatePt(d) { const [y, m, dd] = d.split("-"); return `${dd}/${m}/${y}`; }
+function addDays(d, n) { const dt = new Date(d + "T00:00:00"); dt.setDate(dt.getDate() + n); return dt.toISOString().slice(0, 10); }
+function round(n) { return Math.round(n); }
+
+function calcTDEE(weightKg, heightCm, age, sex, factor) {
+  const base = sex === "f" ? 10 * weightKg + 6.25 * heightCm - 5 * age - 161 : 10 * weightKg + 6.25 * heightCm - 5 * age + 5;
+  return round(base * factor);
+}
+function calcMacros(calories, weightKg) {
+  const proteinG = round(weightKg * 1.8);
+  const proteinCal = proteinG * 4;
+  const fatCal = calories * 0.25;
+  const fatG = round(fatCal / 9);
+  const carbCal = Math.max(calories - proteinCal - fatCal, 0);
+  const carbG = round(carbCal / 4);
+  return { protein: proteinG, carb: carbG, fat: fatG };
+}
+function latestWeight() {
+  if (weightLog.length === 0) return settings ? Number(settings.weightKg) : 75;
+  return [...weightLog].sort((a, b) => (a.date < b.date ? -1 : 1)).slice(-1)[0].weight;
+}
+function calorieGoal() {
+  if (!settings) return 2000;
+  if (settings.calorieMode === "manual") return Number(settings.manualCalories) || 2000;
+  const factor = ACTIVITY.find(a => a.key === settings.activity)?.factor || 1.375;
+  const tdee = calcTDEE(latestWeight(), Number(settings.heightCm), Number(settings.age), settings.sex, factor);
+  const delta = GOALS.find(g => g.key === settings.goal)?.delta || 0;
+  return Math.max(tdee + delta, 1200);
+}
+function macroGoals() {
+  if (!settings) return { protein: 150, carb: 200, fat: 60 };
+  if (settings.macroMode === "manual") {
+    return { protein: Number(settings.manualProtein) || 0, carb: Number(settings.manualCarb) || 0, fat: Number(settings.manualFat) || 0 };
+  }
+  return calcMacros(calorieGoal(), latestWeight());
+}
+
+function persist(key, val) { LS.set(key, val); }
+
+function safeFocusEnd(el) {
+  try {
+    el.focus();
+    const len = el.value.length;
+    el.setSelectionRange(len, len);
+  } catch (e) {
+    // some input types (e.g. number) don't support setSelectionRange — safe to ignore
+  }
+}
+
+// icons
+const ICONS = {
+  settings: '<svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+  trash: '<svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>',
+  chevLeft: '<svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>',
+  chevRight: '<svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>',
+  plus: '<svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>',
+  x: '<svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>',
+};
+
+// ---------------- render ----------------
+function render() {
+  const root = document.getElementById("root");
+  if (showSettingsScreen) { root.innerHTML = renderOnboard(); attachOnboardEvents(); return; }
+  root.innerHTML = renderApp();
+  attachAppEvents();
+}
+
+function renderGauge(consumed, goal) {
+  const size = 220, stroke = 14, r = (size - stroke) / 2, circ = 2 * Math.PI * r;
+  const pct = goal > 0 ? consumed / goal : 0;
+  const pctClamped = Math.min(pct, 1);
+  const over = consumed > goal;
+  const remaining = goal - consumed;
+  const color = over ? "var(--danger)" : pct > 0.85 ? "var(--warn)" : "var(--accent)";
+  let ticks = "";
+  for (let i = 0; i < 40; i++) {
+    const angle = (i / 40) * 2 * Math.PI - Math.PI / 2;
+    const inner = r - stroke / 2 - 4;
+    const outer = r - stroke / 2 - (i % 5 === 0 ? 12 : 7);
+    const cx = size / 2, cy = size / 2;
+    ticks += `<line x1="${cx + inner * Math.cos(angle)}" y1="${cy + inner * Math.sin(angle)}" x2="${cx + outer * Math.cos(angle)}" y2="${cy + outer * Math.sin(angle)}" stroke="var(--border)" stroke-width="1.5"/>`;
+  }
+  return `
+  <div class="gauge-wrap">
+    <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      ${ticks}
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--panel-alt)" stroke-width="${stroke}"/>
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}" stroke-linecap="round"
+        stroke-dasharray="${circ}" stroke-dashoffset="${circ * (1 - pctClamped)}" transform="rotate(-90 ${size/2} ${size/2})"
+        style="transition: stroke-dashoffset .5s ease, stroke .3s ease"/>
+    </svg>
+    <div class="gauge-center">
+      <div class="gauge-num" style="color:${color}">${round(consumed)}</div>
+      <div class="gauge-sub">de ${round(goal)} kcal</div>
+      <div class="gauge-remaining" style="color:${over ? 'var(--danger)' : 'var(--text-muted)'}">${over ? `+${round(Math.abs(remaining))} acima` : `${round(remaining)} restantes`}</div>
+    </div>
+  </div>`;
+}
+
+function renderMacroBar(label, consumed, goal, color) {
+  const pct = goal > 0 ? Math.min((consumed / goal) * 100, 100) : 0;
+  const over = consumed > goal;
+  return `
+  <div class="macro-row">
+    <div class="macro-label"><span>${label}</span></div>
+    <div class="macro-bar-track"><div class="macro-bar-fill" style="width:${pct}%;background:${over ? 'var(--danger)' : color}"></div></div>
+    <div class="macro-vals"><span style="color:${over ? 'var(--danger)' : 'var(--text)'}">${round(consumed)}g</span><span class="macro-goal"> / ${round(goal)}g</span></div>
+  </div>`;
+}
+
+function renderApp() {
+  const dayEntries = foodDiary[selectedDate] || [];
+  const totals = dayEntries.reduce((acc, e) => ({ kcal: acc.kcal + e.kcal, protein: acc.protein + e.protein, carb: acc.carb + e.carb, fat: acc.fat + e.fat }), { kcal: 0, protein: 0, carb: 0, fat: 0 });
+  const cGoal = calorieGoal();
+  const mGoals = macroGoals();
+
+  let body = "";
+  if (tab === "hoje") {
+    body = `
+    <div class="date-nav">
+      <button class="icon-btn" id="prevDay">${ICONS.chevLeft}</button>
+      <div class="date-label">${fmtDatePt(selectedDate)} ${selectedDate === todayStr() ? '<span class="today-badge">HOJE</span>' : ''}</div>
+      <button class="icon-btn" id="nextDay" ${selectedDate >= todayStr() ? 'style="opacity:.3;pointer-events:none"' : ''}>${ICONS.chevRight}</button>
+    </div>
+    <div class="panel gauge-panel">${renderGauge(totals.kcal, cGoal)}</div>
+    <div class="panel macros-panel">
+      ${renderMacroBar("Proteína", totals.protein, mGoals.protein, "var(--macro-protein)")}
+      ${renderMacroBar("Carboidrato", totals.carb, mGoals.carb, "var(--macro-carb)")}
+      ${renderMacroBar("Gordura", totals.fat, mGoals.fat, "var(--macro-fat)")}
+    </div>
+    <div class="panel">
+      <div class="panel-title">Adicionar alimento</div>
+      <div class="mode-toggle">
+        <span>Modo</span>
+        <div class="toggle-buttons">
+          <button class="toggle-btn ${addMode === 'db' ? 'active' : ''}" id="modeDb">Base de dados</button>
+          <button class="toggle-btn ${addMode === 'manual' ? 'active' : ''}" id="modeManual">Manual</button>
+        </div>
+      </div>
+      ${addMode === "db" ? renderDbAddForm() : renderManualAddForm()}
+    </div>
+    <div class="panel">
+      <div class="panel-title">Refeições do dia (${dayEntries.length})</div>
+      ${dayEntries.length === 0 ? '<div class="empty-state">Nada registrado ainda.</div>' : `
+      <div class="food-list">
+        ${dayEntries.map(e => `
+        <div class="food-item">
+          <div class="food-item-name">${e.name}${e.grams ? ` <span class="dim">(${e.grams}g)</span>` : ''}</div>
+          <div class="food-item-macros"><span>${e.kcal} kcal</span><span class="dim">P ${e.protein}g · C ${e.carb}g · G ${e.fat}g</span></div>
+          <button class="icon-btn danger" data-del-food="${e.id}">${ICONS.trash}</button>
+        </div>`).join("")}
+      </div>`}
+    </div>`;
+  } else if (tab === "progresso") {
+    body = renderProgresso();
+  } else if (tab === "alimentos") {
+    body = renderAlimentos();
+  }
+
+  return `
+  <div class="app-shell">
+    <div class="app-header">
+      <div><div class="eyebrow">PROJETO ATLAS</div><div class="brand-name">FUEL</div></div>
+      <button class="icon-btn" id="openSettings">${ICONS.settings}</button>
+    </div>
+    <nav class="tab-bar">
+      <button class="tab ${tab === 'hoje' ? 'active' : ''}" data-tab="hoje">Hoje</button>
+      <button class="tab ${tab === 'progresso' ? 'active' : ''}" data-tab="progresso">Progresso</button>
+      <button class="tab ${tab === 'alimentos' ? 'active' : ''}" data-tab="alimentos">Alimentos</button>
+    </nav>
+    ${saveError ? `<div class="save-error">${saveError}</div>` : ""}
+    ${body}
+  </div>`;
+}
+
+function renderDbAddForm() {
+  const filtered = searchQuery.trim() ? foodDb.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 8) : [];
+  const selected = foodDb.find(f => f.id === selectedFoodId);
+  let previewHtml = "";
+  if (selected) {
+    const g = Number(qtyUnit === "kg" ? (Number(qty) || 0) * 1000 : (Number(qty) || 0));
+    const k = round(selected.kcal100 * g / 100), p = round(selected.protein100 * g / 100), c = round(selected.carb100 * g / 100), f = round(selected.fat100 * g / 100);
+    previewHtml = `
+    <div class="selected-food-box">
+      <div class="selected-food-name"><span>${selected.name}</span><button class="icon-btn" id="clearSelectedFood">${ICONS.x}</button></div>
+      <div class="qty-row">
+        <input class="food-input" type="text" inputmode="decimal" id="qtyInput" placeholder="Quantidade" value="${qty}">
+        <select class="unit-select" id="unitSelect">
+          <option value="g" ${qtyUnit === "g" ? "selected" : ""}>g</option>
+          <option value="kg" ${qtyUnit === "kg" ? "selected" : ""}>kg</option>
+        </select>
+      </div>
+      <div class="preview-macros"><span><b>${k}</b> kcal</span><span>P <b>${p}</b>g</span><span>C <b>${c}</b>g</span><span>G <b>${f}</b>g</span></div>
+      <button class="btn-primary" id="confirmAddDb" ${g <= 0 ? "disabled" : ""}>${ICONS.plus} Adicionar</button>
+    </div>`;
+  }
+  return `
+    <div class="search-wrap">
+      <input class="food-input" id="foodSearch" placeholder="Buscar alimento (ex: arroz, frango...)" value="${searchQuery}" autocomplete="off" ${foodDbLoading ? "disabled" : ""}>
+      ${filtered.length > 0 && !selected ? `<div class="suggestion-list">${filtered.map(f => `<div class="suggestion-item" data-pick-food="${f.id}"><span>${f.name}</span><span class="s-macro">${f.kcal100} kcal/100g</span></div>`).join("")}</div>` : ""}
+    </div>
+    ${foodDbLoading ? '<div class="empty-state">Carregando base de alimentos...</div>' : ""}
+    ${previewHtml}
+  `;
+}
+
+function renderManualAddForm() {
+  return `
+  <div class="food-form">
+    <input class="food-input name" id="mfName" placeholder="Nome (ex: prato feito no restaurante)" value="${manualForm.name}">
+    <input class="food-input" id="mfKcal" type="number" placeholder="kcal" value="${manualForm.kcal}">
+    <input class="food-input" id="mfProtein" type="number" placeholder="prot (g)" value="${manualForm.protein}">
+    <input class="food-input" id="mfCarb" type="number" placeholder="carb (g)" value="${manualForm.carb}">
+    <input class="food-input" id="mfFat" type="number" placeholder="gord (g)" value="${manualForm.fat}">
+    <button class="btn-primary btn-add full" id="addManualFood">${ICONS.plus} Adicionar</button>
+  </div>`;
+}
+
+function renderProgresso() {
+  const sorted = [...weightLog].sort((a, b) => (a.date < b.date ? -1 : 1));
+  const chartSvg = sorted.length > 1 ? renderWeightChart(sorted) : `<div class="empty-state">Registra pelo menos 2 pesagens pra ver o gráfico.</div>`;
+  const last14 = [];
+  for (let i = 13; i >= 0; i--) {
+    const date = addDays(todayStr(), -i);
+    const entries = foodDiary[date] || [];
+    const kcal = entries.reduce((s, e) => s + e.kcal, 0);
+    last14.push({ date, kcal });
+  }
+  const cGoal = calorieGoal();
+  return `
+  <div class="panel">
+    <div class="panel-title">Peso corporal</div>
+    <div class="weight-form">
+      <input class="food-input" type="number" step="0.1" id="weightInput" placeholder="Peso hoje (kg), atual: ${latestWeight()}">
+      <button class="btn-primary" id="addWeightBtn" style="width:auto;padding:0 14px">${ICONS.plus} Registrar</button>
+    </div>
+    ${chartSvg}
+  </div>
+  <div class="panel">
+    <div class="panel-title">Últimos 14 dias</div>
+    <div class="history-list">
+      ${last14.map(d => {
+        const pct = cGoal > 0 ? Math.min((d.kcal / cGoal) * 100, 100) : 0;
+        const over = d.kcal > cGoal;
+        return `<div class="history-row"><div class="history-date">${fmtDatePt(d.date).slice(0,5)}</div><div class="history-bar-track"><div class="history-bar-fill" style="width:${pct}%;background:${over ? 'var(--danger)' : 'var(--accent)'}"></div></div><div class="history-kcal">${d.kcal || "-"}</div></div>`;
+      }).join("")}
+    </div>
+  </div>`;
+}
+
+function renderWeightChart(sorted) {
+  const w = 400, h = 180, pad = 30;
+  const weights = sorted.map(s => s.weight);
+  const min = Math.min(...weights) - 1, max = Math.max(...weights) + 1;
+  const xStep = (w - pad * 2) / (sorted.length - 1 || 1);
+  const points = sorted.map((s, i) => {
+    const x = pad + i * xStep;
+    const y = h - pad - ((s.weight - min) / (max - min)) * (h - pad * 2);
+    return `${x},${y}`;
+  });
+  const dots = sorted.map((s, i) => {
+    const x = pad + i * xStep;
+    const y = h - pad - ((s.weight - min) / (max - min)) * (h - pad * 2);
+    return `<circle cx="${x}" cy="${y}" r="3.5" fill="#2DE3C7"/>`;
+  }).join("");
+  const firstLabel = fmtDatePt(sorted[0].date).slice(0, 5);
+  const lastLabel = fmtDatePt(sorted[sorted.length - 1].date).slice(0, 5);
+  return `
+  <svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" style="margin-top:8px">
+    <line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="#232A35"/>
+    <polyline points="${points.join(" ")}" fill="none" stroke="#2DE3C7" stroke-width="2"/>
+    ${dots}
+    <text x="${pad}" y="${h-8}" fill="#6E7887" font-size="11" font-family="JetBrains Mono, monospace">${firstLabel}</text>
+    <text x="${w-pad}" y="${h-8}" fill="#6E7887" font-size="11" font-family="JetBrains Mono, monospace" text-anchor="end">${lastLabel}</text>
+  </svg>`;
+}
+
+function renderAlimentos() {
+  const filtered = foodDb.filter(f => f.name.toLowerCase().includes(foodTabSearch.toLowerCase()));
+  return `
+  <div class="panel">
+    <div class="panel-title">Meus alimentos (${foodDb.length})</div>
+    <input class="food-input" id="foodTabSearchInput" placeholder="Buscar..." value="${foodTabSearch}" style="margin-bottom:12px">
+    ${!showNewFoodForm ? `<button class="btn-primary" id="openNewFoodForm" style="margin-bottom:12px">${ICONS.plus} Cadastrar novo alimento</button>` : renderNewFoodForm()}
+    <div class="food-db-list">
+      ${filtered.map(f => `
+        <div class="food-db-row">
+          <div>
+            <span class="food-db-name">${f.name}</span>
+            <span class="${f.custom ? 'custom-tag' : 'builtin-tag'}">${f.custom ? 'MEU' : 'PADRÃO'}</span>
+            <div class="food-db-macro">${f.kcal100} kcal · P${f.protein100} C${f.carb100} G${f.fat100} /100g</div>
+          </div>
+          ${f.custom ? `<button class="icon-btn danger" data-del-fooddb="${f.id}">${ICONS.trash}</button>` : ""}
+        </div>`).join("")}
+    </div>
+  </div>`;
+}
+
+function renderNewFoodForm() {
+  return `
+  <div class="selected-food-box" style="border-color:var(--border)">
+    <div class="food-form">
+      <input class="food-input name" id="nfName" placeholder="Nome do alimento" value="${newFoodForm.name}">
+      <input class="food-input" id="nfKcal" type="number" placeholder="kcal /100g" value="${newFoodForm.kcal100}">
+      <input class="food-input" id="nfProtein" type="number" placeholder="prot /100g" value="${newFoodForm.protein100}">
+      <input class="food-input" id="nfCarb" type="number" placeholder="carb /100g" value="${newFoodForm.carb100}">
+      <input class="food-input" id="nfFat" type="number" placeholder="gord /100g" value="${newFoodForm.fat100}">
+    </div>
+    ${newFoodFormError ? `<div class="save-error" style="margin-top:10px">${newFoodFormError}</div>` : ""}
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn-ghost" id="cancelNewFood" style="flex:1;justify-content:center">Cancelar</button>
+      <button class="btn-primary" id="saveNewFood" style="flex:1">Salvar</button>
+    </div>
+  </div>`;
+}
+
+function renderOnboard() {
+  const f = onboardForm;
+  return `
+  <div class="onboard-wrap">
+    <div class="onboard-card">
+      <div class="eyebrow">PROJETO ATLAS</div>
+      <h1 class="onboard-title">Configurar perfil</h1>
+      <p class="onboard-sub">Isso define suas metas de calorias e macros.</p>
+      <div class="form-grid">
+        <label class="field"><span>Sexo</span>
+          <select id="obSex"><option value="m" ${f.sex==='m'?'selected':''}>Masculino</option><option value="f" ${f.sex==='f'?'selected':''}>Feminino</option></select>
+        </label>
+        <label class="field"><span>Idade</span><input type="number" id="obAge" value="${f.age}"></label>
+        <label class="field"><span>Altura (cm)</span><input type="number" id="obHeight" value="${f.heightCm}"></label>
+        <label class="field"><span>Peso atual (kg)</span><input type="number" id="obWeight" value="${f.weightKg}"></label>
+        <label class="field field-wide"><span>Nível de atividade</span>
+          <select id="obActivity">${ACTIVITY.map(a => `<option value="${a.key}" ${f.activity===a.key?'selected':''}>${a.label}</option>`).join("")}</select>
+        </label>
+        <label class="field field-wide"><span>Objetivo</span>
+          <select id="obGoal">${GOALS.map(g => `<option value="${g.key}" ${f.goal===g.key?'selected':''}>${g.label}</option>`).join("")}</select>
+        </label>
+      </div>
+      <div class="divider"></div>
+      <div class="mode-toggle"><span>Meta de calorias</span>
+        <div class="toggle-buttons">
+          <button class="toggle-btn ${f.calorieMode==='auto'?'active':''}" id="obCalAuto">Automático (TMB)</button>
+          <button class="toggle-btn ${f.calorieMode==='manual'?'active':''}" id="obCalManual">Manual</button>
+        </div>
+      </div>
+      ${f.calorieMode === "manual" ? `<label class="field"><span>Meta de calorias (kcal/dia)</span><input type="number" id="obManualCal" value="${f.manualCalories}"></label>` : ""}
+      <div class="mode-toggle"><span>Meta de macros</span>
+        <div class="toggle-buttons">
+          <button class="toggle-btn ${f.macroMode==='auto'?'active':''}" id="obMacroAuto">Automático</button>
+          <button class="toggle-btn ${f.macroMode==='manual'?'active':''}" id="obMacroManual">Manual</button>
+        </div>
+      </div>
+      ${f.macroMode === "manual" ? `
+      <div class="form-grid">
+        <label class="field"><span>Proteína (g)</span><input type="number" id="obManualProtein" value="${f.manualProtein}"></label>
+        <label class="field"><span>Carbo (g)</span><input type="number" id="obManualCarb" value="${f.manualCarb}"></label>
+        <label class="field"><span>Gordura (g)</span><input type="number" id="obManualFat" value="${f.manualFat}"></label>
+      </div>` : ""}
+      <div class="onboard-actions">
+        ${settings ? `<button class="btn-ghost" id="obCancel">${ICONS.x} Cancelar</button>` : ""}
+        <button class="btn-primary" id="obSave" style="width:auto">Salvar e continuar</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ---------------- events ----------------
+function attachOnboardEvents() {
+  const byId = id => document.getElementById(id);
+  byId("obSex").onchange = e => { onboardForm.sex = e.target.value; };
+  byId("obAge").oninput = e => { onboardForm.age = e.target.value; };
+  byId("obHeight").oninput = e => { onboardForm.heightCm = e.target.value; };
+  byId("obWeight").oninput = e => { onboardForm.weightKg = e.target.value; };
+  byId("obActivity").onchange = e => { onboardForm.activity = e.target.value; };
+  byId("obGoal").onchange = e => { onboardForm.goal = e.target.value; };
+  byId("obCalAuto").onclick = () => { onboardForm.calorieMode = "auto"; render(); };
+  byId("obCalManual").onclick = () => { onboardForm.calorieMode = "manual"; render(); };
+  byId("obMacroAuto").onclick = () => { onboardForm.macroMode = "auto"; render(); };
+  byId("obMacroManual").onclick = () => { onboardForm.macroMode = "manual"; render(); };
+  const mc = byId("obManualCal"); if (mc) mc.oninput = e => { onboardForm.manualCalories = e.target.value; };
+  const mp = byId("obManualProtein"); if (mp) mp.oninput = e => { onboardForm.manualProtein = e.target.value; };
+  const mca = byId("obManualCarb"); if (mca) mca.oninput = e => { onboardForm.manualCarb = e.target.value; };
+  const mf = byId("obManualFat"); if (mf) mf.oninput = e => { onboardForm.manualFat = e.target.value; };
+  const cancel = byId("obCancel"); if (cancel) cancel.onclick = () => { showSettingsScreen = false; render(); };
+  byId("obSave").onclick = () => {
+    settings = { ...onboardForm };
+    persist(SETTINGS_KEY, settings);
+    if (weightLog.length === 0) {
+      weightLog = [{ date: todayStr(), weight: Number(settings.weightKg) }];
+      persist(WEIGHT_KEY, weightLog);
+    }
+    showSettingsScreen = false;
+    render();
+  };
+}
+
+function attachAppEvents() {
+  const byId = id => document.getElementById(id);
+  byId("openSettings").onclick = () => { onboardForm = { ...settings }; showSettingsScreen = true; render(); };
+  document.querySelectorAll("[data-tab]").forEach(el => {
+    el.onclick = () => { tab = el.getAttribute("data-tab"); render(); };
+  });
+
+  if (tab === "hoje") {
+    const prev = byId("prevDay"); if (prev) prev.onclick = () => { selectedDate = addDays(selectedDate, -1); render(); };
+    const next = byId("nextDay"); if (next) next.onclick = () => { if (selectedDate < todayStr()) { selectedDate = addDays(selectedDate, 1); render(); } };
+    byId("modeDb").onclick = () => { addMode = "db"; render(); };
+    byId("modeManual").onclick = () => { addMode = "manual"; render(); };
+
+    if (addMode === "db") {
+      const search = byId("foodSearch");
+      if (search) {
+        search.oninput = e => { searchQuery = e.target.value; selectedFoodId = null; render(); };
+        // restore focus & cursor position after re-render
+        safeFocusEnd(search);
+      }
+      document.querySelectorAll("[data-pick-food]").forEach(el => {
+        el.onclick = () => { selectedFoodId = el.getAttribute("data-pick-food"); searchQuery = ""; qty = ""; render(); };
+      });
+      const clearBtn = byId("clearSelectedFood");
+      if (clearBtn) clearBtn.onclick = () => { selectedFoodId = null; qty = ""; render(); };
+      const qtyInput = byId("qtyInput");
+      if (qtyInput) {
+        qtyInput.oninput = e => {
+          // keep only digits and a single decimal point
+          let v = e.target.value.replace(/[^0-9.]/g, "");
+          const parts = v.split(".");
+          if (parts.length > 2) v = parts[0] + "." + parts.slice(1).join("");
+          qty = v;
+          render();
+        };
+        safeFocusEnd(qtyInput);
+      }
+      const unitSelect = byId("unitSelect");
+      if (unitSelect) unitSelect.onchange = e => { qtyUnit = e.target.value; render(); };
+      const confirmBtn = byId("confirmAddDb");
+      if (confirmBtn) confirmBtn.onclick = () => {
+        const selected = foodDb.find(f => f.id === selectedFoodId);
+        if (!selected) return;
+        const g = qtyUnit === "kg" ? (Number(qty) || 0) * 1000 : (Number(qty) || 0);
+        if (g <= 0) return;
+        const entry = {
+          id: Date.now().toString(), name: selected.name, grams: g,
+          kcal: round(selected.kcal100 * g / 100), protein: round(selected.protein100 * g / 100),
+          carb: round(selected.carb100 * g / 100), fat: round(selected.fat100 * g / 100),
+        };
+        const dayList = foodDiary[selectedDate] || [];
+        foodDiary = { ...foodDiary, [selectedDate]: [...dayList, entry] };
+        persist(DIARY_KEY, foodDiary);
+        selectedFoodId = null; qty = ""; searchQuery = "";
+        render();
+      };
+    } else {
+      byId("mfName").oninput = e => { manualForm.name = e.target.value; };
+      byId("mfKcal").oninput = e => { manualForm.kcal = e.target.value; };
+      byId("mfProtein").oninput = e => { manualForm.protein = e.target.value; };
+      byId("mfCarb").oninput = e => { manualForm.carb = e.target.value; };
+      byId("mfFat").oninput = e => { manualForm.fat = e.target.value; };
+      byId("addManualFood").onclick = () => {
+        if (!manualForm.name.trim() || !manualForm.kcal) return;
+        const entry = {
+          id: Date.now().toString(), name: manualForm.name.trim(),
+          kcal: round(Number(manualForm.kcal) || 0), protein: round(Number(manualForm.protein) || 0),
+          carb: round(Number(manualForm.carb) || 0), fat: round(Number(manualForm.fat) || 0),
+        };
+        const dayList = foodDiary[selectedDate] || [];
+        foodDiary = { ...foodDiary, [selectedDate]: [...dayList, entry] };
+        persist(DIARY_KEY, foodDiary);
+        manualForm = { name: "", kcal: "", protein: "", carb: "", fat: "" };
+        render();
+      };
+    }
+    document.querySelectorAll("[data-del-food]").forEach(el => {
+      el.onclick = () => {
+        const id = el.getAttribute("data-del-food");
+        foodDiary = { ...foodDiary, [selectedDate]: (foodDiary[selectedDate] || []).filter(e => e.id !== id) };
+        persist(DIARY_KEY, foodDiary);
+        render();
+      };
+    });
+  }
+
+  if (tab === "progresso") {
+    byId("addWeightBtn").onclick = () => {
+      const val = byId("weightInput").value;
+      if (!val) return;
+      weightLog = [...weightLog.filter(w => w.date !== todayStr()), { date: todayStr(), weight: Number(val) }]
+        .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+      persist(WEIGHT_KEY, weightLog);
+      render();
+    };
+  }
+
+  if (tab === "alimentos") {
+    const searchInput = byId("foodTabSearchInput");
+    if (searchInput) {
+      searchInput.oninput = e => { foodTabSearch = e.target.value; render(); };
+      safeFocusEnd(searchInput);
+    }
+    const openBtn = byId("openNewFoodForm");
+    if (openBtn) openBtn.onclick = () => { showNewFoodForm = true; render(); };
+    const cancelBtn = byId("cancelNewFood");
+    if (cancelBtn) cancelBtn.onclick = () => { showNewFoodForm = false; newFoodForm = { name: "", kcal100: "", protein100: "", carb100: "", fat100: "" }; newFoodFormError = ""; render(); };
+    const saveBtn = byId("saveNewFood");
+    if (saveBtn) {
+      ["nfName","nfKcal","nfProtein","nfCarb","nfFat"].forEach((id, idx) => {
+        const keys = ["name","kcal100","protein100","carb100","fat100"];
+        const el = byId(id);
+        if (el) el.oninput = e => { newFoodForm[keys[idx]] = e.target.value; };
+      });
+      saveBtn.onclick = () => {
+        if (!newFoodForm.name.trim() || !newFoodForm.kcal100) {
+          newFoodFormError = "Preenche pelo menos o nome e as calorias por 100g.";
+          render();
+          return;
+        }
+        const food = {
+          id: "c_" + Date.now().toString(), name: newFoodForm.name.trim(), custom: true,
+          kcal100: Number(newFoodForm.kcal100) || 0, protein100: Number(newFoodForm.protein100) || 0,
+          carb100: Number(newFoodForm.carb100) || 0, fat100: Number(newFoodForm.fat100) || 0,
+        };
+        customFoods = [...customFoods, food];
+        persist(FOODDB_KEY, customFoods);
+        rebuildFoodDb();
+        newFoodForm = { name: "", kcal100: "", protein100: "", carb100: "", fat100: "" };
+        newFoodFormError = "";
+        showNewFoodForm = false;
+        render();
+      };
+    }
+    document.querySelectorAll("[data-del-fooddb]").forEach(el => {
+      el.onclick = () => {
+        const id = el.getAttribute("data-del-fooddb");
+        customFoods = customFoods.filter(f => f.id !== id);
+        persist(FOODDB_KEY, customFoods);
+        rebuildFoodDb();
+        render();
+      };
+    });
+  }
+}
+
+render();
+loadBuiltinFoods();
+</script>
+</body>
+</html>
