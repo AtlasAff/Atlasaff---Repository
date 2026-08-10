@@ -701,10 +701,6 @@ async function enterApp(){
   document.getElementById('appRoot').style.display='';
   document.getElementById('whoami').textContent = 'Logado como ' + displayName;
 
-  let msg = `Bem-vindo, ${displayName}`;
-  playWelcomeLetters(msg);
-  let minDelay = new Promise(res=>setTimeout(res, msg.length*32 + 850));
-
   let fetchData = (async ()=>{
     try{
       let rows = await restRequest(`/app_state?user_id=eq.${session.user.id}&select=data`);
