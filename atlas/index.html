@@ -70,7 +70,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 
 .app{display:flex;min-height:100vh}
 
-/* ---------- sidebar ----------€ */
+/* ---------- sidebar ---------- */
 .side{
   width:242px;background:var(--panel);border-right:1px solid var(--line);
   padding:28px 14px;position:fixed;top:0;bottom:0;left:0;display:flex;flex-direction:column;
@@ -231,7 +231,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 @media(max-width:850px){
   body{padding-bottom:120px}
   .side{width:100%;height:66px;top:auto;bottom:0;left:0;right:0;flex-direction:row;padding:0 6px;background:var(--panel);border-right:0;border-top:1px solid var(--line);justify-content:space-around;align-items:center}
-  .logo,.side-foot{display:none}
+  .logo,.side-foot,#whoami{display:none}
   .nav{flex-direction:row;justify-content:space-around;width:100%;gap:0}
   .nav button{flex-direction:column;gap:3px;padding:7px 1px;font-size:8.5px;border-radius:8px;text-align:center;justify-content:center;color:var(--muted)}
   .nav button svg{width:15px;height:15px}
@@ -558,7 +558,7 @@ let session = null;
 let saveTimer = null;
 
 function supaConfigured(){ return SUPABASE_URL.startsWith('http') && SUPABASE_ANON_KEY.length>10; }
-function usernameToEmail(u){ return `${u.trim().toLowerCase().replace(/[^a-z0-9_.-]/g,'')}@atlas.local`; }
+function usernameToEmail(u){ return `${u.trim().toLowerCase().replace(/[^a-z0-9_.-]/g,'')}@atlas-users.com`; }
 function saveSessionLocal(s){ localStorage.setItem(AUTH_KEY, JSON.stringify(s)); }
 function loadSessionLocal(){ try{ return JSON.parse(localStorage.getItem(AUTH_KEY)||'null'); }catch(e){ return null; } }
 function clearSessionLocal(){ localStorage.removeItem(AUTH_KEY); }
