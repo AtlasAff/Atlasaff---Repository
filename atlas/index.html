@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Atlas · Controle Financeiro</title>
+<title>Atlas Ledger · Controle Financeiro</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230a0a0b'/%3E%3Ctext x='50' y='68' font-family='Georgia,serif' font-size='58' font-weight='700' fill='%23d4a94a' text-anchor='middle'%3EA%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
@@ -27,6 +28,7 @@
   --blue:#4fa6e8;
   --shadow:0 12px 28px rgba(0,0,0,.4);
   --radius:16px;
+  --ease:cubic-bezier(.16,1,.3,1);
   --font-display:'Space Grotesk',sans-serif;
   --font-body:'Inter',sans-serif;
   --font-mono:'IBM Plex Mono',monospace;
@@ -103,9 +105,9 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .theme-toggle svg{width:14px;height:14px}
 
 .main{margin-left:242px;width:calc(100% - 242px);padding:34px 36px 40px;max-width:1280px}
-.section{display:none;animation:fadeIn .35s ease}
-.section.active{display:block}
-@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.section{display:none}
+.section.active{display:block;animation:fadeIn .5s var(--ease)}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 
 .top{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:26px;gap:16px;flex-wrap:wrap}
 .eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);font-weight:600;margin:0 0 6px}
@@ -137,7 +139,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .panel h2{font-size:14.5px;font-weight:600;margin:0 0 16px;color:var(--text);display:flex;justify-content:space-between;align-items:center;letter-spacing:.1px}
 
 .bar{height:9px;background:var(--bg);border-radius:99px;overflow:hidden;position:relative;border:1px solid var(--line)}
-.fill{height:100%;background:var(--accent);border-radius:99px;transition:width .5s cubic-bezier(.4,0,.2,1),background-color .3s ease}
+.fill{height:100%;background:var(--accent);border-radius:99px;transition:width .65s var(--ease),background-color .3s ease}
 .fill.warning{background:var(--yellow)}
 .fill.danger{background:var(--red)}
 .budget{margin:12px 0;background:var(--panel2);padding:14px;border-radius:12px;border:1px solid var(--line)}
@@ -206,16 +208,17 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .badge-active .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
 
 /* ---------- modal (substitui prompt() nativo) ---------- */
-.modal-overlay{position:fixed;inset:0;background:rgba(4,8,6,.6);backdrop-filter:blur(2px);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px}
-.modal-overlay.open{display:flex;animation:fadeIn .18s ease}
-.modal-box{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:22px;width:100%;max-width:360px;box-shadow:var(--shadow)}
+.modal-overlay{position:fixed;inset:0;background:rgba(4,8,6,.6);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px;opacity:0;pointer-events:none;transition:opacity .3s var(--ease)}
+.modal-overlay.open{opacity:1;pointer-events:auto}
+.modal-box{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:22px;width:100%;max-width:360px;box-shadow:var(--shadow);transform:translateY(10px) scale(.97);opacity:0;transition:transform .35s var(--ease),opacity .3s var(--ease)}
+.modal-overlay.open .modal-box{transform:translateY(0) scale(1);opacity:1}
 .modal-box h3{margin:0 0 4px;font-size:15px;font-weight:600;font-family:var(--font-display)}
 .modal-box p{margin:0 0 14px;font-size:12px;color:var(--muted)}
 .modal-box .field{margin-bottom:0}
 
 /* ---------- toast de alerta ---------- */
-.toast{position:fixed;top:20px;right:20px;max-width:320px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--red);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow);z-index:1200;opacity:0;pointer-events:none;transform:translateY(-8px);transition:opacity .25s ease,transform .25s ease}
-.toast.show{opacity:1;transform:translateY(0)}
+.toast{position:fixed;top:20px;right:20px;max-width:320px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--red);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow);z-index:1200;opacity:0;pointer-events:none;transform:translateY(-10px) scale(.98);transition:opacity .35s var(--ease),transform .35s var(--ease)}
+.toast.show{opacity:1;transform:translateY(0) scale(1)}
 .toast.warn{border-left-color:var(--yellow)}
 .toast b{display:block;margin-bottom:3px;font-size:13px;font-family:var(--font-display)}
 .toast p{margin:0;font-size:12px;color:var(--muted);line-height:1.4}
@@ -227,6 +230,30 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .auth-logo{display:flex;justify-content:center;font-family:var(--font-display);font-size:24px;font-weight:700;margin-bottom:4px}
 .auth-logo em{font-style:normal;color:var(--accent)}
 .auth-sub{text-align:center;font-size:12.5px;color:var(--muted);margin:0 0 20px}
+
+/* ---------- boas-vindas (momento de entrada) ---------- */
+.welcome-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:3000;opacity:0;pointer-events:none;transition:opacity .55s var(--ease)}
+.welcome-screen.show{opacity:1;pointer-events:auto}
+.welcome-text{font-family:var(--font-display);font-weight:600;font-size:clamp(24px,6vw,42px);letter-spacing:.2px;color:var(--text);display:flex;flex-wrap:wrap;justify-content:center;padding:0 24px}
+.welcome-text .ch{display:inline-block;opacity:0;transform:translateY(18px);animation:letterIn .7s var(--ease) forwards}
+.welcome-text .ch.accent{color:var(--accent)}
+@keyframes letterIn{to{opacity:1;transform:translateY(0)}}
+
+/* ---------- cascata de entrada dos cards ---------- */
+@keyframes cardIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.card-enter{animation:cardIn .6s var(--ease) both}
+
+/* ---------- barra superior mobile (marca + sair) ---------- */
+.mobile-top-bar{display:none}
+@media(max-width:850px){
+  .mobile-top-bar{
+    display:flex;justify-content:space-between;align-items:center;padding:14px 16px;
+    border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:60;
+  }
+  .mobile-top-bar .brand{font-family:var(--font-display);font-weight:700;font-size:15px}
+  .mobile-top-bar .brand em{font-style:normal;color:var(--accent)}
+  .mobile-top-bar button{background:var(--panel2);color:var(--muted);border:1px solid var(--line);padding:6px 12px;border-radius:8px;font-size:11.5px;font-weight:600;display:flex;align-items:center;gap:6px}
+}
 
 @media(max-width:850px){
   body{padding-bottom:120px}
@@ -253,9 +280,12 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 </head>
 <body>
 
+<div id="welcomeScreen" class="welcome-screen"><div class="welcome-text" id="welcomeText"></div></div>
+
 <div id="authScreen" class="auth-screen">
   <div class="modal-box">
     <div class="auth-logo">Atlas<em>.</em></div>
+    <div style="text-align:center;font-family:var(--font-mono);font-size:11px;letter-spacing:2.5px;color:var(--muted);margin:-2px 0 16px">LEDGER</div>
     <p class="auth-sub">Nome de usuário e senha, só isso. Seus dados ficam guardados na sua conta.</p>
     <div class="field" style="margin-bottom:12px"><label>Usuário</label><input id="authUser" placeholder="ex: pedro" autocomplete="username"></div>
     <div class="field" style="margin-bottom:6px"><label>Senha</label><input id="authPass" type="password" placeholder="mín. 6 caracteres" autocomplete="current-password" onkeydown="if(event.key==='Enter')doAuth('login')"></div>
@@ -268,6 +298,13 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 </div>
 
 <div class="app" id="appRoot" style="display:none">
+<div class="mobile-top-bar">
+  <span class="brand">Atlas<em>.</em> Ledger</span>
+  <button onclick="doLogout()" aria-label="Sair da conta">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+    Sair
+  </button>
+</div>
 <aside class="side">
   <div class="logo">Atlas<em>.</em><small>LEDGER</small></div>
   <div id="whoami" class="sub" style="padding:0 12px 16px;font-size:11px;margin-top:-18px"></div>
@@ -390,7 +427,9 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 <div id="instList" style="margin-top:14px"></div>
 </div>
 
-<div class="panel"><h2>Extrato Real <span class="muted" style="font-size:11px;font-weight:500" id="txCount"></span></h2><div id="txList"></div></div>
+<div class="panel"><h2>Extrato Real <span class="muted" style="font-size:11px;font-weight:500" id="txCount"></span></h2>
+<input id="txSearch" placeholder="Buscar por descrição ou categoria..." oninput="renderTx()" style="width:100%;background:var(--bg);color:var(--text);border:1px solid var(--line);padding:10px 12px;border-radius:9px;font-size:13px;margin-bottom:14px">
+<div id="txList"></div></div>
 </section>
 
 <section id="formula" class="section">
@@ -618,26 +657,75 @@ async function tryRefreshSession(saved){
   }catch(e){ return false; }
 }
 
+/* ---------- momento de entrada: nome letra por letra + revelação do painel ---------- */
+function playWelcomeLetters(msg){
+  let screen = document.getElementById('welcomeScreen');
+  let textEl = document.getElementById('welcomeText');
+  textEl.innerHTML = [...msg].map((c,i)=>
+    `<span class="ch${c==='.'?' accent':''}" style="animation-delay:${i*32}ms">${c===' '?'&nbsp;':esc(c)}</span>`
+  ).join('');
+  screen.classList.add('show');
+}
+function hideWelcome(onReveal){
+  document.getElementById('welcomeScreen').classList.remove('show');
+  if(onReveal) onReveal();
+  setTimeout(()=>{ document.getElementById('welcomeText').innerHTML=''; }, 600);
+}
+
+function animateNumber(el, toValue, duration=750){
+  if(!el) return;
+  let start = null;
+  function tick(ts){
+    if(start===null) start = ts;
+    let p = Math.min(1, (ts-start)/duration);
+    let eased = 1 - Math.pow(1-p, 3);
+    el.textContent = money(toValue*eased);
+    if(p<1) requestAnimationFrame(tick);
+    else el.textContent = money(toValue);
+  }
+  requestAnimationFrame(tick);
+}
+
+function animateCardsIn(){
+  document.querySelectorAll('#home .cards .card').forEach((el,i)=>{
+    el.classList.remove('card-enter'); void el.offsetWidth;
+    el.style.animationDelay = `${i*90}ms`;
+    el.classList.add('card-enter');
+  });
+  animateNumber(document.getElementById('saldo'), data.bankBalance);
+}
+
 async function enterApp(){
+  let displayName = session.username || (session.user.email||'').split('@')[0];
   document.getElementById('authScreen').style.display='none';
   document.getElementById('appRoot').style.display='';
-  document.getElementById('whoami').textContent = 'Logado como ' + (session.username || (session.user.email||'').split('@')[0]);
-  try{
-    let rows = await restRequest(`/app_state?user_id=eq.${session.user.id}&select=data`);
-    if(rows && rows.length){
-      let remote = rows[0].data || {};
-      data = Object.assign(structuredClone(DEFAULTS), remote, {
-        payments: Object.assign({single:0,d05:0,d20:0}, remote.payments||{})
-      });
-    } else {
+  document.getElementById('whoami').textContent = 'Logado como ' + displayName;
+
+  let msg = `Bem-vindo, ${displayName}`;
+  playWelcomeLetters(msg);
+  let minDelay = new Promise(res=>setTimeout(res, msg.length*32 + 850));
+
+  let fetchData = (async ()=>{
+    try{
+      let rows = await restRequest(`/app_state?user_id=eq.${session.user.id}&select=data`);
+      if(rows && rows.length){
+        let remote = rows[0].data || {};
+        data = Object.assign(structuredClone(DEFAULTS), remote, {
+          payments: Object.assign({single:0,d05:0,d20:0}, remote.payments||{})
+        });
+      } else {
+        data = structuredClone(DEFAULTS);
+        await restRequest('/app_state', { method:'POST', body: JSON.stringify({ user_id:session.user.id, data }) });
+      }
+    }catch(e){
       data = structuredClone(DEFAULTS);
-      await restRequest('/app_state', { method:'POST', body: JSON.stringify({ user_id:session.user.id, data }) });
     }
-  }catch(e){
-    data = structuredClone(DEFAULTS);
-  }
+  })();
+
+  await Promise.all([minDelay, fetchData]);
   syncConfigFields();
   render();
+  hideWelcome(()=> animateCardsIn());
 }
 
 async function pushRemote(){
@@ -986,8 +1074,11 @@ function addTx(){
 }
 function renderTx(){
   let el=document.getElementById('txList'); if(!el) return;
-  if(!data.tx.length){ el.innerHTML='<div class="empty">Nenhuma movimentação registrada no extrato ainda.</div>'; return; }
-  el.innerHTML = data.tx.slice(0,40).map(t=>`
+  let searchEl = document.getElementById('txSearch');
+  let q = searchEl ? normalize(searchEl.value) : '';
+  let list = q ? data.tx.filter(t => normalize(t.desc).includes(q) || normalize(t.cat).includes(q)) : data.tx;
+  if(!list.length){ el.innerHTML = q ? '<div class="empty">Nada encontrado pra essa busca.</div>' : '<div class="empty">Nenhuma movimentação registrada no extrato ainda.</div>'; return; }
+  el.innerHTML = list.slice(0,40).map(t=>`
     <div class="tx">
       <div><div class="txname">${esc(t.desc)}${t.origin && t.origin!=='manual' ? ` <span class="badge-active" style="padding:1px 6px;font-size:9px;margin:0">${esc(t.origin)}</span>` : ''}</div><div class="txmeta">${new Date(t.date+'T12:00:00').toLocaleDateString('pt-BR')} · ${esc(t.cat)}</div></div>
       <div style="display:flex;align-items:center">
