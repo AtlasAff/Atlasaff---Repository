@@ -1513,7 +1513,7 @@ function renderChart(){
     <div style="flex:1;min-width:150px">${legend}</div>`;
 }
 
-/* ---------- histórico mensal (calculado a partir do extrato, sem precisar de snapshot) ---------- */
+/* ---------- histórico mensal (calculado ma partir do extrato, sem precisar de snapshot) ---------- */
 const MONTH_NAMES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 function txForMonth(y,m){
   return data.tx.filter(t=>{ let x=new Date(t.date+'T12:00:00'); return x.getMonth()===m && x.getFullYear()===y; });
