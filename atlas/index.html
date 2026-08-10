@@ -303,9 +303,8 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 
 <section id="home" class="section active">
 <div class="top">
-  <div><p class="eyebrow">Painel</p><h1>Visão Geral</h1><p>Saúde financeira e fluxo real em tempo real.</p></div>
+  <div><p class="eyebrow">Painel</p><h1>Contas &amp; Dívidas</h1><p>O que falta pagar este mês e quanto tempo até vencer.</p></div>
   <div class="actions-row" style="display:flex;gap:10px">
-    <button class="btn secondary" onclick="adjustBankBalance()">Ajustar Saldo</button>
     <button class="btn" onclick="show('mov', document.querySelector('[data-target=mov]'))">+ Lançamento</button>
   </div>
 </div>
@@ -319,20 +318,26 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 </div>
 
 <div class="cards">
- <div class="card" style="--card-accent:var(--accent)"><div class="label">Saldo em Conta</div><div class="value" id="saldo">R$ 0,00</div><div class="sub">Dinheiro real na conta</div></div>
- <div class="card" style="--card-accent:var(--green)"><div class="label">Entradas Pendentes</div><div class="value green" id="pendente">R$ 0,00</div><div class="sub">A confirmar no mês</div></div>
+ <div class="card" style="--card-accent:var(--red)"><div class="label">Total a Pagar Este Mês</div><div class="value red" id="totalAPagar">R$ 0,00</div><div class="sub" id="totalAPagarSub">Contas em aberto</div></div>
+ <div class="card" style="--card-accent:var(--yellow)"><div class="label">Próximo Vencimento</div><div class="value yellow" id="proxVenc" style="font-size:16px">—</div><div class="sub" id="proxVencSub">Nenhuma conta pendente</div></div>
  <div class="card" style="--card-accent:var(--red)"><div class="label">Contas Fixas</div><div class="value red" id="fixas">R$ 0,00</div><div class="sub">Comprometido no mês</div></div>
  <div class="card" style="--card-accent:var(--blue)"><div class="label">Score Financeiro</div><div class="value blue" id="score">—</div><div class="sub" id="scoreSub">Baseado na fórmula ativa</div></div>
 </div>
 
-<div id="pendingBox" class="panel" style="margin-top:18px;display:none;border-color:var(--accent)">
-  <h2>Entradas do Mês a Confirmar</h2>
-  <div id="pendingList"></div>
-</div>
-
-<div id="billsBox" class="panel" style="margin-top:18px;display:none;border-color:var(--red)">
+<div id="billsBox" class="panel" style="margin-top:18px;border-color:var(--red)">
   <h2>Contas do Mês a Pagar</h2>
   <div id="billsList"></div>
+</div>
+
+<div id="salaryPeriodsBox" style="display:none;margin-top:18px">
+  <div class="panel" style="margin-bottom:14px">
+    <h2>Dia 5 → Dia 19 <span class="muted" style="font-size:11px;font-weight:500">· 1º Recebimento</span></h2>
+    <div id="period5Box"></div>
+  </div>
+  <div class="panel">
+    <h2>Dia 20 → Dia 4 <span class="muted" style="font-size:11px;font-weight:500">· 2º Recebimento</span></h2>
+    <div id="period20Box"></div>
+  </div>
 </div>
 
 <div class="grid">
@@ -346,6 +351,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
    <div id="insight" class="tip">Configure seus rendimentos e selecione uma fórmula de gastos.</div>
    <div id="dashboardBudgets" style="margin-top:14px"></div>
  </div>
+
 </div>
 </section>
 
@@ -353,41 +359,39 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 <div class="top"><div><p class="eyebrow">Fluxo de caixa</p><h1>Movimentações &amp; Gastos Fixos</h1><p>Registro do extrato e gerenciamento de contas recorrentes.</p></div></div>
 
 <div class="panel">
-<h2>Novo Lançamento no Extrato</h2>
+<h2>Novo Gasto / Lançamento</h2>
+<p class="muted" style="font-size:12px;margin-bottom:14px">Data de hoje pra trás = já foi gasto (vai direto pro extrato). Data futura = vira conta a pagar com contagem regressiva. Marque "Recorrente" pra virar gasto fixo mensal ou parcelado.</p>
 <div class="formgrid">
-<div class="field"><label>Descrição</label><input id="txDesc" placeholder="Ex.: Supermercado, Lazer no fds" maxlength="60"></div>
+<div class="field"><label>Descrição</label><input id="txDesc" placeholder="Ex.: Supermercado, Aluguel, Celular" maxlength="60"></div>
 <div class="field"><label>Valor (R$)</label><input id="txVal" type="text" inputmode="decimal" placeholder="0,00" onblur="formatCurrencyOnBlur(this)"></div>
 <div class="field"><label>Data</label><input id="txDate" type="date"></div>
-<div class="field"><label>Tipo</label><select id="txType"><option value="out">Saída</option><option value="in">Entrada</option></select></div>
+<div class="field"><label>Tipo</label><select id="txType" onchange="toggleRecurrenceUI()"><option value="out">Saída</option><option value="in">Entrada</option></select></div>
 <div class="field" style="grid-column:span 2"><label>Categoria</label><select id="txCat"></select></div>
 </div>
-<div class="actions"><button class="btn" onclick="addTx()">Adicionar ao Extrato</button></div>
+<div id="recorrenteWrap" style="display:flex;align-items:center;gap:8px;margin-top:12px">
+  <input type="checkbox" id="txRecorrente" onchange="toggleRecurrenceUI()" style="width:16px;height:16px;flex:none">
+  <label style="margin:0;text-transform:none;font-size:13px;color:var(--text);font-weight:500">É recorrente (gasto fixo mensal ou parcelado)</label>
+</div>
+<div id="recorrenteFields" class="formgrid" style="display:none;margin-top:12px">
+  <div class="field" style="grid-column:span 2"><label>Nº de Parcelas (deixe vazio p/ recorrência sem fim, tipo aluguel)</label><input id="txParcelas" type="number" min="1" max="60" placeholder="Ex: 12 — ou deixe em branco"></div>
+</div>
+<div class="actions"><button class="btn" onclick="addExpenseUnified()">Adicionar</button></div>
 </div>
 
 <div class="panel">
-<h2>Cadastrar Gasto Fixo Recorrente</h2>
-<div class="formgrid">
-<div class="field"><label>Nome da Conta Fixa</label><input id="fixedName" placeholder="Ex.: Aluguel, Internet, Academia" maxlength="40"></div>
-<div class="field"><label>Valor (R$)</label><input id="fixedVal" type="text" inputmode="decimal" placeholder="0,00" onblur="formatCurrencyOnBlur(this)"></div>
-<div class="field"><label>Dia Vencimento</label><input id="fixedDay" type="number" min="1" max="31" placeholder="Ex: 10"></div>
-<div class="field"><label>Categoria</label><select id="fixedCat"></select></div>
-</div>
-<div class="actions"><button class="btn" onclick="addFixed()">Adicionar aos Gastos Fixos</button></div>
-<div id="fixedList" style="margin-top:14px"></div>
+<h2>Gastos Fixos Recorrentes</h2>
+<div id="fixedList"></div>
 </div>
 
 <div class="panel">
-<h2>Cadastrar Compra Parcelada</h2>
-<p class="muted" style="font-size:12px;margin-bottom:14px">Lançamentos com número fixo de parcelas — depois de pagar todas, some sozinha da lista.</p>
-<div class="formgrid">
-<div class="field"><label>Nome da Compra</label><input id="instName" placeholder="Ex.: Celular, Sofá, Notebook" maxlength="40"></div>
-<div class="field"><label>Valor da Parcela (R$)</label><input id="instVal" type="text" inputmode="decimal" placeholder="0,00" onblur="formatCurrencyOnBlur(this)"></div>
-<div class="field"><label>Nº de Parcelas</label><input id="instTotal" type="number" min="1" max="60" placeholder="Ex: 12"></div>
-<div class="field"><label>Dia Vencimento</label><input id="instDay" type="number" min="1" max="31" placeholder="Ex: 10"></div>
-<div class="field" style="grid-column:span 2"><label>Categoria</label><select id="instCat"></select></div>
+<h2>Compras Parceladas</h2>
+<div id="instList"></div>
 </div>
-<div class="actions"><button class="btn" onclick="addInstallment()">Adicionar Parcelamento</button></div>
-<div id="instList" style="margin-top:14px"></div>
+
+<div class="panel">
+<h2>Contas Avulsas a Pagar</h2>
+<p class="muted" style="font-size:12px;margin-bottom:14px">Gastos únicos com data futura, sem ser recorrentes.</p>
+<div id="oneOffList"></div>
 </div>
 
 <div class="panel"><h2>Extrato Real <span class="muted" style="font-size:11px;font-weight:500" id="txCount"></span></h2><div id="txList"></div></div>
@@ -471,7 +475,22 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 </section>
 
 <section id="config" class="section">
-<div class="top"><div><p class="eyebrow">Preferências</p><h1>Ajustes &amp; Renda</h1><p>Configuração do modelo de recebimento e ganhos mensais.</p></div></div>
+<div class="top"><div><p class="eyebrow">Preferências</p><h1>Ajustes &amp; Renda</h1><p>Saldo em conta, recebimentos e configuração do modelo de renda.</p></div></div>
+
+<div class="panel">
+<h2>Saldo &amp; Renda</h2>
+<div class="cards" style="grid-template-columns:repeat(2,1fr)">
+ <div class="card" style="--card-accent:var(--accent)"><div class="label">Saldo em Conta</div><div class="value" id="saldo">R$ 0,00</div><div class="sub">Dinheiro real na conta</div></div>
+ <div class="card" style="--card-accent:var(--green)"><div class="label">Entradas Pendentes</div><div class="value green" id="pendente">R$ 0,00</div><div class="sub">A confirmar no mês</div></div>
+</div>
+<div class="actions"><button class="btn secondary" onclick="adjustBankBalance()">Ajustar Saldo</button></div>
+</div>
+
+<div id="pendingBox" class="panel" style="display:none;border-color:var(--accent)">
+  <h2>Entradas do Mês a Confirmar</h2>
+  <div id="pendingList"></div>
+</div>
+
 <div class="panel">
 <h2>Configuração de Recebimento</h2>
 <div class="formgrid">
@@ -543,6 +562,7 @@ const DEFAULTS={
   paidFixed:[],
   fixed:[],
   installments:[],
+  oneOff:[],
   customFormulaSetup:[
     {name:'Necessidades',pct:50},
     {name:'Lazer',pct:30},
@@ -879,19 +899,38 @@ function render(){
 
   let bBox = document.getElementById('billsBox');
   let bList = document.getElementById('billsList');
-  let dueBills = pendingBillsAll();
+  let dueBills = pendingBillsAll(); // já vem ordenado por urgência real
+  let totalDue = dueBills.reduce((a,f)=>a+Number(f.val),0);
+  document.getElementById('totalAPagar').textContent = money(totalDue);
+  document.getElementById('totalAPagarSub').textContent = dueBills.length ? `${dueBills.length} conta${dueBills.length>1?'s':''} em aberto` : 'Tudo pago esse mês';
+
   if(dueBills.length){
-    bBox.style.display='block';
-    bList.innerHTML = dueBills.map(f=>{
+    let soonest = dueBills[0];
+    let sd = soonest._kind==='oneoff' ? dueLabelForDate(soonest.date) : dueLabel(soonest.day);
+    let soonestDayTxt = soonest._kind==='oneoff' ? new Date(soonest.date+'T12:00:00').toLocaleDateString('pt-BR') : `dia ${soonest.day}`;
+    document.getElementById('proxVenc').textContent = soonest.name;
+    document.getElementById('proxVencSub').innerHTML = `<span class="${sd.cls}">${sd.text}</span> · ${soonestDayTxt}`;
+
+    let totalRow = `<div class="row" style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--line)">
+      <b style="font-size:13.5px">Total a pagar este mês</b><b class="amount red" style="font-size:15.5px">${money(totalDue)}</b>
+    </div>`;
+    let itemsHtml = dueBills.map(f=>{
       let isInst = f._kind==='inst';
-      let sub = isInst ? `Parcela ${f.paidMonths.length+1}/${f.totalParcels} · vence dia ${f.day} · ${esc(f.cat||'Outros')}` : `Vencimento dia ${f.day} · ${esc(f.cat||'Outros')}`;
-      let action = isInst ? `confirmInstallmentPaid(${f.id})` : `confirmFixedPaid(${f.id})`;
-      let name = isInst ? f.name : f.name;
-      return `<div class="tx"><div><b class="txname">${esc(name)}</b><div class="txmeta">${sub}</div></div><button class="btn sm" onclick="${action}">Confirmar Pagamento</button></div>`;
+      let isOneOff = f._kind==='oneoff';
+      let dl = isOneOff ? dueLabelForDate(f.date) : dueLabel(f.day);
+      let dayTxt = isOneOff ? new Date(f.date+'T12:00:00').toLocaleDateString('pt-BR') : `dia ${f.day}`;
+      let sub = isInst ? `Parcela ${f.paidMonths.length+1}/${f.totalParcels} · ${esc(f.cat||'Outros')}` : `${esc(f.cat||'Outros')}`;
+      let action = isInst ? `confirmInstallmentPaid(${f.id})` : isOneOff ? `confirmOneOffPaid(${f.id})` : `confirmFixedPaid(${f.id})`;
+      let label = isInst ? 'Pagar Parcela' : 'Confirmar Pagamento';
+      return `<div class="tx"><div><b class="txname">${esc(f.name)}</b><div class="txmeta">${sub} · ${dayTxt} · <span class="${dl.cls}">${dl.text}</span></div></div><button class="btn sm" onclick="${action}">${label}</button></div>`;
     }).join('');
+    bList.innerHTML = totalRow + itemsHtml;
   } else {
-    bBox.style.display='none';
+    document.getElementById('proxVenc').textContent = '—';
+    document.getElementById('proxVencSub').textContent = 'Nenhuma conta pendente';
+    bList.innerHTML = '<div class="empty">Nenhuma conta pendente esse mês — tudo pago! 🎉</div>';
   }
+  bBox.style.display='block';
 
   document.querySelectorAll('.formula-card').forEach(c=>c.classList.remove('selected'));
   let activeCard = document.getElementById(`f_${data.formula}`);
@@ -913,6 +952,8 @@ function render(){
   renderGoals();
   renderFixed();
   renderInstallments();
+  renderOneOffList();
+  renderSalaryPeriods();
   renderChart();
   populateHistMonths();
   renderHistorico();
@@ -964,26 +1005,61 @@ function saveCustomFormula(){
   alert('Fórmula personalizada salva!');
 }
 
-/* ---------- transactions ---------- */
-function addTx(){
+/* ---------- lançamento unificado (gasto já feito, conta futura, fixo ou parcelado) ---------- */
+function toggleRecurrenceUI(){
+  let type = document.getElementById('txType').value;
+  let wrap = document.getElementById('recorrenteWrap');
+  let recEl = document.getElementById('txRecorrente');
+  wrap.style.display = type==='out' ? 'flex' : 'none';
+  if(type!=='out') recEl.checked = false;
+  document.getElementById('recorrenteFields').style.display = (type==='out' && recEl.checked) ? 'grid' : 'none';
+}
+function addExpenseUnified(){
   let descEl=document.getElementById('txDesc'), valEl=document.getElementById('txVal'),
-      dateEl=document.getElementById('txDate'), typeEl=document.getElementById('txType'), catEl=document.getElementById('txCat');
+      dateEl=document.getElementById('txDate'), typeEl=document.getElementById('txType'), catEl=document.getElementById('txCat'),
+      recEl=document.getElementById('txRecorrente'), parcelasEl=document.getElementById('txParcelas');
   let desc = descEl.value.trim();
   let val = parseMoney(valEl.value);
-  let date = dateEl.value || new Date().toISOString().slice(0,10);
+  let dateStr = dateEl.value || new Date().toISOString().slice(0,10);
   let type = typeEl.value;
   let cat = catEl.value;
+  let recorrente = type==='out' && recEl.checked;
+  let parcelas = Number(parcelasEl.value) || 0;
 
-  if(!desc) return alert('Preencha a descrição do lançamento.');
+  if(!desc) return alert('Preencha a descrição.');
   if(!(val>0)) return alert('Informe um valor maior que zero.');
+  if(recorrente && parcelas>60) return alert('Máximo de 60 parcelas.');
 
-  if(type==='in') data.bankBalance += val; else data.bankBalance -= val;
-  data.tx.unshift({id:Date.now(), desc, val, date, type, cat, origin:'manual'});
-  save();
-  if(type==='out') checkCategoryAlert(cat);
-  descEl.value=''; valEl.value='';
+  let today = new Date(); today.setHours(0,0,0,0);
+  let picked = new Date(dateStr+'T00:00:00');
+  let isFuture = picked > today;
+  let day = picked.getDate();
+
+  if(type==='in'){
+    data.bankBalance += val;
+    data.tx.unshift({id:Date.now(), desc, val, date:dateStr, type:'in', cat, origin:'manual'});
+    save();
+  } else if(recorrente && parcelas>=1){
+    data.installments.push({id:Date.now(), name:desc, val, day, cat, totalParcels:parcelas, paidMonths:[]});
+    save();
+  } else if(recorrente){
+    data.fixed.push({id:Date.now(), name:desc, val, day, cat});
+    save();
+  } else if(isFuture){
+    data.oneOff.push({id:Date.now(), name:desc, val, date:dateStr, cat});
+    save();
+  } else {
+    data.bankBalance -= val;
+    data.tx.unshift({id:Date.now(), desc, val, date:dateStr, type:'out', cat, origin:'manual'});
+    save();
+    checkCategoryAlert(cat);
+  }
+
+  descEl.value=''; valEl.value=''; parcelasEl.value=''; recEl.checked=false;
+  toggleRecurrenceUI();
   show('home');
 }
+/* ---------- transactions ---------- */
 function renderTx(){
   let el=document.getElementById('txList'); if(!el) return;
   if(!data.tx.length){ el.innerHTML='<div class="empty">Nenhuma movimentação registrada no extrato ainda.</div>'; return; }
@@ -1005,29 +1081,45 @@ function delTx(id){
   save();
 }
 
-/* ---------- fixed expenses ---------- */
-function addFixed(){
-  let n=document.getElementById('fixedName').value.trim();
-  let v=parseMoney(document.getElementById('fixedVal').value);
-  let d=Number(document.getElementById('fixedDay').value);
-  let c=document.getElementById('fixedCat').value || 'Outros';
-  if(!n) return alert('Preencha o nome do gasto fixo.');
-  if(!(v>0)) return alert('Informe um valor maior que zero.');
-  if(!d || d<1 || d>31) return alert('Informe um dia de vencimento entre 1 e 31.');
-  data.fixed.push({id:Date.now(), name:n, val:v, day:d, cat:c});
-  document.getElementById('fixedName').value='';
-  document.getElementById('fixedVal').value='';
-  document.getElementById('fixedDay').value='';
+/* ---------- contas avulsas (gasto único com data futura, não recorrente) ---------- */
+function renderOneOffList(){
+  let el=document.getElementById('oneOffList'); if(!el) return;
+  if(!data.oneOff.length){ el.innerHTML='<div class="empty">Nenhuma conta avulsa cadastrada.</div>'; return; }
+  let sorted=[...data.oneOff].sort((a,b)=> new Date(a.date)-new Date(b.date));
+  el.innerHTML = sorted.map(x=>{
+    let dl = dueLabelForDate(x.date);
+    return `<div class="tx">
+      <div><b class="txname">${esc(x.name)}</b><div class="txmeta">${new Date(x.date+'T12:00:00').toLocaleDateString('pt-BR')} · ${esc(x.cat||'Outros')} · <span class="${dl.cls}">${dl.text}</span></div></div>
+      <div style="display:flex;align-items:center"><button class="btn sm" onclick="confirmOneOffPaid(${x.id})" style="margin-right:4px">Confirmar Pagamento</button><b class="amount">${money(x.val)}</b><button class="delx" onclick="delOneOff(${x.id})" aria-label="Excluir conta avulsa">×</button></div>
+    </div>`;
+  }).join('');
+}
+function delOneOff(id){
+  let item = data.oneOff.find(x=>x.id===id);
+  if(item && !confirm(`Remover a conta "${item.name}"?`)) return;
+  data.oneOff = data.oneOff.filter(x=>x.id!==id);
   save();
 }
+function confirmOneOffPaid(id){
+  let o = data.oneOff.find(x=>x.id===id); if(!o) return;
+  data.bankBalance -= o.val;
+  data.tx.unshift({id:Date.now(), desc:o.name, val:o.val, date:new Date().toISOString().slice(0,10), type:'out', cat:o.cat||'Outros', origin:'manual'});
+  data.oneOff = data.oneOff.filter(x=>x.id!==id);
+  save();
+  checkCategoryAlert(o.cat||'Outros');
+}
+
+/* ---------- fixed expenses ---------- */
 function renderFixed(){
   let el=document.getElementById('fixedList'); if(!el) return;
   if(!data.fixed.length){ el.innerHTML='<div class="empty">Nenhum gasto fixo cadastrado.</div>'; return; }
   let sorted=[...data.fixed].sort((a,b)=>a.day-b.day);
   el.innerHTML = sorted.map(x=>{
     let paid = data.paidFixed.includes(getFixedKey(x.id));
+    let dl = dueLabel(x.day);
+    let status = paid ? ' · <span class="green">pago este mês</span>' : ` · <span class="${dl.cls}">${dl.text}</span>`;
     return `<div class="tx">
-      <div><b class="txname">${esc(x.name)}</b><div class="txmeta">Vencimento todo dia ${x.day} · ${esc(x.cat||'Outros')}${paid?' · <span class="green">pago este mês</span>':''}</div></div>
+      <div><b class="txname">${esc(x.name)}</b><div class="txmeta">Vencimento todo dia ${x.day} · ${esc(x.cat||'Outros')}${status}</div></div>
       <div style="display:flex;align-items:center"><b class="amount">${money(x.val)}</b><button class="delx" onclick="delFixed(${x.id})" aria-label="Excluir gasto fixo">×</button></div>
     </div>`;
   }).join('');
@@ -1054,23 +1146,6 @@ function confirmFixedPaid(id){
 }
 
 /* ---------- compras parceladas ---------- */
-function addInstallment(){
-  let n=document.getElementById('instName').value.trim();
-  let v=parseMoney(document.getElementById('instVal').value);
-  let total=Number(document.getElementById('instTotal').value);
-  let d=Number(document.getElementById('instDay').value);
-  let c=document.getElementById('instCat').value || 'Outros';
-  if(!n) return alert('Preencha o nome da compra.');
-  if(!(v>0)) return alert('Informe o valor da parcela.');
-  if(!total || total<1 || total>60) return alert('Informe um número de parcelas entre 1 e 60.');
-  if(!d || d<1 || d>31) return alert('Informe um dia de vencimento entre 1 e 31.');
-  data.installments.push({id:Date.now(), name:n, val:v, day:d, cat:c, totalParcels:total, paidMonths:[]});
-  document.getElementById('instName').value='';
-  document.getElementById('instVal').value='';
-  document.getElementById('instTotal').value='';
-  document.getElementById('instDay').value='';
-  save();
-}
 function renderInstallments(){
   let el=document.getElementById('instList'); if(!el) return;
   if(!data.installments.length){ el.innerHTML='<div class="empty">Nenhuma compra parcelada cadastrada.</div>'; return; }
@@ -1078,9 +1153,15 @@ function renderInstallments(){
   el.innerHTML = sorted.map(x=>{
     let paidCount = x.paidMonths.length;
     let done = paidCount>=x.totalParcels;
+    let paidThisMonth = x.paidMonths.includes(getMonthKey());
+    let dl = dueLabel(x.day);
+    let statusHtml = done ? '' : paidThisMonth ? ' · <span class="green">parcela paga este mês</span>' : ` · <span class="${dl.cls}">${dl.text}</span>`;
+    let payBtn = done ? '' : paidThisMonth
+      ? `<span class="green" style="font-size:11px;margin-right:4px">paga</span>`
+      : `<button class="btn sm" onclick="confirmInstallmentPaid(${x.id})" style="margin-right:4px">Pagar Parcela</button>`;
     return `<div class="tx">
-      <div><b class="txname">${esc(x.name)}${done?' <span class="green">✓ quitada</span>':''}</b><div class="txmeta">Parcela ${Math.min(paidCount+1,x.totalParcels)}/${x.totalParcels} · vence dia ${x.day} · ${esc(x.cat||'Outros')}</div></div>
-      <div style="display:flex;align-items:center"><b class="amount">${money(x.val)}</b><button class="delx" onclick="delInstallment(${x.id})" aria-label="Excluir compra parcelada">×</button></div>
+      <div><b class="txname">${esc(x.name)}${done?' <span class="green">✓ quitada</span>':''}</b><div class="txmeta">Parcela ${Math.min(paidCount+1,x.totalParcels)}/${x.totalParcels} · vence dia ${x.day} · ${esc(x.cat||'Outros')}${statusHtml}</div></div>
+      <div style="display:flex;align-items:center">${payBtn}<b class="amount">${money(x.val)}</b><button class="delx" onclick="delInstallment(${x.id})" aria-label="Excluir compra parcelada">×</button></div>
     </div>`;
   }).join('');
 }
@@ -1105,11 +1186,83 @@ function confirmInstallmentPaid(id){
   checkCategoryAlert(x.cat||'Outros');
 }
 
-/* ---------- contas do mês a pagar (fixas + parceladas juntas) ---------- */
+/* ---------- contagem regressiva de vencimento (sincronizado com o relógio real) ---------- */
+function nextDueDate(day){
+  let now = new Date(); now.setHours(0,0,0,0);
+  let y = now.getFullYear(), m = now.getMonth();
+  let lastDay = new Date(y, m+1, 0).getDate();
+  let d = Math.min(day, lastDay);
+  return new Date(y, m, d);
+}
+function daysUntilDue(day){
+  let due = nextDueDate(day);
+  let now = new Date(); now.setHours(0,0,0,0);
+  return Math.round((due - now) / 86400000);
+}
+function dueLabel(day){
+  let diff = daysUntilDue(day);
+  if(diff > 0) return {text:`faltam ${diff} dia${diff>1?'s':''}`, cls: diff<=3 ? 'yellow' : 'muted'};
+  if(diff === 0) return {text:'vence hoje', cls:'yellow'};
+  return {text:`atrasada há ${Math.abs(diff)} dia${Math.abs(diff)>1?'s':''}`, cls:'red'};
+}
+function daysUntilDueDate(dateStr){
+  let due = new Date(dateStr+'T00:00:00');
+  let now = new Date(); now.setHours(0,0,0,0);
+  return Math.round((due - now) / 86400000);
+}
+function dueLabelForDate(dateStr){
+  let diff = daysUntilDueDate(dateStr);
+  if(diff > 0) return {text:`faltam ${diff} dia${diff>1?'s':''}`, cls: diff<=3 ? 'yellow' : 'muted'};
+  if(diff === 0) return {text:'vence hoje', cls:'yellow'};
+  return {text:`atrasada há ${Math.abs(diff)} dia${Math.abs(diff)>1?'s':''}`, cls:'red'};
+}
+
+/* ---------- contas do mês a pagar (fixas + parceladas + avulsas juntas) ---------- */
 function pendingBillsAll(){
   let fx = pendingFixedBills().map(f=>({...f, _kind:'fixed'}));
   let ins = pendingInstallments().map(x=>({...x, _kind:'inst'}));
-  return [...fx, ...ins].sort((a,b)=>a.day-b.day);
+  let one = [...data.oneOff].map(o=>({...o, _kind:'oneoff'}));
+  let all = [...fx, ...ins, ...one];
+  all.sort((a,b)=>{
+    let da = a._kind==='oneoff' ? daysUntilDueDate(a.date) : daysUntilDue(a.day);
+    let db = b._kind==='oneoff' ? daysUntilDueDate(b.date) : daysUntilDue(b.day);
+    return da-db;
+  });
+  return all;
+}
+
+/* ---------- divisão da renda por período (salário com adiantamento: dia 5 e dia 20) ---------- */
+function dayInRange(day, start, end){
+  if(start <= end) return day>=start && day<end;
+  return day>=start || day<end; // range com virada de mês (ex: 20 até 4)
+}
+function allCommittedBillsWithDay(){
+  let fx = data.fixed.map(f=>({...f, day:f.day}));
+  let ins = data.installments.filter(x=>x.paidMonths.length<x.totalParcels).map(x=>({...x, day:x.day}));
+  let one = data.oneOff.map(o=>({...o, day:new Date(o.date+'T00:00:00').getDate()}));
+  return [...fx, ...ins, ...one];
+}
+function sumForPeriod(start,end){
+  return allCommittedBillsWithDay().filter(b=>dayInRange(b.day,start,end)).reduce((a,b)=>a+Number(b.val),0);
+}
+function periodRowHtml(income, spent){
+  let left = income - spent;
+  let pct = income>0 ? Math.min(100, (spent/income*100)) : 0;
+  let barCls = left<0 ? 'danger' : (pct>85 ? 'warning' : '');
+  let leftCls = left<0 ? 'red' : 'green';
+  return `
+    <div class="row"><span class="muted">Renda do período</span><span class="amount">${money(income)}</span></div>
+    <div class="row"><span class="muted">Já reservado (contas)</span><span class="amount red">${money(spent)}</span></div>
+    <div class="bar" style="margin:8px 0"><div class="fill ${barCls}" style="width:${pct}%"></div></div>
+    <div class="row" style="margin-bottom:0"><b>Sobra livre</b><b class="amount ${leftCls}">${money(left)}</b></div>`;
+}
+function renderSalaryPeriods(){
+  let box = document.getElementById('salaryPeriodsBox');
+  if(!box) return;
+  if(data.salaryMode !== 'double'){ box.style.display='none'; return; }
+  box.style.display='block';
+  document.getElementById('period5Box').innerHTML = periodRowHtml(Number(data.payments.d05||0), sumForPeriod(5,20));
+  document.getElementById('period20Box').innerHTML = periodRowHtml(Number(data.payments.d20||0), sumForPeriod(20,5));
 }
 
 /* ---------- goals ---------- */
@@ -1474,6 +1627,10 @@ function clearData(){
 }
 
 checkSession();
+
+/* mantém a contagem regressiva de vencimento sincronizada com o horário real,
+   mesmo que o usuário deixe a aba aberta e a virada do dia/mês aconteça */
+setInterval(()=>{ if(session) render(); }, 60000);
 
 /* ---------- API pronta pra integração futura com bot ----------
    Quando o bot mandar mensagem tipo "gastei 40 no mercado", basta chamar:
