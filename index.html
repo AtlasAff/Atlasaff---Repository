@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pavan & Co. | Joalheria</title>
+
+<!--
+  ============================================================
+  IMAGENS QUE VOCÊ PRECISA TROCAR/ADICIONAR (busque por "IMG:")
+  ============================================================
+  1) IMG: LOGO — coloque "logo.png" nesta mesma pasta (junto de
+     index.html, style.css, shared.js). Atualiza header e rodapé
+     de TODAS as páginas do site automaticamente.
+  2) IMG: BANNER PRINCIPAL — array `heroBanners` no <script> lá embaixo.
+  3) IMG: VITRINE — array `vitrine` no <script> lá embaixo.
+  4) IMG: PRODUTOS EM DESTAQUE — array `produtos` no <script> lá embaixo.
+  ============================================================
+  ESTRUTURA DO SITE (multi-página)
+  ============================================================
+  - style.css   → visual de TODO o site (cores, fontes, layout)
+  - shared.js   → menu de categorias + comportamento do header (usado em todas as páginas)
+  - index.html  → esta página (home)
+  - categoria-aneis.html → página de listagem da categoria Anéis
+  Ao criar uma nova página de categoria, copie a estrutura de
+  categoria-aneis.html e troque os dados de produtos.
+  ============================================================
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=Lato:wght@300;400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ============ HEADER ============ -->
+<header id="siteHeader">
+  <div class="header-inner container">
+    <a href="index.html" class="logo" aria-label="Pavan & Co. - início">
+      <!-- IMG: LOGO — coloque seu arquivo nesta pasta com o nome "logo.png" -->
+      <img class="logo-mark" src="logo.png" alt="Pavan & Co.">
+    </a>
+
+    <nav class="main-nav" aria-label="Categorias principais">
+      <ul id="navList"></ul>
+    </nav>
+
+    <div class="header-icons">
+      <button class="icon-btn" id="searchBtn" aria-label="Buscar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
+      <a class="icon-btn" href="conta.html" aria-label="Minha conta">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+      </a>
+      <a class="icon-btn" href="carrinho.html" aria-label="Carrinho">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h7.2a2 2 0 0 0 2-1.6L21 8H6"/><circle cx="9" cy="21" r="1"/><circle cx="18" cy="21" r="1"/></svg>
+        <span class="cart-count" id="cartCount">3</span>
+      </a>
+      <button class="hamburger" id="hamburgerBtn" aria-label="Abrir menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+
+  <div class="mobile-nav" id="mobileNav">
+    <ul id="mobileNavList"></ul>
+  </div>
+
+  <div class="search-overlay" id="searchOverlay">
+    <form id="searchFormHeader">
+      <input type="search" placeholder="Buscar por nome, material ou pedra (ex: ouro, moissanite)..." required>
+      <button type="submit" class="btn btn-primary">Buscar</button>
+    </form>
+  </div>
+</header>
+
+<!-- ============ HERO ============ -->
+<section class="hero" id="hero">
+  <div class="hero-content">
+    <span class="eyebrow" id="heroEyebrow"></span>
+    <h1 id="heroTitle"></h1>
+    <a href="#produtos" class="btn btn-primary" id="heroCta"></a>
+  </div>
+</section>
+
+<!-- ============ CATEGORIAS ============ -->
+<section class="section" id="categorias">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Explore</span>
+      <h2>Nossas categorias</h2>
+    </div>
+    <div class="cat-grid" id="catGrid"></div>
+  </div>
+</section>
+
+<!-- ============ VITRINE ============ -->
+<section class="section vitrine">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Seleção</span>
+      <h2>Coleções em destaque</h2>
+    </div>
+    <div class="vitrine-grid" id="vitrineGrid"></div>
+  </div>
+</section>
+
+<!-- ============ PRODUTOS ============ -->
+<section class="section" id="produtos">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Catálogo</span>
+      <h2>Peças em destaque</h2>
+    </div>
+    <div class="prod-grid" id="prodGrid"></div>
+  </div>
+</section>
+
+<!-- ============ NEWSLETTER ============ -->
+<div class="newsletter-strip">
+  <h3>Receba novidades da Pavan & Co.</h3>
+  <p>Lançamentos, coleções e convites exclusivos, direto no seu e-mail.</p>
+  <form class="newsletter-form" onsubmit="event.preventDefault(); alert('Obrigado! (isto é um mock — ligar ao Supabase depois)');">
+    <input type="email" placeholder="Seu melhor e-mail" required>
+    <button class="btn btn-light" type="submit">Assinar</button>
+  </form>
+</div>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-col">
+        <div class="footer-logo">
+          <img src="logo.png" alt="Pavan & Co.">
+        </div>
+        <p>Joias atemporais, feitas para acompanhar cada capítulo da sua história. Peças pensadas para durar gerações.</p>
+        <a href="sobre.html" style="display:inline-block;margin-top:10px;text-decoration:underline;">Nossa história →</a>
+      </div>
+
+      <div class="footer-col">
+        <h4>Atendimento</h4>
+        <ul>
+          <li><a href="faq.html">Perguntas frequentes</a></li>
+          <li><a href="trocas-devolucoes.html">Trocas e devoluções</a></li>
+          <li><a href="privacidade.html">Política de privacidade</a></li>
+          <li><a href="contato.html">Fale conosco</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Categorias</h4>
+        <ul id="footerCatList"></ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Redes sociais</h4>
+        <div class="social-row">
+          <a href="#" aria-label="Instagram">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg>
+          </a>
+          <a href="#" aria-label="WhatsApp">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 11.5a8.5 8.5 0 1 1-3.6-6.9L21 3l-1.2 4A8.4 8.4 0 0 1 21 11.5Z"/><path d="M8 10c.5 2.5 2.5 4.5 5 5"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    © <span id="year"></span> Pavan &amp; Co. — CNPJ: 00.000.000/0001-00
+  </div>
+</footer>
+
+<script src="shared.js"></script>
+<script>
+/* ============================================================
+   DADOS DESTA PÁGINA (home)
+   Estrutura pensada para no futuro vir do Supabase — troque cada
+   array abaixo por um fetch/select nas tabelas correspondentes.
+   ============================================================ */
+
+// IMG: BANNER PRINCIPAL
+const heroBanners = [
+  {
+    eyebrow: "Coleção Primavera",
+    title: "Peças que contam sua história.",
+    ctaText: "Ver coleção",
+    image: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?q=80&w=1920&auto=format&fit=crop"
+  }
+];
+
+// IMG: VITRINE
+const vitrine = [
+  { eyebrow: "Para sempre", titulo: "Coleção Noivado", cta: "Descobrir", image: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?q=80&w=900&auto=format&fit=crop" },
+  { eyebrow: "Favoritos", titulo: "Mais vendidos", cta: "Ver seleção", image: "https://images.unsplash.com/photo-1620656798579-1984d9e87df7?q=80&w=900&auto=format&fit=crop" },
+  { eyebrow: "Recém-chegados", titulo: "Novidades", cta: "Conferir", image: "https://images.unsplash.com/photo-1599643477877-530eb83abc8e?q=80&w=900&auto=format&fit=crop" }
+];
+
+/* ============================================================
+   RENDER (categorias/header/menu já rodam via shared.js)
+   ============================================================ */
+
+const banner = heroBanners[0];
+document.getElementById('hero').style.backgroundImage = `url('${banner.image}')`;
+document.getElementById('heroEyebrow').textContent = banner.eyebrow;
+document.getElementById('heroTitle').textContent = banner.title;
+document.getElementById('heroCta').textContent = banner.ctaText;
+
+const catGrid = document.getElementById('catGrid');
+catGrid.innerHTML = categorias.map(cat => `
+  <a class="cat-card" href="${cat.href}">
+    ${cat.icon}
+    <span>${cat.nome}</span>
+  </a>
+`).join('');
+
+const vitrineGrid = document.getElementById('vitrineGrid');
+vitrineGrid.innerHTML = vitrine.map(v => `
+  <a class="vitrine-card" href="#produtos" style="background-image:url('${v.image}')">
+    <div class="vitrine-inner">
+      <span class="eyebrow">${v.eyebrow}</span>
+      <h3>${v.titulo}</h3>
+      <span class="btn btn-light">${v.cta}</span>
+    </div>
+  </a>
+`).join('');
+
+const prodGrid = document.getElementById('prodGrid');
+// Home mostra 5 produtos de destaque escolhidos do catálogo (um de cada categoria)
+const destaques = ["ane-01", "col-01", "bri-01", "pul-01", "ali-02"]
+  .map(id => PRODUTOS_CATALOGO.find(p => p.id === id));
+prodGrid.innerHTML = destaques.map(cardProdutoHTML).join('');
+
+initBuscaForm('searchFormHeader', true);
+</script>
+
+</body>
+</html>
