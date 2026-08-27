@@ -20,7 +20,7 @@
   - Fotos: o upload aqui vai de verdade pro Supabase Storage
     (bucket "produtos"). A miniatura que aparece antes de salvar
     é só uma prévia local — a foto só é enviada quando você clica
-    em "Salvar produto".
+    em "Salvar produto". atual
   ============================================================
 -->
 
@@ -260,6 +260,49 @@
 
   .modal-confirma .modal-card{ max-width: 380px; text-align:center; }
   .modal-confirma p{ font-size:0.9rem; color: var(--texto-suave); margin: 10px 0 20px; }
+
+  /* ---------- FORMATO DA PEDRA (ícones) ---------- */
+  .formato-admin-pills{ display:flex; flex-wrap:wrap; gap:8px; }
+  .formato-admin-pill{
+    display:flex; flex-direction:column; align-items:center; gap:5px;
+    padding: 8px 10px;
+    border: 1px solid var(--cinza-borda);
+    border-radius: var(--radius);
+    font-size: 0.7rem;
+    color: var(--texto-suave);
+  }
+  .formato-admin-pill svg{ width:22px; height:22px; }
+  .formato-admin-pill.active{ border-color: var(--azul); background: #EAF0F8; color: var(--azul); }
+
+  /* ---------- MODAL DE CATEGORIAS ---------- */
+  .categoria-linha{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--cinza-borda);
+    font-size: 0.9rem;
+  }
+  .categoria-linha button{ color: var(--vermelho); font-size:0.78rem; text-decoration:underline; }
+  .nova-categoria-form{ display:flex; gap:8px; margin-top: 16px; }
+  .nova-categoria-form input{
+    flex:1;
+    padding: 10px 12px;
+    border:1px solid var(--cinza-borda);
+    border-radius: var(--radius);
+  }
+
+  /* ---------- AVALIAÇÕES ---------- */
+  .estrelas-picker{ display:flex; gap:4px; }
+  .estrelas-picker button{ color: var(--cinza-borda); }
+  .estrelas-picker button.ativa{ color: #D9A441; }
+  .estrelas-picker svg{ width:26px; height:26px; }
+  .avaliacao-admin-linha{
+    display:flex; gap:10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--cinza-borda);
+    font-size: 0.85rem;
+  }
+  .avaliacao-admin-linha .conteudo{ flex:1; }
+  .avaliacao-admin-linha .excluir-av{ color: var(--vermelho); font-size:0.78rem; text-decoration:underline; align-self:flex-start; }
 </style>
 </head>
 <body>
@@ -286,13 +329,8 @@
       <input type="text" id="buscaAdmin" placeholder="Buscar por nome...">
       <select id="filtroCategoriaAdmin">
         <option value="">Todas as categorias</option>
-        <option value="aliancas">Alianças</option>
-        <option value="aneis">Anéis</option>
-        <option value="brincos">Brincos</option>
-        <option value="colares">Colares</option>
-        <option value="pulseiras">Pulseiras</option>
-        <option value="joias">Joias</option>
       </select>
+      <button type="button" class="btn-admin btn-admin-outline" id="btnGerenciarCategorias">Categorias</button>
       <button type="button" class="btn-admin btn-admin-primary" id="btnNovoProduto">+ Novo produto</button>
     </div>
 
@@ -315,6 +353,20 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="modalCategorias">
+  <div class="modal-card" style="max-width:460px;">
+    <h2>Categorias</h2>
+    <div id="listaCategoriasAdmin"></div>
+    <form class="nova-categoria-form" id="formNovaCategoria">
+      <input type="text" id="novaCategoriaNome" placeholder="Nome da nova categoria (ex: Pingentes)" required>
+      <button type="submit" class="btn-admin btn-admin-primary">Criar</button>
+    </form>
+    <div class="modal-footer">
+      <button type="button" class="btn-admin btn-admin-outline" id="btnFecharCategorias">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modalProduto">
   <div class="modal-card">
     <h2 id="modalProdutoTitulo">Novo produto</h2>
@@ -330,14 +382,7 @@
           </div>
           <div class="form-campo">
             <label for="fCategoria">Categoria *</label>
-            <select id="fCategoria" required>
-              <option value="aliancas">Alianças</option>
-              <option value="aneis">Anéis</option>
-              <option value="brincos">Brincos</option>
-              <option value="colares">Colares</option>
-              <option value="pulseiras">Pulseiras</option>
-              <option value="joias">Joias</option>
-            </select>
+            <select id="fCategoria" required></select>
           </div>
         </div>
         <div class="form-campo">
@@ -378,16 +423,9 @@
             <input type="text" id="fQuilate" placeholder="Ex: 2ct (8mm)">
           </div>
           <div class="form-campo">
-            <label for="fFormato">Formato da pedra</label>
-            <select id="fFormato">
-              <option value="">—</option>
-              <option>Redondo</option>
-              <option>Oval</option>
-              <option>Princesa</option>
-              <option>Coração</option>
-              <option>Marquise</option>
-              <option>Esmeralda</option>
-            </select>
+            <label>Formato da pedra</label>
+            <div class="formato-admin-pills" id="formatoAdminPills"></div>
+            <input type="hidden" id="fFormato">
           </div>
           <div class="form-campo">
             <label for="fCravacao">Cravação</label>
@@ -465,6 +503,52 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="modalAvaliacoes">
+  <div class="modal-card" style="max-width:560px;">
+    <h2 id="avaliacoesModalTitulo">Avaliações</h2>
+    <p style="font-size:0.82rem;color:var(--texto-suave);margin-bottom:16px;">
+      Use isso pra cadastrar uma avaliação que um cliente de verdade te mandou por WhatsApp,
+      e-mail ou pessoalmente — não pra copiar review de outro site/anúncio.
+    </p>
+    <div id="listaAvaliacoesAdmin" style="max-height:260px;overflow-y:auto;margin-bottom:18px;"></div>
+
+    <form id="formNovaAvaliacao">
+      <div class="form-linha cols-2">
+        <div class="form-campo">
+          <label for="avNome">Nome do cliente *</label>
+          <input type="text" id="avNome" required placeholder="Ex: Camila R.">
+        </div>
+        <div class="form-campo">
+          <label for="avData">Data da avaliação</label>
+          <input type="date" id="avData">
+        </div>
+      </div>
+      <div class="form-campo" style="margin-bottom:12px;">
+        <label>Nota *</label>
+        <div class="estrelas-picker" id="avEstrelasPicker"></div>
+        <input type="hidden" id="avNota" value="5">
+      </div>
+      <div class="form-campo">
+        <label for="avComentario">Comentário</label>
+        <textarea id="avComentario" rows="3" placeholder="O que o cliente disse sobre o produto"></textarea>
+      </div>
+      <div class="form-campo">
+        <label>Fotos (opcional)</label>
+        <div class="fotos-drop" id="avFotosDrop">Clique para escolher fotos</div>
+        <input type="file" id="avFotosInput" accept="image/*" multiple style="display:none;">
+        <div class="fotos-preview" id="avFotosPreview"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn-admin btn-admin-primary">Adicionar avaliação</button>
+      </div>
+    </form>
+
+    <div class="modal-footer">
+      <button type="button" class="btn-admin btn-admin-outline" id="btnFecharAvaliacoes">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay modal-confirma" id="modalExcluir">
   <div class="modal-card">
     <h2>Excluir produto?</h2>
@@ -501,14 +585,18 @@ async function tentarLogin(){
 
   document.getElementById('telaLogin').style.display = 'none';
   document.getElementById('painelAdmin').classList.add('show');
+  await carregarCategoriasAdmin();
+  popularSelectsDeCategoria();
   renderTabela();
 }
 
 // Se já existir uma sessão válida (ex: página recarregada), entra direto
-sb.auth.getSession().then(({ data }) => {
+sb.auth.getSession().then(async ({ data }) => {
   if (data.session){
     document.getElementById('telaLogin').style.display = 'none';
     document.getElementById('painelAdmin').classList.add('show');
+    await carregarCategoriasAdmin();
+    popularSelectsDeCategoria();
     renderTabela();
   }
 });
@@ -521,9 +609,80 @@ document.getElementById('btnSair').addEventListener('click', async () => {
 });
 
 let produtosAdmin = [];
+let categoriasAdminCache = [];
 let fotosFormAtual = [];
 let arquivosFotosNovas = []; // Arquivos reais escolhidos agora, aguardando upload no Storage ao salvar
 let tamanhosFormAtual = new Set();
+let formatoSelecionado = '';
+
+async function carregarCategoriasAdmin(){
+  const { data, error } = await sb.from('categorias').select('*').order('ordem');
+  if (error){ console.error('Erro ao carregar categorias:', error); return []; }
+  categoriasAdminCache = data;
+  return data;
+}
+
+function popularSelectsDeCategoria(){
+  const optionsHTML = categoriasAdminCache.map(c => `<option value="${c.slug}">${c.nome}</option>`).join('');
+  document.getElementById('fCategoria').innerHTML = optionsHTML;
+  document.getElementById('filtroCategoriaAdmin').innerHTML = `<option value="">Todas as categorias</option>${optionsHTML}`;
+}
+
+// Slug simples a partir do nome (sem acento, minúsculo, hífens)
+function gerarSlug(nome){
+  return nome
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+}
+
+async function renderListaCategoriasModal(){
+  await carregarCategoriasAdmin();
+  popularSelectsDeCategoria();
+  document.getElementById('listaCategoriasAdmin').innerHTML = categoriasAdminCache.map(c => `
+    <div class="categoria-linha">
+      <span>${c.nome} <span style="color:var(--texto-suave);">(/${c.slug})</span></span>
+      <button type="button" data-slug="${c.slug}" data-id="${c.id}">Excluir</button>
+    </div>
+  `).join('');
+  document.querySelectorAll('#listaCategoriasAdmin button[data-id]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm(`Excluir a categoria "${btn.parentElement.textContent.trim()}"? Só funciona se não houver produtos nela.`)) return;
+      const { error } = await sb.from('categorias').delete().eq('id', btn.getAttribute('data-id'));
+      if (error){
+        alert('Não foi possível excluir: existem produtos usando essa categoria (mova ou exclua eles primeiro).');
+        return;
+      }
+      renderListaCategoriasModal();
+    });
+  });
+}
+
+document.getElementById('btnGerenciarCategorias').addEventListener('click', () => {
+  renderListaCategoriasModal();
+  document.getElementById('modalCategorias').classList.add('show');
+});
+document.getElementById('btnFecharCategorias').addEventListener('click', () => {
+  document.getElementById('modalCategorias').classList.remove('show');
+  renderTabela();
+});
+
+document.getElementById('formNovaCategoria').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const nome = document.getElementById('novaCategoriaNome').value.trim();
+  if (!nome) return;
+  const slug = gerarSlug(nome);
+  const maiorOrdem = Math.max(0, ...categoriasAdminCache.map(c => c.ordem || 0));
+  const { error } = await sb.from('categorias').insert({ nome, slug, icone: 'padrao', ordem: maiorOrdem + 1 });
+  if (error){
+    alert('Erro ao criar categoria: ' + error.message);
+    return;
+  }
+  document.getElementById('novaCategoriaNome').value = '';
+  renderListaCategoriasModal();
+});
 
 const CATEGORIA_LABEL = { aliancas: "Alianças", aneis: "Anéis", brincos: "Brincos", colares: "Colares", pulseiras: "Pulseiras", joias: "Joias" };
 
@@ -551,13 +710,14 @@ async function renderTabela(){
     <tr>
       <td><img class="admin-thumb" src="${(p.fotos && p.fotos[0]) || ''}" alt=""></td>
       <td>${p.nome}</td>
-      <td>${CATEGORIA_LABEL[p.categoria] || p.categoria}</td>
+      <td>${(categoriasAdminCache.find(c => c.slug === p.categoria) || {}).nome || CATEGORIA_LABEL[p.categoria] || p.categoria}</td>
       <td>${formatarPreco(p.preco)}</td>
       <td>${p.estoque ?? '—'}</td>
       <td><span class="status-pill ${p.ativo ? 'status-ativo' : 'status-rascunho'}">${p.ativo ? 'Ativo' : 'Rascunho'}</span></td>
       <td>
         <div class="acoes-linha">
           <button type="button" data-acao="editar" data-id="${p.id}">Editar</button>
+          <button type="button" data-acao="avaliacoes" data-id="${p.id}">Avaliações</button>
           <button type="button" data-acao="duplicar" data-id="${p.id}">Duplicar</button>
           <button type="button" class="excluir" data-acao="excluir" data-id="${p.id}">Excluir</button>
         </div>
@@ -570,6 +730,7 @@ async function renderTabela(){
       const id = btn.getAttribute('data-id');
       const acao = btn.getAttribute('data-acao');
       if (acao === 'editar') abrirModalProduto(produtosAdmin.find(p => p.id === id));
+      if (acao === 'avaliacoes') abrirModalAvaliacoes(produtosAdmin.find(p => p.id === id));
       if (acao === 'duplicar') duplicarProduto(id);
       if (acao === 'excluir') abrirModalExcluir(id);
     });
@@ -607,6 +768,22 @@ document.querySelectorAll('#tamanhosMulti button').forEach(btn => {
   });
 });
 
+document.getElementById('formatoAdminPills').innerHTML = Object.keys(ICONES_FORMATO).map(f => `
+  <button type="button" class="formato-admin-pill" data-formato="${f}">
+    ${ICONES_FORMATO[f]}
+    <span>${f}</span>
+  </button>
+`).join('');
+document.querySelectorAll('.formato-admin-pill').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const jaAtivo = btn.classList.contains('active');
+    document.querySelectorAll('.formato-admin-pill').forEach(b => b.classList.remove('active'));
+    formatoSelecionado = jaAtivo ? '' : btn.getAttribute('data-formato');
+    if (!jaAtivo) btn.classList.add('active');
+    document.getElementById('fFormato').value = formatoSelecionado;
+  });
+});
+
 document.getElementById('btnNovoProduto').addEventListener('click', () => abrirModalProduto(null));
 document.getElementById('btnCancelarModal').addEventListener('click', fecharModalProduto);
 
@@ -624,7 +801,9 @@ function abrirModalProduto(produto){
   form.reset();
   fotosFormAtual = [];
   tamanhosFormAtual = new Set();
+  formatoSelecionado = '';
   document.querySelectorAll('#tamanhosMulti button').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.formato-admin-pill').forEach(b => b.classList.remove('active'));
   document.getElementById('detalhesExtra').classList.remove('show');
 
   document.getElementById('modalProdutoTitulo').textContent = produto ? 'Editar produto' : 'Novo produto';
@@ -637,7 +816,12 @@ function abrirModalProduto(produto){
     document.getElementById('fMaterial').value = produto.material_aro || 'Prata 925';
     document.getElementById('fPedra').value = produto.pedra_central || 'Sem pedra';
     document.getElementById('fQuilate').value = produto.quilate_pedra || '';
-    document.getElementById('fFormato').value = produto.formato_pedra || '';
+    formatoSelecionado = produto.formato_pedra || '';
+    document.getElementById('fFormato').value = formatoSelecionado;
+    if (formatoSelecionado){
+      const pill = document.querySelector(`.formato-admin-pill[data-formato="${formatoSelecionado}"]`);
+      if (pill) pill.classList.add('active');
+    }
     document.getElementById('fCravacao').value = produto.cravacao || '';
     document.getElementById('fGrauCor').value = produto.grau_cor || '';
     document.getElementById('fGrauClareza').value = produto.grau_clareza || '';
@@ -763,6 +947,139 @@ document.getElementById('formProduto').addEventListener('submit', async (e) => {
   } finally {
     botaoSalvar.disabled = false;
     botaoSalvar.textContent = 'Salvar produto';
+  }
+});
+
+/* ============================================================
+   AVALIAÇÕES (cadastro manual — feedback real recebido por outro canal)
+   ============================================================ */
+let produtoAvaliacoesAtual = null;
+let notaSelecionada = 5;
+let fotosAvaliacaoAtual = []; // { file, previewUrl }
+
+document.getElementById('avEstrelasPicker').innerHTML = [1,2,3,4,5].map(n => `
+  <button type="button" data-nota="${n}">
+    <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9"/></svg>
+  </button>
+`).join('');
+
+function marcarEstrelas(nota){
+  notaSelecionada = nota;
+  document.getElementById('avNota').value = nota;
+  document.querySelectorAll('#avEstrelasPicker button').forEach(btn => {
+    btn.classList.toggle('ativa', Number(btn.getAttribute('data-nota')) <= nota);
+  });
+}
+document.querySelectorAll('#avEstrelasPicker button').forEach(btn => {
+  btn.addEventListener('click', () => marcarEstrelas(Number(btn.getAttribute('data-nota'))));
+});
+
+async function abrirModalAvaliacoes(produto){
+  produtoAvaliacoesAtual = produto;
+  document.getElementById('avaliacoesModalTitulo').textContent = `Avaliações — ${produto.nome}`;
+  document.getElementById('formNovaAvaliacao').reset();
+  document.getElementById('avData').value = new Date().toISOString().slice(0, 10);
+  fotosAvaliacaoAtual = [];
+  renderAvFotosPreview();
+  marcarEstrelas(5);
+  await renderListaAvaliacoesAdmin();
+  document.getElementById('modalAvaliacoes').classList.add('show');
+}
+
+async function renderListaAvaliacoesAdmin(){
+  const { data, error } = await sb.from('avaliacoes').select('*').eq('produto_id', produtoAvaliacoesAtual.id).order('data_avaliacao', { ascending: false });
+  const lista = error ? [] : data;
+  document.getElementById('listaAvaliacoesAdmin').innerHTML = lista.length
+    ? lista.map(a => `
+        <div class="avaliacao-admin-linha">
+          <div class="conteudo">
+            <strong>${'★'.repeat(a.nota)}${'☆'.repeat(5 - a.nota)}</strong> ${a.nome_cliente} — ${formatarDataBR(a.data_avaliacao)}
+            ${a.comentario ? `<div style="color:var(--texto-suave);">${a.comentario}</div>` : ''}
+          </div>
+          <button type="button" class="excluir-av" data-id="${a.id}">Excluir</button>
+        </div>
+      `).join('')
+    : `<p style="color:var(--texto-suave);font-size:0.85rem;">Nenhuma avaliação cadastrada ainda.</p>`;
+
+  document.querySelectorAll('.excluir-av').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Excluir essa avaliação?')) return;
+      await sb.from('avaliacoes').delete().eq('id', btn.getAttribute('data-id'));
+      renderListaAvaliacoesAdmin();
+    });
+  });
+}
+
+document.getElementById('btnFecharAvaliacoes').addEventListener('click', () => {
+  document.getElementById('modalAvaliacoes').classList.remove('show');
+});
+
+document.getElementById('avFotosDrop').addEventListener('click', () => document.getElementById('avFotosInput').click());
+document.getElementById('avFotosInput').addEventListener('change', (e) => {
+  [...e.target.files].forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      fotosAvaliacaoAtual.push({ file, previewUrl: ev.target.result });
+      renderAvFotosPreview();
+    };
+    reader.readAsDataURL(file);
+  });
+  e.target.value = '';
+});
+
+function renderAvFotosPreview(){
+  const wrap = document.getElementById('avFotosPreview');
+  wrap.innerHTML = fotosAvaliacaoAtual.map((f, i) => `
+    <div class="foto-item">
+      <img src="${f.previewUrl}" alt="">
+      <button type="button" class="foto-remover" data-i="${i}" aria-label="Remover foto">×</button>
+    </div>
+  `).join('');
+  wrap.querySelectorAll('.foto-remover').forEach(btn => {
+    btn.addEventListener('click', () => {
+      fotosAvaliacaoAtual.splice(Number(btn.getAttribute('data-i')), 1);
+      renderAvFotosPreview();
+    });
+  });
+}
+
+document.getElementById('formNovaAvaliacao').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const botao = e.target.querySelector('button[type="submit"]');
+  botao.disabled = true;
+  botao.textContent = 'Salvando...';
+
+  try {
+    const urlsFotos = [];
+    for (const f of fotosAvaliacaoAtual){
+      const nomeArquivo = `avaliacoes/${produtoAvaliacoesAtual.id}/${crypto.randomUUID()}-${f.file.name}`;
+      const { error: erroUpload } = await sb.storage.from('produtos').upload(nomeArquivo, f.file);
+      if (erroUpload) throw new Error(erroUpload.message);
+      const { data: urlData } = sb.storage.from('produtos').getPublicUrl(nomeArquivo);
+      urlsFotos.push(urlData.publicUrl);
+    }
+
+    const { error } = await sb.from('avaliacoes').insert({
+      produto_id: produtoAvaliacoesAtual.id,
+      nome_cliente: document.getElementById('avNome').value.trim(),
+      nota: notaSelecionada,
+      comentario: document.getElementById('avComentario').value.trim() || null,
+      data_avaliacao: document.getElementById('avData').value || new Date().toISOString().slice(0, 10),
+      fotos: urlsFotos
+    });
+    if (error) throw new Error(error.message);
+
+    e.target.reset();
+    document.getElementById('avData').value = new Date().toISOString().slice(0, 10);
+    fotosAvaliacaoAtual = [];
+    renderAvFotosPreview();
+    marcarEstrelas(5);
+    await renderListaAvaliacoesAdmin();
+  } catch (err) {
+    alert('Erro ao salvar avaliação: ' + err.message);
+  } finally {
+    botao.disabled = false;
+    botao.textContent = 'Adicionar avaliação';
   }
 });
 

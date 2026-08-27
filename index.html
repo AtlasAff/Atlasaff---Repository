@@ -16,7 +16,7 @@
   3) IMG: VITRINE — array `vitrine` no <script> lá embaixo.
   4) IMG: PRODUTOS EM DESTAQUE — array `produtos` no <script> lá embaixo.
   ============================================================
-  ESTRUTURA DO SITE (multi-página)
+  ESTRUTURA DO SITE (multi-página) atual
   ============================================================
   - style.css   → visual de TODO o site (cores, fontes, layout)
   - shared.js   → menu de categorias + comportamento do header (usado em todas as páginas)
@@ -77,7 +77,7 @@
 
 <!-- ============ HERO ============ -->
 <section class="hero" id="hero">
-  <div class="hero-content">
+  <div class="hero-content entra-com-pagina">
     <span class="eyebrow" id="heroEyebrow"></span>
     <h1 id="heroTitle"></h1>
     <a href="#produtos" class="btn btn-primary" id="heroCta"></a>
@@ -87,7 +87,7 @@
 <!-- ============ CATEGORIAS ============ -->
 <section class="section" id="categorias">
   <div class="container">
-    <div class="section-head">
+    <div class="section-head reveal">
       <span class="eyebrow">Explore</span>
       <h2>Nossas categorias</h2>
     </div>
@@ -98,7 +98,7 @@
 <!-- ============ VITRINE ============ -->
 <section class="section vitrine">
   <div class="container">
-    <div class="section-head">
+    <div class="section-head reveal">
       <span class="eyebrow">Seleção</span>
       <h2>Coleções em destaque</h2>
     </div>
@@ -109,7 +109,7 @@
 <!-- ============ PRODUTOS ============ -->
 <section class="section" id="produtos">
   <div class="container">
-    <div class="section-head">
+    <div class="section-head reveal">
       <span class="eyebrow">Catálogo</span>
       <h2>Peças em destaque</h2>
     </div>
@@ -209,16 +209,19 @@ document.getElementById('heroTitle').textContent = banner.title;
 document.getElementById('heroCta').textContent = banner.ctaText;
 
 const catGrid = document.getElementById('catGrid');
-catGrid.innerHTML = categorias.map(cat => `
-  <a class="cat-card" href="${cat.href}">
-    ${cat.icon}
-    <span>${cat.nome}</span>
-  </a>
-`).join('');
+carregarCategorias().then(categorias => {
+  catGrid.innerHTML = categorias.map(cat => `
+    <a class="cat-card reveal" href="${cat.href}">
+      ${cat.icon}
+      <span>${cat.nome}</span>
+    </a>
+  `).join('');
+  revelarNovosElementos();
+});
 
 const vitrineGrid = document.getElementById('vitrineGrid');
 vitrineGrid.innerHTML = vitrine.map(v => `
-  <a class="vitrine-card" href="#produtos" style="background-image:url('${v.image}')">
+  <a class="vitrine-card reveal" href="#produtos" style="background-image:url('${v.image}')">
     <div class="vitrine-inner">
       <span class="eyebrow">${v.eyebrow}</span>
       <h3>${v.titulo}</h3>
@@ -226,13 +229,15 @@ vitrineGrid.innerHTML = vitrine.map(v => `
     </div>
   </a>
 `).join('');
+revelarNovosElementos();
 
 const prodGrid = document.getElementById('prodGrid');
-prodGrid.innerHTML = `<p class="sem-resultados">Carregando produtos...</p>`;
+prodGrid.innerHTML = skeletonGridHTML();
 carregarProdutosDestaque(5).then(destaques => {
   prodGrid.innerHTML = destaques.length
     ? destaques.map(cardProdutoHTML).join('')
     : `<p class="sem-resultados">Nenhum produto em destaque cadastrado ainda.</p>`;
+  revelarNovosElementos();
 });
 
 initBuscaForm('searchFormHeader', true);

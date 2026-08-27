@@ -977,3 +977,142 @@
 
 .prod-name-link{ display:block; }
 .prod-name-link:hover .prod-name{ text-decoration: underline; }
+
+/* ============================================================
+   ANIMAÇÕES GERAIS
+   ============================================================ */
+body{ opacity: 0; }
+body.pronto{ opacity: 1; transition: opacity .45s ease; }
+
+.reveal{
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity .6s cubic-bezier(.22,.68,0,1.01), transform .6s cubic-bezier(.22,.68,0,1.01);
+}
+.reveal.revelado{ opacity: 1; transform: translateY(0); }
+
+/* leve "respiro" de profundidade nos cards ao passar o mouse */
+.prod-card{ transition: transform .25s ease; }
+.prod-card:hover{ transform: translateY(-4px); }
+.prod-img{ transition: transform .4s ease; }
+.prod-card:hover .prod-img{ transform: scale(1.035); }
+
+.btn{ transition: background .25s ease, color .25s ease, transform .15s ease, box-shadow .25s ease; }
+.btn:active{ transform: scale(0.96); }
+.btn-primary:hover{ box-shadow: 0 6px 18px rgba(107,15,26,0.25); }
+
+.btn-add{ position:relative; overflow:hidden; }
+.btn-add.clicado::after{
+  content:"";
+  position:absolute; inset:0;
+  background: rgba(107,15,26,0.15);
+  animation: ondaClique .5s ease-out;
+}
+@keyframes ondaClique{
+  from{ opacity:1; transform: scale(0.3); }
+  to{ opacity:0; transform: scale(2.2); }
+}
+
+/* pulso no ícone do carrinho ao adicionar item */
+@keyframes pulsoCarrinho{
+  0%{ transform: scale(1); }
+  30%{ transform: scale(1.28); }
+  55%{ transform: scale(0.95); }
+  100%{ transform: scale(1); }
+}
+.icon-btn.pulso, a.pulso{ animation: pulsoCarrinho .45s ease; }
+
+.cat-card{ transition: border-color .25s ease, transform .25s ease, box-shadow .25s ease; }
+.cat-card:hover{ box-shadow: 0 10px 26px rgba(43,33,31,0.08); }
+.cat-card svg{ transition: transform .3s ease; }
+.cat-card:hover svg{ transform: scale(1.12) rotate(-4deg); }
+
+.vitrine-card img, .vitrine-card{ transition: transform .5s ease; }
+.vitrine-card:hover{ transform: translateY(-3px); }
+
+/* toast com leve "bounce" */
+.toast{ transition: opacity .3s cubic-bezier(.34,1.56,.64,1), transform .3s cubic-bezier(.34,1.56,.64,1); }
+
+/* ============================================================
+   SKELETON (carregando)
+   ============================================================ */
+.skeleton{
+  background: linear-gradient(90deg, var(--creme-escuro) 25%, #f3ede1 37%, var(--creme-escuro) 63%);
+  background-size: 400% 100%;
+  animation: brilhoSkeleton 1.4s ease infinite;
+  border-radius: var(--radius);
+}
+@keyframes brilhoSkeleton{
+  0%{ background-position: 100% 50%; }
+  100%{ background-position: 0 50%; }
+}
+.skeleton-img{ aspect-ratio: 1/1; margin-bottom: 12px; }
+.skeleton-linha{ height: 12px; margin-bottom: 8px; }
+
+/* ============================================================
+   ESCOLHA POR FORMATO (formato da pedra, estilo Versale)
+   ============================================================ */
+.formato-wrap{ padding: 26px 20px 6px; }
+.formato-wrap h4{ font-size: 0.86rem; font-weight:600; margin-bottom: 14px; }
+.formato-pills{
+  display:flex;
+  gap: 14px;
+  overflow-x:auto;
+  padding-bottom: 4px;
+}
+.formato-pill{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap: 8px;
+  flex-shrink:0;
+  padding: 12px 16px;
+  border: 1px solid var(--borda);
+  border-radius: var(--radius);
+  font-size: 0.78rem;
+  font-weight:600;
+  color: var(--texto-suave);
+  transition: border-color .2s ease, background .2s ease, transform .2s ease;
+}
+.formato-pill:hover{ transform: translateY(-2px); }
+.formato-icone{ width:32px; height:32px; color: var(--bordo); display:block; }
+.formato-icone svg{ width:100%; height:100%; }
+.formato-pill.active{ border-color: var(--bordo); background: var(--creme-escuro); color: var(--texto); }
+
+/* ============================================================
+   AVALIAÇÕES
+   ============================================================ */
+.estrelas{ display:inline-flex; gap:2px; color: var(--bordo); vertical-align:middle; }
+.rating-resumo{ display:flex; align-items:center; gap:8px; margin: 10px 0 4px; font-size:0.86rem; }
+.rating-numero{ font-weight:700; }
+.rating-contagem{ color: var(--texto-suave); }
+
+.avaliacoes-wrap{ max-width: 800px; }
+.avaliacoes-topo{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:12px;
+  margin-bottom: 20px;
+}
+.avaliacoes-topo h2{ font-size: 1.3rem; }
+.avaliacao-item{
+  padding: 18px 0;
+  border-bottom: 1px solid var(--borda);
+}
+.avaliacao-topo{ display:flex; align-items:center; gap:10px; margin-bottom:6px; }
+.avaliacao-nome{ font-size:0.85rem; font-weight:600; color: var(--texto-suave); }
+.avaliacao-item p{ font-size:0.92rem; }
+
+/* Elementos que animam já na carga da página (ex: hero, acima da dobra) */
+.entra-com-pagina{
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity .7s ease .15s, transform .7s ease .15s;
+}
+body.pronto .entra-com-pagina{ opacity: 1; transform: translateY(0); }
+
+.avaliacao-data{ color: var(--texto-suave); font-size: 0.78rem; margin-left: auto; }
+.avaliacao-fotos{ display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+.avaliacao-fotos img{ width:64px; height:64px; object-fit:cover; border-radius: var(--radius); cursor:pointer; }

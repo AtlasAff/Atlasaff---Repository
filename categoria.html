@@ -3,7 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Buscar | Pavan & Co.</title>
+<title>Categoria | Pavan & Co.</title>
+
+<!--
+  Página ÚNICA e genérica pra qualquer categoria: categoria.html?c=aneis,
+  categoria.html?c=colares, etc. Categorias criadas pelo admin também
+  caem aqui automaticamente — não precisa criar um arquivo novo pra
+  cada categoria nova.
+-->
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -41,18 +48,51 @@
   </div>
 </header>
 
-<div class="busca-hero">
-  <span class="eyebrow">Busca</span>
-  <h1 id="buscaTitulo" style="font-family:var(--serif);font-style:italic;font-size:clamp(1.7rem,5vw,2.3rem);margin-top:8px;"></h1>
-  <form id="formBuscaPagina">
-    <input type="search" id="inputBuscaPagina" placeholder="Buscar por nome, material ou pedra...">
-    <button type="submit" class="btn btn-primary">Buscar</button>
-  </form>
+<div class="container">
+  <div class="breadcrumb">
+    <a href="index.html">Início</a>
+    <span class="sep">/</span>
+    <span class="atual" id="breadcrumbAtual">Categoria</span>
+  </div>
+</div>
+
+<div class="page-title container">
+  <span class="eyebrow">Catálogo</span>
+  <h1>Categoria</h1>
+  <div class="linha"></div>
+</div>
+
+<!-- ============ ESCOLHA POR FORMATO (estilo Versale) ============ -->
+<div class="container formato-wrap" id="formatoWrap" style="display:none;">
+  <h4>Escolha por formato</h4>
+  <div class="formato-pills"></div>
 </div>
 
 <div class="container">
+  <div class="filter-bar">
+    <button type="button" id="filtrosBtn" aria-label="Abrir filtros">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><line x1="4" y1="6" x2="20" y2="6"/><circle cx="9" cy="6" r="2" fill="currentColor" stroke="none"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="11" cy="18" r="2" fill="currentColor" stroke="none"/></svg>
+      Filtros
+    </button>
+    <div class="ordenar-wrap">
+      <button type="button" id="ordenarBtn" aria-label="Ordenar produtos">
+        <span class="ordenar-label">Ordenar por</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="ordenar-menu" id="ordenarMenu">
+        <button type="button" data-valor="relevancia">Relevância</button>
+        <button type="button" data-valor="menor-preco">Menor preço</button>
+        <button type="button" data-valor="maior-preco">Maior preço</button>
+        <button type="button" data-valor="nome">Nome A-Z</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="painel-filtros" id="painelFiltros"></div>
+
   <div class="result-bar">
     <span class="result-count" id="resultCount"></span>
+    <div id="chipsFiltros" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
   </div>
 </div>
 
@@ -61,6 +101,15 @@
     <div class="prod-grid" id="prodGrid"></div>
   </div>
 </section>
+
+<div class="newsletter-strip">
+  <h3>Receba novidades da Pavan & Co.</h3>
+  <p>Lançamentos, coleções e convites exclusivos, direto no seu e-mail.</p>
+  <form class="newsletter-form" onsubmit="event.preventDefault(); alert('Obrigado! (isto é um mock — ligar ao Supabase depois)');">
+    <input type="email" placeholder="Seu melhor e-mail" required>
+    <button class="btn btn-light" type="submit">Assinar</button>
+  </form>
+</div>
 
 <footer>
   <div class="container">
@@ -95,9 +144,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="shared.js"></script>
 <script>
+renderCategoryPage();
 initBuscaForm('searchFormHeader', true);
-initBuscaForm('formBuscaPagina', false);
-renderBuscaPage();
 </script>
 
 </body>
