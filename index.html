@@ -172,6 +172,7 @@
   </div>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="shared.js"></script>
 <script>
 /* ============================================================
@@ -227,10 +228,12 @@ vitrineGrid.innerHTML = vitrine.map(v => `
 `).join('');
 
 const prodGrid = document.getElementById('prodGrid');
-// Home mostra 5 produtos de destaque escolhidos do catálogo (um de cada categoria)
-const destaques = ["ane-01", "col-01", "bri-01", "pul-01", "ali-02"]
-  .map(id => PRODUTOS_CATALOGO.find(p => p.id === id));
-prodGrid.innerHTML = destaques.map(cardProdutoHTML).join('');
+prodGrid.innerHTML = `<p class="sem-resultados">Carregando produtos...</p>`;
+carregarProdutosDestaque(5).then(destaques => {
+  prodGrid.innerHTML = destaques.length
+    ? destaques.map(cardProdutoHTML).join('')
+    : `<p class="sem-resultados">Nenhum produto em destaque cadastrado ainda.</p>`;
+});
 
 initBuscaForm('searchFormHeader', true);
 </script>

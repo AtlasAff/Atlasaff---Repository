@@ -90,16 +90,20 @@
   <div class="footer-bottom">© <span id="year"></span> Pavan &amp; Co. — CNPJ: 00.000.000/0001-00</div>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="shared.js"></script>
 <script>
 initBuscaForm('searchFormHeader', true);
 
-// Itens de EXEMPLO já "no carrinho" — troque pelos ids reais quando ligar ao Supabase
-let itensCarrinho = [
-  { ...PRODUTOS_CATALOGO.find(p => p.id === 'ane-01'), qtd: 1 },
-  { ...PRODUTOS_CATALOGO.find(p => p.id === 'col-01'), qtd: 1 },
-  { ...PRODUTOS_CATALOGO.find(p => p.id === 'pul-02'), qtd: 1 }
-];
+// Itens de EXEMPLO já "no carrinho" — busca 3 produtos reais do Supabase
+// pra ilustrar o funcionamento (quantidade, remover, subtotal).
+let itensCarrinho = [];
+
+async function iniciarCarrinhoExemplo(){
+  const produtos = await carregarTodosProdutosAtivos();
+  itensCarrinho = produtos.slice(0, 3).map(p => ({ ...p, qtd: 1 }));
+  renderCarrinho();
+}
 
 function renderCarrinho(){
   const lista = document.getElementById('listaCarrinho');
@@ -155,7 +159,7 @@ function renderCarrinho(){
   });
 }
 
-renderCarrinho();
+iniciarCarrinhoExemplo();
 </script>
 
 </body>

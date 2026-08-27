@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin | Pavan & Co.</title>
+<meta name="robots" content="noindex, nofollow">
+
+<!--
+  ============================================================
+  PAINEL ADMIN — LEIA ANTES DE USAR
+  ============================================================
+  - Login: agora é via Supabase Auth de verdade (e-mail/senha).
+    Crie seu usuário admin em Authentication > Add User no painel
+    do Supabase. Não existe cadastro público aqui — só quem você
+    criar manualmente lá consegue entrar.
+  - Dados: tudo já é gravado direto na tabela `produtos` do
+    Supabase. Criar, editar, duplicar ou excluir aqui reflete
+    imediatamente na loja pública (index.html, categorias, busca).
+  - Fotos: o upload aqui vai de verdade pro Supabase Storage
+    (bucket "produtos"). A miniatura que aparece antes de salvar
+    é só uma prévia local — a foto só é enviada quando você clica
+    em "Salvar produto".
+  ============================================================
+-->
+
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,400&family=Lato:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cinza-bg: #F4F5F7;
+    --cinza-card: #FFFFFF;
+    --cinza-borda: #DDE1E6;
+    --texto: #1F2429;
+    --texto-suave: #656D76;
+    --azul: #2B4C7E;
+    --azul-escuro: #1E3A5F;
+    --verde: #2C6E37;
+    --vermelho: #B3261E;
+    --vermelho-bg: #FBEAE9;
+    --radius: 6px;
+    --serif: 'Playfair Display', Georgia, serif;
+    --sans: 'Lato', -apple-system, sans-serif;
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  body{ background: var(--cinza-bg); color: var(--texto); font-family: var(--sans); line-height:1.5; }
+  button{ font-family:inherit; cursor:pointer; border:none; background:none; }
+  input, select, textarea{ font-family:inherit; }
+  ul{ list-style:none; }
+  img{ max-width:100%; display:block; }
+
+  /* ---------- LOGIN ---------- */
+  #telaLogin{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding: 20px;
+  }
+  .login-card{
+    background: var(--cinza-card);
+    border: 1px solid var(--cinza-borda);
+    border-radius: var(--radius);
+    padding: 40px 32px;
+    max-width: 360px;
+    width:100%;
+    text-align:center;
+  }
+  .login-card h1{ font-family: var(--serif); font-size:1.5rem; margin-bottom:6px; }
+  .login-card p{ font-size:0.85rem; color:var(--texto-suave); margin-bottom:24px; }
+  .login-card input{
+    width:100%;
+    padding: 12px 14px;
+    border: 1px solid var(--cinza-borda);
+    border-radius: var(--radius);
+    margin-bottom: 12px;
+    font-size:0.95rem;
+  }
+  .login-card button{
+    width:100%;
+    padding: 12px;
+    background: var(--azul);
+    color:#fff;
+    border-radius: var(--radius);
+    font-weight:600;
+  }
+  .login-card button:hover{ background: var(--azul-escuro); }
+  .login-erro{ color: var(--vermelho); font-size:0.82rem; margin-top:10px; display:none; }
+  .login-erro.show{ display:block; }
+
+  /* ---------- LAYOUT ADMIN ---------- */
+  #painelAdmin{ display:none; min-height:100vh; }
+  #painelAdmin.show{ display:block; }
+
+  .admin-topbar{
+    background: var(--azul-escuro);
+    color:#fff;
+    padding: 14px 24px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .admin-topbar .marca{ font-family: var(--serif); font-size:1.1rem; }
+  .admin-topbar button{ color:#fff; font-size:0.85rem; text-decoration:underline; }
+
+  .admin-wrap{ max-width: 1200px; margin: 0 auto; padding: 26px 20px 80px; }
+
+  .admin-toolbar{
+    display:flex;
+    flex-wrap:wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+    align-items:center;
+  }
+  .admin-toolbar input, .admin-toolbar select{
+    padding: 10px 12px;
+    border:1px solid var(--cinza-borda);
+    border-radius: var(--radius);
+    font-size:0.88rem;
+  }
+  .admin-toolbar input{ flex:1; min-width:180px; }
+  .btn-admin{
+    padding: 10px 18px;
+    border-radius: var(--radius);
+    font-size:0.85rem;
+    font-weight:600;
+  }
+  .btn-admin-primary{ background: var(--azul); color:#fff; }
+  .btn-admin-primary:hover{ background: var(--azul-escuro); }
+  .btn-admin-outline{ border:1px solid var(--cinza-borda); background:#fff; }
+  .btn-admin-outline:hover{ background: var(--cinza-bg); }
+
+  /* ---------- TABELA ---------- */
+  .admin-tabela-wrap{
+    background: var(--cinza-card);
+    border: 1px solid var(--cinza-borda);
+    border-radius: var(--radius);
+    overflow-x:auto;
+  }
+  table.admin-tabela{ width:100%; border-collapse:collapse; min-width: 720px; }
+  .admin-tabela th{
+    text-align:left;
+    font-size:0.74rem;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    color: var(--texto-suave);
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--cinza-borda);
+  }
+  .admin-tabela td{
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--cinza-borda);
+    font-size:0.88rem;
+    vertical-align:middle;
+  }
+  .admin-tabela tr:last-child td{ border-bottom:none; }
+  .admin-thumb{ width:44px; height:44px; object-fit:cover; border-radius:4px; background:var(--cinza-bg); }
+  .status-pill{
+    display:inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size:0.72rem;
+    font-weight:700;
+  }
+  .status-ativo{ background:#E8F3E9; color: var(--verde); }
+  .status-rascunho{ background:#F1EFE0; color:#8A6D1D; }
+  .acoes-linha{ display:flex; gap:10px; }
+  .acoes-linha button{ font-size:0.78rem; color: var(--azul); text-decoration:underline; }
+  .acoes-linha button.excluir{ color: var(--vermelho); }
+
+  /* ---------- MODAL FORMULÁRIO ---------- */
+  .modal-overlay{
+    display:none;
+    position:fixed; inset:0;
+    background: rgba(15,20,25,0.5);
+    z-index: 500;
+    align-items:flex-start;
+    justify-content:center;
+    overflow-y:auto;
+    padding: 30px 16px;
+  }
+  .modal-overlay.show{ display:flex; }
+  .modal-card{
+    background:#fff;
+    border-radius: var(--radius);
+    max-width: 720px;
+    width:100%;
+    padding: 28px;
+  }
+  .modal-card h2{ font-family: var(--serif); font-size:1.3rem; margin-bottom: 20px; }
+  .form-secao{ margin-bottom: 22px; padding-bottom:18px; border-bottom:1px solid var(--cinza-borda); }
+  .form-secao:last-of-type{ border-bottom:none; }
+  .form-secao h3{ font-size:0.82rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--texto-suave); margin-bottom:12px; }
+  .form-linha{ display:grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 12px; }
+  .form-campo label{ font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px; }
+  .form-campo input, .form-campo select, .form-campo textarea{
+    width:100%;
+    padding: 10px 12px;
+    border:1px solid var(--cinza-borda);
+    border-radius: var(--radius);
+    font-size:0.88rem;
+  }
+  .form-campo textarea{ resize:vertical; }
+
+  @media (min-width: 640px){
+    .form-linha.cols-2{ grid-template-columns: 1fr 1fr; }
+    .form-linha.cols-3{ grid-template-columns: 1fr 1fr 1fr; }
+  }
+
+  .detalhes-toggle{
+    font-size:0.82rem;
+    color: var(--azul);
+    text-decoration:underline;
+    margin: 4px 0 12px;
+    display:inline-block;
+  }
+  .detalhes-extra{ display:none; }
+  .detalhes-extra.show{ display:block; }
+
+  .tamanhos-multi{ display:flex; flex-wrap:wrap; gap:8px; }
+  .tamanhos-multi button{
+    padding: 7px 12px;
+    border: 1px solid var(--cinza-borda);
+    border-radius: var(--radius);
+    font-size:0.82rem;
+  }
+  .tamanhos-multi button.active{ background: var(--azul); color:#fff; border-color: var(--azul); }
+
+  .fotos-drop{
+    border: 2px dashed var(--cinza-borda);
+    border-radius: var(--radius);
+    padding: 22px;
+    text-align:center;
+    font-size:0.85rem;
+    color: var(--texto-suave);
+    cursor:pointer;
+  }
+  .fotos-preview{ display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
+  .foto-item{ position:relative; width:74px; height:74px; }
+  .foto-item img{ width:100%; height:100%; object-fit:cover; border-radius:4px; }
+  .foto-item.capa::after{
+    content:"Capa";
+    position:absolute; bottom:0; left:0; right:0;
+    background: rgba(43,76,126,0.85);
+    color:#fff; font-size:0.6rem; text-align:center; padding:2px 0;
+  }
+  .foto-remover{
+    position:absolute; top:-6px; right:-6px;
+    width:18px; height:18px;
+    background: var(--vermelho);
+    color:#fff;
+    border-radius:50%;
+    font-size:0.7rem;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  .checkbox-linha{ display:flex; align-items:center; gap:8px; margin-bottom:10px; font-size:0.88rem; }
+  .checkbox-linha input{ width:16px; height:16px; }
+
+  .modal-footer{ display:flex; justify-content:flex-end; gap:10px; margin-top: 10px; }
+
+  .modal-confirma .modal-card{ max-width: 380px; text-align:center; }
+  .modal-confirma p{ font-size:0.9rem; color: var(--texto-suave); margin: 10px 0 20px; }
+</style>
+</head>
+<body>
+
+<div id="telaLogin">
+  <div class="login-card">
+    <h1>Pavan & Co.</h1>
+    <p>Painel administrativo — acesso restrito</p>
+    <input type="email" id="emailInput" placeholder="E-mail" autofocus>
+    <input type="password" id="senhaInput" placeholder="Senha de acesso">
+    <button type="button" id="btnEntrarAdmin">Entrar</button>
+    <div class="login-erro" id="loginErro">E-mail ou senha incorretos.</div>
+  </div>
+</div>
+
+<div id="painelAdmin">
+  <div class="admin-topbar">
+    <span class="marca">Pavan & Co. — Admin</span>
+    <button type="button" id="btnSair">Sair</button>
+  </div>
+
+  <div class="admin-wrap">
+    <div class="admin-toolbar">
+      <input type="text" id="buscaAdmin" placeholder="Buscar por nome...">
+      <select id="filtroCategoriaAdmin">
+        <option value="">Todas as categorias</option>
+        <option value="aliancas">Alianças</option>
+        <option value="aneis">Anéis</option>
+        <option value="brincos">Brincos</option>
+        <option value="colares">Colares</option>
+        <option value="pulseiras">Pulseiras</option>
+        <option value="joias">Joias</option>
+      </select>
+      <button type="button" class="btn-admin btn-admin-primary" id="btnNovoProduto">+ Novo produto</button>
+    </div>
+
+    <div class="admin-tabela-wrap">
+      <table class="admin-tabela">
+        <thead>
+          <tr>
+            <th></th>
+            <th>Nome</th>
+            <th>Categoria</th>
+            <th>Preço</th>
+            <th>Estoque</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="corpoTabelaAdmin"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalProduto">
+  <div class="modal-card">
+    <h2 id="modalProdutoTitulo">Novo produto</h2>
+    <form id="formProduto">
+      <input type="hidden" id="fId">
+
+      <div class="form-secao">
+        <h3>1. Informações básicas</h3>
+        <div class="form-linha cols-2">
+          <div class="form-campo">
+            <label for="fNome">Nome *</label>
+            <input type="text" id="fNome" required placeholder="Ex: Anel Solitário Noivado Cravejado">
+          </div>
+          <div class="form-campo">
+            <label for="fCategoria">Categoria *</label>
+            <select id="fCategoria" required>
+              <option value="aliancas">Alianças</option>
+              <option value="aneis">Anéis</option>
+              <option value="brincos">Brincos</option>
+              <option value="colares">Colares</option>
+              <option value="pulseiras">Pulseiras</option>
+              <option value="joias">Joias</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-campo">
+          <label for="fDescricao">Descrição</label>
+          <textarea id="fDescricao" rows="3" placeholder="Descrição de venda, estilo editorial..."></textarea>
+        </div>
+      </div>
+
+      <div class="form-secao">
+        <h3>2. Material e pedra</h3>
+        <div class="form-linha cols-2">
+          <div class="form-campo">
+            <label for="fMaterial">Material do aro</label>
+            <select id="fMaterial">
+              <option>Prata 925</option>
+              <option>Prata 925 banhada a ouro 18k</option>
+              <option>Ouro 18k</option>
+              <option>Ouro Rosé</option>
+              <option>Aço inox</option>
+              <option>Tungstênio</option>
+            </select>
+          </div>
+          <div class="form-campo">
+            <label for="fPedra">Pedra central</label>
+            <select id="fPedra">
+              <option>Sem pedra</option>
+              <option>Moissanite</option>
+              <option>Zircônia</option>
+              <option>Diamante</option>
+              <option>Pérola</option>
+              <option>Outra</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-linha cols-3">
+          <div class="form-campo">
+            <label for="fQuilate">Quilate / tamanho da pedra</label>
+            <input type="text" id="fQuilate" placeholder="Ex: 2ct (8mm)">
+          </div>
+          <div class="form-campo">
+            <label for="fFormato">Formato da pedra</label>
+            <select id="fFormato">
+              <option value="">—</option>
+              <option>Redondo</option>
+              <option>Oval</option>
+              <option>Princesa</option>
+              <option>Coração</option>
+              <option>Marquise</option>
+              <option>Esmeralda</option>
+            </select>
+          </div>
+          <div class="form-campo">
+            <label for="fCravacao">Cravação</label>
+            <input type="text" id="fCravacao" placeholder="Ex: 4 garras">
+          </div>
+        </div>
+
+        <button type="button" class="detalhes-toggle" id="toggleDetalhesExtra">+ Mostrar detalhes de grau (cor / clareza / corte)</button>
+        <div class="detalhes-extra" id="detalhesExtra">
+          <div class="form-linha cols-3">
+            <div class="form-campo">
+              <label for="fGrauCor">Grau de cor</label>
+              <select id="fGrauCor">
+                <option value="">—</option>
+                <option>D</option><option>E</option><option>F</option><option>G</option><option>H</option>
+              </select>
+            </div>
+            <div class="form-campo">
+              <label for="fGrauClareza">Grau de clareza</label>
+              <select id="fGrauClareza">
+                <option value="">—</option>
+                <option>VVS1</option><option>VVS2</option><option>VS1</option><option>VS2</option>
+              </select>
+            </div>
+            <div class="form-campo">
+              <label for="fGrauCorte">Grau de corte</label>
+              <select id="fGrauCorte">
+                <option value="">—</option>
+                <option>Excelente</option><option>Muito bom</option><option>Bom</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-campo">
+            <label for="fLargura">Largura do aro (mm)</label>
+            <input type="number" id="fLargura" step="0.1" placeholder="Ex: 4">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-secao">
+        <h3>3. Tamanhos e preço</h3>
+        <div class="form-campo" style="margin-bottom:14px;">
+          <label>Tamanhos disponíveis (aros)</label>
+          <div class="tamanhos-multi" id="tamanhosMulti"></div>
+        </div>
+        <div class="form-linha cols-2">
+          <div class="form-campo">
+            <label for="fPreco">Preço (R$) *</label>
+            <input type="number" id="fPreco" step="0.01" required placeholder="Ex: 589.00">
+          </div>
+          <div class="form-campo">
+            <label for="fEstoque">Estoque</label>
+            <input type="number" id="fEstoque" placeholder="Ex: 10">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-secao">
+        <h3>4. Fotos *</h3>
+        <div class="fotos-drop" id="fotosDrop">Clique para escolher fotos (a primeira vira a capa)</div>
+        <input type="file" id="fotosInput" accept="image/*" multiple style="display:none;">
+        <div class="fotos-preview" id="fotosPreview"></div>
+      </div>
+
+      <div class="form-secao">
+        <label class="checkbox-linha"><input type="checkbox" id="fDestaque"> Marcar como destaque (aparece na home)</label>
+        <label class="checkbox-linha"><input type="checkbox" id="fAtivo" checked> Ativar produto (visível na loja — desmarque para rascunho)</label>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-admin btn-admin-outline" id="btnCancelarModal">Cancelar</button>
+        <button type="submit" class="btn-admin btn-admin-primary">Salvar produto</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay modal-confirma" id="modalExcluir">
+  <div class="modal-card">
+    <h2>Excluir produto?</h2>
+    <p>Tem certeza que deseja excluir "<span id="nomeExcluir"></span>"? Essa ação não pode ser desfeita (e no futuro também vai remover as fotos do Storage).</p>
+    <div class="modal-footer" style="justify-content:center;">
+      <button type="button" class="btn-admin btn-admin-outline" id="btnCancelarExcluir">Cancelar</button>
+      <button type="button" class="btn-admin" style="background:var(--vermelho);color:#fff;" id="btnConfirmarExcluir">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="shared.js"></script>
+<script>
+const SENHA_ADMIN = null; // não usado mais — login agora é via Supabase Auth (sb.auth)
+
+document.getElementById('btnEntrarAdmin').addEventListener('click', tentarLogin);
+document.getElementById('senhaInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') tentarLogin(); });
+document.getElementById('emailInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') tentarLogin(); });
+
+async function tentarLogin(){
+  const email = document.getElementById('emailInput').value.trim();
+  const senha = document.getElementById('senhaInput').value;
+  const erroEl = document.getElementById('loginErro');
+  erroEl.classList.remove('show');
+
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: senha });
+
+  if (error || !data.session){
+    erroEl.textContent = error ? error.message : 'E-mail ou senha incorretos.';
+    erroEl.classList.add('show');
+    return;
+  }
+
+  document.getElementById('telaLogin').style.display = 'none';
+  document.getElementById('painelAdmin').classList.add('show');
+  renderTabela();
+}
+
+// Se já existir uma sessão válida (ex: página recarregada), entra direto
+sb.auth.getSession().then(({ data }) => {
+  if (data.session){
+    document.getElementById('telaLogin').style.display = 'none';
+    document.getElementById('painelAdmin').classList.add('show');
+    renderTabela();
+  }
+});
+
+document.getElementById('btnSair').addEventListener('click', async () => {
+  await sb.auth.signOut();
+  document.getElementById('painelAdmin').classList.remove('show');
+  document.getElementById('telaLogin').style.display = 'flex';
+  document.getElementById('senhaInput').value = '';
+});
+
+let produtosAdmin = [];
+let fotosFormAtual = [];
+let arquivosFotosNovas = []; // Arquivos reais escolhidos agora, aguardando upload no Storage ao salvar
+let tamanhosFormAtual = new Set();
+
+const CATEGORIA_LABEL = { aliancas: "Alianças", aneis: "Anéis", brincos: "Brincos", colares: "Colares", pulseiras: "Pulseiras", joias: "Joias" };
+
+async function carregarProdutosAdmin(){
+  // Autenticado vê TODOS os produtos (inclusive rascunhos) — a política de RLS já garante isso
+  const { data, error } = await sb.from('produtos').select('*').order('criado_em', { ascending: false });
+  if (error){
+    console.error('Erro ao carregar produtos do admin:', error);
+    return [];
+  }
+  return data;
+}
+
+async function renderTabela(){
+  const termo = document.getElementById('buscaAdmin').value.toLowerCase();
+  const catFiltro = document.getElementById('filtroCategoriaAdmin').value;
+
+  produtosAdmin = await carregarProdutosAdmin();
+
+  const lista = produtosAdmin.filter(p =>
+    p.nome.toLowerCase().includes(termo) && (!catFiltro || p.categoria === catFiltro)
+  );
+
+  document.getElementById('corpoTabelaAdmin').innerHTML = lista.map(p => `
+    <tr>
+      <td><img class="admin-thumb" src="${(p.fotos && p.fotos[0]) || ''}" alt=""></td>
+      <td>${p.nome}</td>
+      <td>${CATEGORIA_LABEL[p.categoria] || p.categoria}</td>
+      <td>${formatarPreco(p.preco)}</td>
+      <td>${p.estoque ?? '—'}</td>
+      <td><span class="status-pill ${p.ativo ? 'status-ativo' : 'status-rascunho'}">${p.ativo ? 'Ativo' : 'Rascunho'}</span></td>
+      <td>
+        <div class="acoes-linha">
+          <button type="button" data-acao="editar" data-id="${p.id}">Editar</button>
+          <button type="button" data-acao="duplicar" data-id="${p.id}">Duplicar</button>
+          <button type="button" class="excluir" data-acao="excluir" data-id="${p.id}">Excluir</button>
+        </div>
+      </td>
+    </tr>
+  `).join('') || `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--texto-suave);">Nenhum produto encontrado.</td></tr>`;
+
+  document.querySelectorAll('#corpoTabelaAdmin button[data-acao]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-id');
+      const acao = btn.getAttribute('data-acao');
+      if (acao === 'editar') abrirModalProduto(produtosAdmin.find(p => p.id === id));
+      if (acao === 'duplicar') duplicarProduto(id);
+      if (acao === 'excluir') abrirModalExcluir(id);
+    });
+  });
+}
+
+document.getElementById('buscaAdmin').addEventListener('input', renderTabela);
+document.getElementById('filtroCategoriaAdmin').addEventListener('change', renderTabela);
+
+async function duplicarProduto(id){
+  const original = produtosAdmin.find(p => p.id === id);
+  const copia = { ...original };
+  delete copia.id;
+  delete copia.criado_em;
+  copia.nome = `${copia.nome} (cópia)`;
+  copia.ativo = false;
+
+  const { data, error } = await sb.from('produtos').insert(copia).select().single();
+  if (error){
+    alert('Erro ao duplicar: ' + error.message);
+    return;
+  }
+  await renderTabela();
+  abrirModalProduto(data);
+}
+
+const TAMANHOS_PADRAO = ["12","14","16","18","20","22","24"];
+
+document.getElementById('tamanhosMulti').innerHTML = TAMANHOS_PADRAO.map(t => `<button type="button" data-tam="${t}">${t}</button>`).join('');
+document.querySelectorAll('#tamanhosMulti button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const t = btn.getAttribute('data-tam');
+    if (tamanhosFormAtual.has(t)){ tamanhosFormAtual.delete(t); btn.classList.remove('active'); }
+    else { tamanhosFormAtual.add(t); btn.classList.add('active'); }
+  });
+});
+
+document.getElementById('btnNovoProduto').addEventListener('click', () => abrirModalProduto(null));
+document.getElementById('btnCancelarModal').addEventListener('click', fecharModalProduto);
+
+document.getElementById('toggleDetalhesExtra').addEventListener('click', (e) => {
+  const extra = document.getElementById('detalhesExtra');
+  extra.classList.toggle('show');
+  e.target.textContent = extra.classList.contains('show')
+    ? '− Ocultar detalhes de grau (cor / clareza / corte)'
+    : '+ Mostrar detalhes de grau (cor / clareza / corte)';
+});
+
+// fotosFormAtual guarda objetos: { tipo: 'existente', url } ou { tipo: 'novo', file, previewUrl }
+function abrirModalProduto(produto){
+  const form = document.getElementById('formProduto');
+  form.reset();
+  fotosFormAtual = [];
+  tamanhosFormAtual = new Set();
+  document.querySelectorAll('#tamanhosMulti button').forEach(b => b.classList.remove('active'));
+  document.getElementById('detalhesExtra').classList.remove('show');
+
+  document.getElementById('modalProdutoTitulo').textContent = produto ? 'Editar produto' : 'Novo produto';
+  document.getElementById('fId').value = produto ? produto.id : '';
+
+  if (produto){
+    document.getElementById('fNome').value = produto.nome || '';
+    document.getElementById('fCategoria').value = produto.categoria || 'aneis';
+    document.getElementById('fDescricao').value = produto.descricao || '';
+    document.getElementById('fMaterial').value = produto.material_aro || 'Prata 925';
+    document.getElementById('fPedra').value = produto.pedra_central || 'Sem pedra';
+    document.getElementById('fQuilate').value = produto.quilate_pedra || '';
+    document.getElementById('fFormato').value = produto.formato_pedra || '';
+    document.getElementById('fCravacao').value = produto.cravacao || '';
+    document.getElementById('fGrauCor').value = produto.grau_cor || '';
+    document.getElementById('fGrauClareza').value = produto.grau_clareza || '';
+    document.getElementById('fGrauCorte').value = produto.grau_corte || '';
+    document.getElementById('fLargura').value = produto.largura_mm || '';
+    document.getElementById('fPreco').value = produto.preco || '';
+    document.getElementById('fEstoque').value = produto.estoque || '';
+    document.getElementById('fDestaque').checked = !!produto.destaque;
+    document.getElementById('fAtivo').checked = produto.ativo !== false;
+    (produto.tamanhos_disponiveis || []).forEach(t => {
+      tamanhosFormAtual.add(t);
+      const btn = document.querySelector(`#tamanhosMulti button[data-tam="${t}"]`);
+      if (btn) btn.classList.add('active');
+    });
+    fotosFormAtual = (produto.fotos || []).map(url => ({ tipo: 'existente', url }));
+  } else {
+    document.getElementById('fAtivo').checked = true;
+  }
+  renderFotosPreview();
+  document.getElementById('modalProduto').classList.add('show');
+}
+
+function fecharModalProduto(){
+  document.getElementById('modalProduto').classList.remove('show');
+}
+
+document.getElementById('fotosDrop').addEventListener('click', () => document.getElementById('fotosInput').click());
+document.getElementById('fotosInput').addEventListener('change', (e) => {
+  [...e.target.files].forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      fotosFormAtual.push({ tipo: 'novo', file, previewUrl: ev.target.result });
+      renderFotosPreview();
+    };
+    reader.readAsDataURL(file);
+  });
+  e.target.value = '';
+});
+
+function renderFotosPreview(){
+  const wrap = document.getElementById('fotosPreview');
+  wrap.innerHTML = fotosFormAtual.map((foto, i) => `
+    <div class="foto-item ${i === 0 ? 'capa' : ''}">
+      <img src="${foto.tipo === 'existente' ? foto.url : foto.previewUrl}" alt="">
+      <button type="button" class="foto-remover" data-i="${i}" aria-label="Remover foto">×</button>
+    </div>
+  `).join('');
+  wrap.querySelectorAll('.foto-remover').forEach(btn => {
+    btn.addEventListener('click', () => {
+      fotosFormAtual.splice(Number(btn.getAttribute('data-i')), 1);
+      renderFotosPreview();
+    });
+  });
+}
+
+// Envia as fotos NOVAS pro Supabase Storage e devolve a lista final de URLs (existentes + recém-enviadas)
+async function enviarFotosEObterUrls(categoria){
+  const urlsFinal = [];
+  for (const foto of fotosFormAtual){
+    if (foto.tipo === 'existente'){
+      urlsFinal.push(foto.url);
+    } else {
+      const nomeArquivo = `${categoria}/${crypto.randomUUID()}-${foto.file.name}`;
+      const { error: erroUpload } = await sb.storage.from('produtos').upload(nomeArquivo, foto.file);
+      if (erroUpload){
+        throw new Error('Erro ao enviar foto: ' + erroUpload.message);
+      }
+      const { data: urlData } = sb.storage.from('produtos').getPublicUrl(nomeArquivo);
+      urlsFinal.push(urlData.publicUrl);
+    }
+  }
+  return urlsFinal;
+}
+
+document.getElementById('formProduto').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  if (fotosFormAtual.length === 0){
+    alert('Adicione pelo menos 1 foto antes de salvar.');
+    return;
+  }
+
+  const botaoSalvar = e.target.querySelector('button[type="submit"]');
+  botaoSalvar.disabled = true;
+  botaoSalvar.textContent = 'Salvando...';
+
+  try {
+    const categoria = document.getElementById('fCategoria').value;
+    const fotosUrls = await enviarFotosEObterUrls(categoria);
+
+    const dados = {
+      nome: document.getElementById('fNome').value.trim(),
+      categoria: categoria,
+      descricao: document.getElementById('fDescricao').value.trim(),
+      material_aro: document.getElementById('fMaterial').value,
+      pedra_central: document.getElementById('fPedra').value,
+      quilate_pedra: document.getElementById('fQuilate').value.trim() || null,
+      formato_pedra: document.getElementById('fFormato').value || null,
+      cravacao: document.getElementById('fCravacao').value.trim() || null,
+      grau_cor: document.getElementById('fGrauCor').value || null,
+      grau_clareza: document.getElementById('fGrauClareza').value || null,
+      grau_corte: document.getElementById('fGrauCorte').value || null,
+      largura_mm: document.getElementById('fLargura').value ? parseFloat(document.getElementById('fLargura').value) : null,
+      tamanhos_disponiveis: [...tamanhosFormAtual],
+      preco: parseFloat(document.getElementById('fPreco').value) || 0,
+      estoque: parseInt(document.getElementById('fEstoque').value) || 0,
+      fotos: fotosUrls,
+      destaque: document.getElementById('fDestaque').checked,
+      ativo: document.getElementById('fAtivo').checked
+    };
+
+    const idExistente = document.getElementById('fId').value;
+    const { error } = idExistente
+      ? await sb.from('produtos').update(dados).eq('id', idExistente)
+      : await sb.from('produtos').insert(dados);
+
+    if (error) throw new Error(error.message);
+
+    fecharModalProduto();
+    await renderTabela();
+  } catch (err) {
+    alert('Não foi possível salvar: ' + err.message);
+  } finally {
+    botaoSalvar.disabled = false;
+    botaoSalvar.textContent = 'Salvar produto';
+  }
+});
+
+let idParaExcluir = null;
+function abrirModalExcluir(id){
+  idParaExcluir = id;
+  document.getElementById('nomeExcluir').textContent = produtosAdmin.find(p => p.id === id)?.nome || '';
+  document.getElementById('modalExcluir').classList.add('show');
+}
+document.getElementById('btnCancelarExcluir').addEventListener('click', () => {
+  document.getElementById('modalExcluir').classList.remove('show');
+});
+document.getElementById('btnConfirmarExcluir').addEventListener('click', async () => {
+  const produto = produtosAdmin.find(p => p.id === idParaExcluir);
+
+  const { error } = await sb.from('produtos').delete().eq('id', idParaExcluir);
+  if (error){
+    alert('Erro ao excluir: ' + error.message);
+    return;
+  }
+
+  // Best-effort: também apaga as fotos do Storage (não bloqueia se falhar)
+  if (produto && produto.fotos && produto.fotos.length){
+    const caminhos = produto.fotos.map(url => {
+      const partes = url.split('/produtos/');
+      return partes[1];
+    }).filter(Boolean);
+    if (caminhos.length) sb.storage.from('produtos').remove(caminhos).catch(() => {});
+  }
+
+  document.getElementById('modalExcluir').classList.remove('show');
+  await renderTabela();
+});
+</script>
+
+</body>
+</html>

@@ -1,11 +1,19 @@
 /* ============================================================
    Pavan & Co. — Script compartilhado
    Incluído em TODAS as páginas via <script src="shared.js">.
-   Contém: menu de categorias, comportamento do header, catálogo
-   de produtos (mock — trocar por Supabase depois), busca, toast
-   de "adicionado ao carrinho" e o motor de filtro/ordenação das
-   páginas de categoria.
+   A partir de agora, os produtos vêm DE VERDADE do Supabase
+   (tabela "produtos" + bucket de Storage "produtos") em vez de
+   um catálogo mockado. Todas as páginas do site (home, categoria,
+   busca, produto) e o admin.html leem/gravam neste mesmo banco —
+   então um produto cadastrado no admin já aparece na loja pública.
    ============================================================ */
+
+const SUPABASE_URL = "https://pqhdtteeukfcjstfsnkn.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxaGR0dGVldWtmY2pzdGZzbmtuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzNzc0MTAsImV4cCI6MjEwMTk1MzQxMH0.VwOKgaNEmKaT-xGqF-S0Cr2mY9i4O_4eIFkqpdv0KiY";
+
+// "sb" é o nosso cliente Supabase — usado em toda consulta/gravação do site.
+// (chamamos de "sb" e não "supabase" pra não bater com o nome global da biblioteca)
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Categorias do menu — usada no header, menu mobile e rodapé de TODAS as páginas.
 const categorias = [
@@ -17,53 +25,70 @@ const categorias = [
   { chave: "joias", nome: "Joias", href: "categoria-joias.html", icon: `<svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 15 L20 6 L30 15 L20 34 Z"/><path d="M10 15 H30 M15 15 L20 6 L25 15"/></svg>` }
 ];
 
-/* ============================================================
-   CATÁLOGO DE PRODUTOS (mock — estrutura pronta pra virar uma
-   tabela "produtos" no Supabase: id, nome, categoria, preco,
-   material, pedra, image)
-   IMG: troque cada `image` pela foto real do produto (800x800,
-   fundo neutro), quando tiver.
-   ============================================================ */
-const PRODUTOS_CATALOGO = [
-  // ---- Alianças ----
-  { id: "ali-01", nome: "Aliança Classic 4mm", categoria: "aliancas", preco: 3290, material: "Ouro 18k", pedra: "Sem pedra", image: "https://images.unsplash.com/photo-1602751584547-6d2c85a80f19?q=80&w=800&auto=format&fit=crop" },
-  { id: "ali-02", nome: "Aliança Trabalhada Diamantada", categoria: "aliancas", preco: 2790, material: "Ouro Rosé", pedra: "Sem pedra", image: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?q=80&w=800&auto=format&fit=crop" },
-  { id: "ali-03", nome: "Aliança Prata Anatômica", categoria: "aliancas", preco: 890, material: "Prata 925", pedra: "Sem pedra", image: "https://images.unsplash.com/photo-1611085583191-a3b181a88401?q=80&w=800&auto=format&fit=crop" },
-  { id: "ali-04", nome: "Aliança Cravejada 3mm", categoria: "aliancas", preco: 1980, material: "Ouro 18k", pedra: "Zircônia", image: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=800&auto=format&fit=crop" },
-
-  // ---- Anéis ----
-  { id: "ane-01", nome: "Anel Solitário Aurora", categoria: "aneis", preco: 2480, material: "Ouro 18k", pedra: "Moissanite", image: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?q=80&w=800&auto=format&fit=crop" },
-  { id: "ane-02", nome: "Anel Trançado Clássico", categoria: "aneis", preco: 1980, material: "Ouro Rosé", pedra: "Moissanite", image: "https://images.unsplash.com/photo-1611085583191-a3b181a88401?q=80&w=800&auto=format&fit=crop" },
-  { id: "ane-03", nome: "Anel Solitário Prata 925", categoria: "aneis", preco: 890, material: "Prata 925", pedra: "Zircônia", image: "https://images.unsplash.com/photo-1602751584547-6d2c85a80f19?q=80&w=800&auto=format&fit=crop" },
-  { id: "ane-04", nome: "Anel Vintage Cravejado", categoria: "aneis", preco: 2150, material: "Ouro 18k", pedra: "Diamante", image: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=800&auto=format&fit=crop" },
-  { id: "ane-05", nome: "Anel Duo Ouro e Prata", categoria: "aneis", preco: 1340, material: "Ouro 18k", pedra: "Sem pedra", image: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?q=80&w=800&auto=format&fit=crop" },
-  { id: "ane-06", nome: "Anel Meia Aliança", categoria: "aneis", preco: 1590, material: "Prata 925", pedra: "Moissanite", image: "https://images.unsplash.com/photo-1620656798579-1984d9e87df7?q=80&w=800&auto=format&fit=crop" },
-
-  // ---- Brincos ----
-  { id: "bri-01", nome: "Brinco Gota Cristal", categoria: "brincos", preco: 890, material: "Prata 925", pedra: "Zircônia", image: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?q=80&w=800&auto=format&fit=crop" },
-  { id: "bri-02", nome: "Brinco Argola Trio", categoria: "brincos", preco: 690, material: "Ouro 18k", pedra: "Moissanite", image: "https://images.unsplash.com/photo-1620656798579-1984d9e87df7?q=80&w=800&auto=format&fit=crop" },
-  { id: "bri-03", nome: "Brinco Ponto de Luz", categoria: "brincos", preco: 590, material: "Ouro Rosé", pedra: "Zircônia", image: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=800&auto=format&fit=crop" },
-  { id: "bri-04", nome: "Brinco Pérola Clássico", categoria: "brincos", preco: 740, material: "Prata 925", pedra: "Pérola", image: "https://images.unsplash.com/photo-1602751584547-6d2c85a80f19?q=80&w=800&auto=format&fit=crop" },
-
-  // ---- Colares ----
-  { id: "col-01", nome: "Colar Ponto de Luz", categoria: "colares", preco: 1190, material: "Ouro 18k", pedra: "Moissanite", image: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=800&auto=format&fit=crop" },
-  { id: "col-02", nome: "Colar Folhas Verdes", categoria: "colares", preco: 990, material: "Prata 925", pedra: "Zircônia", image: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?q=80&w=800&auto=format&fit=crop" },
-  { id: "col-03", nome: "Colar Corrente Fina", categoria: "colares", preco: 650, material: "Ouro Rosé", pedra: "Sem pedra", image: "https://images.unsplash.com/photo-1611085583191-a3b181a88401?q=80&w=800&auto=format&fit=crop" },
-  { id: "col-04", nome: "Colar Pérola Pingente", categoria: "colares", preco: 1050, material: "Prata 925", pedra: "Pérola", image: "https://images.unsplash.com/photo-1620656798579-1984d9e87df7?q=80&w=800&auto=format&fit=crop" },
-
-  // ---- Pulseiras ----
-  { id: "pul-01", nome: "Pulseira Riviera", categoria: "pulseiras", preco: 1640, material: "Ouro 18k", pedra: "Zircônia", image: "https://images.unsplash.com/photo-1611085583191-a3b181a88401?q=80&w=800&auto=format&fit=crop" },
-  { id: "pul-02", nome: "Pulseira Elos Clássica", categoria: "pulseiras", preco: 780, material: "Prata 925", pedra: "Sem pedra", image: "https://images.unsplash.com/photo-1602751584547-6d2c85a80f19?q=80&w=800&auto=format&fit=crop" },
-  { id: "pul-03", nome: "Pulseira Tênis Cravejada", categoria: "pulseiras", preco: 2290, material: "Ouro Rosé", pedra: "Moissanite", image: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?q=80&w=800&auto=format&fit=crop" },
-
-  // ---- Joias (geral) ----
-  { id: "joi-01", nome: "Conjunto Cerimônia", categoria: "joias", preco: 3480, material: "Ouro 18k", pedra: "Diamante", image: "https://images.unsplash.com/photo-1599643477877-530eb83abc8e?q=80&w=800&auto=format&fit=crop" },
-  { id: "joi-02", nome: "Broche Vintage", categoria: "joias", preco: 990, material: "Prata 925", pedra: "Zircônia", image: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?q=80&w=800&auto=format&fit=crop" },
-  { id: "joi-03", nome: "Pingente Solitário Avulso", categoria: "joias", preco: 720, material: "Ouro Rosé", pedra: "Moissanite", image: "https://images.unsplash.com/photo-1620656798579-1984d9e87df7?q=80&w=800&auto=format&fit=crop" }
-];
-
 function formatarPreco(valor){
-  return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+/* ============================================================
+   MAPEAMENTO DB → FRONT-END
+   A tabela `produtos` usa nomes de coluna "completos" (material_aro,
+   pedra_central, tamanhos_disponiveis...). Aqui a gente converte
+   cada linha do banco pro formato mais curto que o site já usa
+   (material, pedra, tamanhos...), assim o resto do código não
+   precisa mudar toda hora que mexemos no banco.
+   ============================================================ */
+function mapProduto(row){
+  const pedra = row.pedra_central || "Sem pedra";
+  return {
+    id: row.id,
+    nome: row.nome,
+    categoria: row.categoria,
+    descricao: row.descricao || "",
+    material: row.material_aro || "",
+    pedra: pedra,
+    temPedra: pedra !== "Sem pedra",
+    quilate: row.quilate_pedra || "",
+    formato: row.formato_pedra || "",
+    cravacao: row.cravacao || "",
+    grauCor: row.grau_cor || "",
+    grauClareza: row.grau_clareza || "",
+    grauCorte: row.grau_corte || "",
+    largura: row.largura_mm || "",
+    tamanhos: row.tamanhos_disponiveis || [],
+    preco: Number(row.preco),
+    estoque: row.estoque,
+    fotos: (row.fotos && row.fotos.length) ? row.fotos : ["https://images.unsplash.com/photo-1605100804763-247f67b3557e?q=80&w=800&auto=format&fit=crop"],
+    image: (row.fotos && row.fotos[0]) || "https://images.unsplash.com/photo-1605100804763-247f67b3557e?q=80&w=800&auto=format&fit=crop",
+    destaque: !!row.destaque,
+    ativo: row.ativo !== false
+  };
+}
+
+/* ============================================================
+   CONSULTAS AO SUPABASE (usadas pela loja pública)
+   ============================================================ */
+async function carregarProdutosPorCategoria(categoriaChave){
+  const { data, error } = await sb.from('produtos').select('*').eq('categoria', categoriaChave).eq('ativo', true);
+  if (error){ console.error('Erro ao carregar produtos:', error); return []; }
+  return data.map(mapProduto);
+}
+
+async function carregarProdutosDestaque(limite = 5){
+  const { data, error } = await sb.from('produtos').select('*').eq('destaque', true).eq('ativo', true).limit(limite);
+  if (error){ console.error('Erro ao carregar destaques:', error); return []; }
+  return data.map(mapProduto);
+}
+
+async function carregarTodosProdutosAtivos(){
+  const { data, error } = await sb.from('produtos').select('*').eq('ativo', true);
+  if (error){ console.error('Erro ao carregar produtos:', error); return []; }
+  return data.map(mapProduto);
+}
+
+async function carregarProdutoPorId(id){
+  const { data, error } = await sb.from('produtos').select('*').eq('id', id).maybeSingle();
+  if (error || !data){ console.error('Erro ao carregar produto:', error); return null; }
+  return mapProduto(data);
 }
 
 /* ============================================================
@@ -96,7 +121,6 @@ function initHeaderShared(){
     });
   }
 
-  // Busca (ícone de lupa) — abre/fecha a barra de busca no topo
   const searchBtn = document.getElementById('searchBtn');
   const searchOverlay = document.getElementById('searchOverlay');
   if (searchBtn && searchOverlay){
@@ -114,8 +138,7 @@ function initHeaderShared(){
 
 /* ============================================================
    TOAST — aviso rápido de "adicionado ao carrinho"
-   (visual apenas: sem backend ainda, o carrinho de verdade
-   precisa do Supabase pra persistir entre páginas)
+   (o carrinho em si ainda é visual — ver observação em carrinho.html)
    ============================================================ */
 function mostrarToast(mensagem){
   let toast = document.getElementById('toastAviso');
@@ -141,12 +164,12 @@ function adicionarAoCarrinho(nomeProduto){
 function cardProdutoHTML(p){
   return `
     <div class="prod-card">
-      <div class="prod-img" style="background-image:url('${p.image}')"></div>
+      <a href="produto.html?id=${p.id}" class="prod-img" style="background-image:url('${p.image}')" aria-label="Ver ${p.nome}"></a>
       <div class="prod-tags">
         <span>${p.material}</span>
-        ${p.pedra !== "Sem pedra" ? `<span>${p.pedra}</span>` : ``}
+        ${p.temPedra ? `<span>${p.pedra}</span>` : ``}
       </div>
-      <div class="prod-name">${p.nome}</div>
+      <a href="produto.html?id=${p.id}" class="prod-name-link"><div class="prod-name">${p.nome}</div></a>
       <div class="prod-price">${formatarPreco(p.preco)}</div>
       <button type="button" class="btn btn-outline btn-add" onclick="adicionarAoCarrinho('${p.nome.replace(/'/g, "\\'")}')">Adicionar ao carrinho</button>
     </div>
@@ -156,11 +179,16 @@ function cardProdutoHTML(p){
 /* ============================================================
    MOTOR DE PÁGINA DE CATEGORIA
    Chamado por cada categoria-*.html: renderCategoryPage('aneis','Anéis')
-   Cuida de: montar produtos da categoria, montar filtros (material/pedra)
-   a partir do que existe nela, aplicar filtro, ordenar e re-renderizar.
+   Busca os produtos da categoria NO SUPABASE, monta os filtros
+   (material/pedra) a partir do que veio, aplica filtro e ordena
+   tudo no navegador (o catálogo é pequeno, não precisa ir ao
+   banco de novo a cada filtro).
    ============================================================ */
-function renderCategoryPage(categoriaChave, tituloExibido){
-  const todos = PRODUTOS_CATALOGO.filter(p => p.categoria === categoriaChave);
+async function renderCategoryPage(categoriaChave, tituloExibido){
+  const grid = document.getElementById('prodGrid');
+  grid.innerHTML = `<p class="sem-resultados">Carregando produtos...</p>`;
+
+  const todos = await carregarProdutosPorCategoria(categoriaChave);
 
   const materiaisDisponiveis = [...new Set(todos.map(p => p.material))];
   const pedrasDisponiveis = [...new Set(todos.map(p => p.pedra))];
@@ -240,7 +268,6 @@ function renderCategoryPage(categoriaChave, tituloExibido){
 
   function renderizarTudo(){
     const lista = ordenarLista(produtosFiltrados());
-    const grid = document.getElementById('prodGrid');
     grid.innerHTML = lista.length
       ? lista.map(cardProdutoHTML).join('')
       : `<p class="sem-resultados">Nenhum produto encontrado com esses filtros.</p>`;
@@ -288,7 +315,7 @@ function renderCategoryPage(categoriaChave, tituloExibido){
 /* ============================================================
    BUSCA — usado em busca.html
    ============================================================ */
-function renderBuscaPage(){
+async function renderBuscaPage(){
   const params = new URLSearchParams(window.location.search);
   const termo = (params.get('q') || '').trim();
 
@@ -306,13 +333,16 @@ function renderBuscaPage(){
     return;
   }
 
-  const termoLower = termo.toLowerCase();
-  const resultados = PRODUTOS_CATALOGO.filter(p =>
-    p.nome.toLowerCase().includes(termoLower) ||
-    p.material.toLowerCase().includes(termoLower) ||
-    p.pedra.toLowerCase().includes(termoLower) ||
-    p.categoria.toLowerCase().includes(termoLower)
-  );
+  grid.innerHTML = `<p class="sem-resultados">Buscando...</p>`;
+
+  // Busca no Supabase por nome, material ou pedra (case-insensitive)
+  const { data, error } = await sb
+    .from('produtos')
+    .select('*')
+    .eq('ativo', true)
+    .or(`nome.ilike.%${termo}%,material_aro.ilike.%${termo}%,pedra_central.ilike.%${termo}%,categoria.ilike.%${termo}%`);
+
+  const resultados = error ? [] : data.map(mapProduto);
 
   tituloEl.textContent = `Resultados para "${termo}"`;
   countEl.textContent = `${resultados.length} produto${resultados.length === 1 ? '' : 's'} encontrado${resultados.length === 1 ? '' : 's'}`;
@@ -333,6 +363,107 @@ function initBuscaForm(formId, redireciona){
       renderBuscaPage();
     }
   });
+}
+
+/* ============================================================
+   PÁGINA DE PRODUTO — usado em produto.html
+   ============================================================ */
+async function renderProdutoPage(){
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get('id');
+
+  const p = await carregarProdutoPorId(id);
+  if (!p){
+    document.querySelector('.produto-grid').innerHTML = `<p class="sem-resultados">Produto não encontrado. <a href="index.html" style="text-decoration:underline;">Voltar à loja</a>.</p>`;
+    return;
+  }
+
+  let tamanhoSelecionado = null;
+  let qtd = 1;
+
+  const catInfo = categorias.find(c => c.chave === p.categoria);
+  document.getElementById('breadcrumbCat').textContent = catInfo ? catInfo.nome : p.categoria;
+  document.getElementById('breadcrumbCat').href = catInfo ? catInfo.href : '#';
+  document.getElementById('breadcrumbNome').textContent = p.nome;
+  document.title = `${p.nome} | Pavan & Co.`;
+
+  const galeriaPrincipal = document.getElementById('galeriaPrincipal');
+  const galeriaThumbs = document.getElementById('galeriaThumbs');
+  galeriaPrincipal.style.backgroundImage = `url('${p.fotos[0]}')`;
+  galeriaThumbs.innerHTML = p.fotos.map((foto, i) => `
+    <button type="button" class="galeria-thumb ${i === 0 ? 'active' : ''}" style="background-image:url('${foto}')" data-foto="${foto}" aria-label="Ver foto ${i + 1}"></button>
+  `).join('');
+  galeriaThumbs.querySelectorAll('.galeria-thumb').forEach(thumb => {
+    thumb.addEventListener('click', () => {
+      galeriaPrincipal.style.backgroundImage = `url('${thumb.getAttribute('data-foto')}')`;
+      galeriaThumbs.querySelectorAll('.galeria-thumb').forEach(t => t.classList.remove('active'));
+      thumb.classList.add('active');
+    });
+  });
+
+  document.getElementById('produtoCategoria').textContent = catInfo ? catInfo.nome : '';
+  document.getElementById('produtoNome').textContent = p.nome;
+  document.getElementById('produtoPreco').textContent = formatarPreco(p.preco);
+  document.getElementById('produtoParcelas').textContent = `12x de ${formatarPreco(p.preco / 12)} sem juros`;
+  document.getElementById('produtoTags').innerHTML = `
+    <span>${p.material}</span>${p.temPedra ? `<span>${p.pedra}</span>` : ''}
+  `;
+
+  const tamanhoWrap = document.getElementById('tamanhoWrap');
+  if (p.tamanhos.length){
+    tamanhoWrap.style.display = 'block';
+    tamanhoWrap.querySelector('.tamanho-pills').innerHTML = p.tamanhos.map(t => `
+      <button type="button" class="tamanho-pill" data-tamanho="${t}">${t}</button>
+    `).join('');
+    tamanhoWrap.querySelectorAll('.tamanho-pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        tamanhoWrap.querySelectorAll('.tamanho-pill').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        tamanhoSelecionado = btn.getAttribute('data-tamanho');
+      });
+    });
+  } else {
+    tamanhoWrap.style.display = 'none';
+  }
+
+  const qtdDisplay = document.getElementById('qtdDisplay');
+  document.getElementById('qtdMenos').addEventListener('click', () => { qtd = Math.max(1, qtd - 1); qtdDisplay.textContent = qtd; });
+  document.getElementById('qtdMais').addEventListener('click', () => { qtd++; qtdDisplay.textContent = qtd; });
+
+  document.getElementById('btnAddCarrinho').addEventListener('click', () => {
+    if (p.tamanhos.length && !tamanhoSelecionado){
+      mostrarToast('Selecione um tamanho antes de continuar');
+      return;
+    }
+    adicionarAoCarrinho(`${p.nome}${tamanhoSelecionado ? ' (aro ' + tamanhoSelecionado + ')' : ''} x${qtd}`);
+  });
+
+  document.getElementById('produtoDescricao').innerHTML = `<p>${p.descricao || 'Sem descrição cadastrada ainda.'}</p>`;
+  const detalhes = [
+    ["Material", p.material],
+    p.temPedra ? ["Pedra central", p.pedra] : null,
+    p.temPedra && p.quilate ? ["Quilate / tamanho da pedra", p.quilate] : null,
+    p.temPedra && p.formato ? ["Formato da pedra", p.formato] : null,
+    p.temPedra && p.cravacao ? ["Cravação", p.cravacao] : null,
+    p.tamanhos.length ? ["Tamanhos disponíveis", p.tamanhos.join(", ")] : null
+  ].filter(Boolean);
+  document.getElementById('produtoDetalhes').innerHTML = `
+    <table class="tabela-detalhes">
+      ${detalhes.map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}
+    </table>
+  `;
+
+  const { data: relacionadosData } = await sb
+    .from('produtos')
+    .select('*')
+    .eq('categoria', p.categoria)
+    .eq('ativo', true)
+    .neq('id', p.id)
+    .limit(4);
+  const relacionados = (relacionadosData || []).map(mapProduto);
+  document.getElementById('relacionadosGrid').innerHTML = relacionados.length
+    ? relacionados.map(cardProdutoHTML).join('')
+    : `<p class="sem-resultados">Nenhum outro produto nessa categoria ainda.</p>`;
 }
 
 document.addEventListener('DOMContentLoaded', initHeaderShared);

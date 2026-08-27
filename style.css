@@ -320,6 +320,7 @@
   }
   .prod-card{ display:flex; flex-direction:column; }
   .prod-img{
+    display:block;
     position:relative;
     aspect-ratio: 1/1;
     background-size:cover;
@@ -720,6 +721,7 @@
   line-height:1.6;
 }
 .faq-item.open .faq-resposta{ max-height: 260px; padding-bottom: 18px; }
+.produto-info .faq-item.open .faq-resposta{ max-height: 500px; }
 
 /* ============================================================
    CONTA (login / cadastro)
@@ -865,3 +867,113 @@
 @media (min-width: 800px){
   .contato-grid{ grid-template-columns: 1.3fr 1fr; }
 }
+
+/* ============================================================
+   PÁGINA DE PRODUTO
+   ============================================================ */
+.produto-grid{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap: 30px;
+  padding: 30px 0 10px;
+}
+.galeria-principal{
+  aspect-ratio: 1/1;
+  background-size:cover;
+  background-position:center;
+  border-radius: var(--radius);
+  background-color: var(--creme-escuro);
+}
+.galeria-thumbs{
+  display:flex;
+  gap: 10px;
+  margin-top: 10px;
+  overflow-x:auto;
+}
+.galeria-thumb{
+  width: 64px; height:64px;
+  flex-shrink:0;
+  background-size:cover;
+  background-position:center;
+  border-radius: var(--radius);
+  border: 2px solid transparent;
+  opacity: .65;
+}
+.galeria-thumb.active{ border-color: var(--bordo); opacity:1; }
+
+.produto-info .eyebrow{ display:block; margin-bottom: 6px; }
+.produto-info h1{
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  margin-bottom: 10px;
+}
+.produto-preco{
+  font-family: var(--serif);
+  color: var(--bordo);
+  font-size: 1.8rem;
+  margin-top: 10px;
+}
+.produto-parcelas{
+  font-size: 0.84rem;
+  color: var(--texto-suave);
+  margin-bottom: 18px;
+}
+
+.tamanho-wrap{ margin: 18px 0; }
+.tamanho-wrap h4{ font-size: 0.86rem; font-weight:600; margin-bottom: 10px; }
+.tamanho-pills{ display:flex; flex-wrap:wrap; gap: 8px; }
+.tamanho-pill{
+  min-width: 42px;
+  padding: 9px 12px;
+  border: 1px solid var(--borda);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  font-weight:600;
+}
+.tamanho-pill.active{ background: var(--bordo); color: var(--creme); border-color: var(--bordo); }
+
+.qtd-linha{
+  display:flex;
+  align-items:center;
+  gap: 16px;
+  margin: 18px 0;
+}
+.qtd-stepper{
+  display:flex; align-items:center; gap: 12px;
+  border: 1px solid var(--borda);
+  border-radius: 30px;
+  padding: 6px 8px;
+}
+.qtd-stepper button{ width:26px; height:26px; font-size:1.1rem; color: var(--bordo); }
+
+.trust-row{
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 22px 0;
+  padding: 16px 0;
+  border-top: 1px solid var(--borda);
+  border-bottom: 1px solid var(--borda);
+  text-align:center;
+}
+.trust-row div{ font-size: 0.72rem; color: var(--texto-suave); }
+.trust-row svg{ width:22px; height:22px; color: var(--bordo); margin-bottom:6px; }
+
+.whatsapp-linha{
+  display:flex; align-items:center; gap: 8px;
+  font-size: 0.85rem;
+  color: var(--texto-suave);
+  margin-top: 8px;
+}
+.whatsapp-linha a{ color: var(--bordo); text-decoration:underline; }
+
+.tabela-detalhes{ width:100%; border-collapse: collapse; }
+.tabela-detalhes td{ padding: 9px 0; font-size: 0.88rem; border-bottom: 1px solid var(--borda); }
+.tabela-detalhes td:first-child{ color: var(--texto-suave); width: 45%; }
+.tabela-detalhes td:last-child{ font-weight:600; }
+
+@media (min-width: 900px){
+  .produto-grid{ grid-template-columns: 1fr 1fr; gap: 60px; padding: 50px 0 30px; }
+}
+
+.prod-name-link{ display:block; }
+.prod-name-link:hover .prod-name{ text-decoration: underline; }
