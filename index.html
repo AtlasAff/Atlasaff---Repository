@@ -228,7 +228,7 @@ revelarNovosElementos();
 
 const prodGrid = document.getElementById('prodGrid');
 prodGrid.innerHTML = skeletonGridHTML();
-carregarProdutosDestaque(5).then(destaques => {
+carregarProdutosDestaque(6).then(destaques => {
   prodGrid.innerHTML = destaques.length
     ? destaques.map(cardProdutoHTML).join('')
     : `<p class="sem-resultados">Nenhum produto em destaque cadastrado ainda.</p>`;
