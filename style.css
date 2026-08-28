@@ -1156,3 +1156,38 @@ body.pronto .entra-com-pagina{ opacity: 1; transform: translateY(0); }
 @media (min-width: 1000px){
   .prod-grid-4col{ grid-template-columns: repeat(4, 1fr) !important; }
 }
+
+/* ============================================================
+   CARD DE CATEGORIA ESTILO POLAROID (home)
+   ============================================================ */
+.cat-polaroid{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  background: var(--branco);
+  padding: 10px 10px 20px;
+  box-shadow: 0 8px 20px rgba(43,33,31,0.10);
+  transition: transform .3s ease, box-shadow .3s ease;
+}
+.cat-polaroid:nth-child(3n+1){ transform: rotate(-1.6deg); }
+.cat-polaroid:nth-child(3n+2){ transform: rotate(1.4deg); }
+.cat-polaroid:nth-child(3n+3){ transform: rotate(-0.8deg); }
+.cat-polaroid:hover{
+  transform: rotate(0deg) translateY(-6px);
+  box-shadow: 0 16px 34px rgba(43,33,31,0.18);
+}
+.cat-polaroid-photo{
+  width: 100%;
+  aspect-ratio: 1/1;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--creme-escuro);
+  margin-bottom: 14px;
+}
+.cat-polaroid-nome{
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1rem;
+  color: var(--texto);
+  text-align: center;
+}

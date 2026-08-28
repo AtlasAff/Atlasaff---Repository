@@ -206,9 +206,9 @@ document.getElementById('heroCta').textContent = banner.ctaText;
 const catGrid = document.getElementById('catGrid');
 carregarCategorias().then(categorias => {
   catGrid.innerHTML = categorias.map(cat => `
-    <a class="cat-card reveal" href="${cat.href}">
-      ${cat.icon}
-      <span>${cat.nome}</span>
+    <a class="cat-polaroid reveal" href="${cat.href}">
+      <div class="cat-polaroid-photo" style="background-image:url('${cat.foto}')"></div>
+      <span class="cat-polaroid-nome">${cat.nome}</span>
     </a>
   `).join('');
   revelarNovosElementos();

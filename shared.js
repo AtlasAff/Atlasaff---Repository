@@ -33,6 +33,19 @@ const ICONES_CATEGORIA = {
   padrao: `<svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 15 L20 6 L30 15 L20 34 Z"/><path d="M10 15 H30 M15 15 L20 6 L25 15"/></svg>`
 };
 
+/* FOTOS DE CATEGORIA (cards estilo polaroid na home) — IMG: troque por fotos
+   reais do seu catálogo quando tiver; por enquanto são fotos de banco de
+   imagens gratuitas, só pra dar a cara certa pra cada categoria. */
+const FOTOS_CATEGORIA = {
+  aliancas: "https://images.unsplash.com/photo-1622398925373-3f91b1e275f5?q=80&w=500&auto=format&fit=crop",
+  aneis: "https://images.unsplash.com/photo-1598560917807-1bae44bd2be8?q=80&w=500&auto=format&fit=crop",
+  brincos: "https://images.unsplash.com/photo-1705326453282-e4e1b78f5fea?q=80&w=500&auto=format&fit=crop",
+  colares: "https://images.unsplash.com/photo-1605201206717-cb9eca0d2eb2?q=80&w=500&auto=format&fit=crop",
+  pulseiras: "https://images.unsplash.com/photo-1602173574767-37ac01994b2a?q=80&w=500&auto=format&fit=crop",
+  joias: "https://images.unsplash.com/photo-1599643477877-530eb83abc8e?q=80&w=500&auto=format&fit=crop",
+  padrao: "https://images.unsplash.com/photo-1599643477877-530eb83abc8e?q=80&w=500&auto=format&fit=crop"
+};
+
 /* Ícones de FORMATO DA PEDRA — estilo Versale (escolha por formato) */
 const ICONES_FORMATO = {
   "Redondo": `<svg viewBox="0 0 40 40" fill="currentColor"><circle cx="20" cy="20" r="14"/></svg>`,
@@ -57,7 +70,8 @@ async function carregarCategorias(){
     nome: c.nome,
     slug: c.slug,
     href: `categoria.html?c=${c.slug}`,
-    icon: ICONES_CATEGORIA[c.icone] || ICONES_CATEGORIA.padrao
+    icon: ICONES_CATEGORIA[c.icone] || ICONES_CATEGORIA.padrao,
+    foto: FOTOS_CATEGORIA[c.icone] || FOTOS_CATEGORIA.padrao
   }));
   return categoriasCache;
 }
