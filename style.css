@@ -51,6 +51,13 @@
     padding: 0 20px;
   }
 
+  @media (min-width: 1440px){
+    .container{ max-width: 1360px; padding: 0 32px; }
+  }
+  @media (min-width: 1800px){
+    .container{ max-width: 1600px; }
+  }
+
   .eyebrow{
     font-size: 0.72rem;
     letter-spacing: 0.18em;
@@ -369,7 +376,7 @@
     min-height: 2.5em;
     line-height: 1.25;
   }
-  .prod-price{ font-family: var(--serif); color: var(--bordo); font-size: 1.05rem; margin-bottom: 4px; }
+  .prod-price{ font-family: var(--serif); color: var(--bordo); font-size: 1.05rem; margin-bottom: 4px; font-variant-numeric: lining-nums tabular-nums; }
   .btn-add{ margin-top: auto; }
 
   @media (min-width: 700px){ .prod-grid{ grid-template-columns: repeat(3, 1fr); gap: 26px 20px; } }
@@ -757,7 +764,7 @@
    ============================================================ */
 .conta-wrap{
   max-width: 420px;
-  margin: 50px auto 80px;
+  margin: 50px auto 140px;
   padding: 0 20px;
 }
 .conta-tabs{
@@ -840,6 +847,7 @@
   color: var(--bordo);
   font-size: 1.05rem;
   white-space: nowrap;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .carrinho-remover{
   font-size: 0.74rem;
@@ -856,6 +864,7 @@
   align-items:center;
   font-family: var(--serif);
   font-size: 1.2rem;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .carrinho-vazio{
   text-align:center;
@@ -940,6 +949,7 @@
   color: var(--bordo);
   font-size: 1.8rem;
   margin-top: 10px;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .produto-parcelas{
   font-size: 0.84rem;
@@ -948,7 +958,9 @@
 }
 
 .tamanho-wrap{ margin: 18px 0; }
+.tamanho-topo{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom: 10px; }
 .tamanho-wrap h4{ font-size: 0.86rem; font-weight:600; margin-bottom: 10px; }
+.link-guia-tamanho{ font-size: 0.78rem; color: var(--bordo); text-decoration:underline; white-space:nowrap; }
 .tamanho-pills{ display:flex; flex-wrap:wrap; gap: 8px; }
 .tamanho-pill{
   min-width: 42px;
@@ -1145,3 +1157,8 @@ body.pronto .entra-com-pagina{ opacity: 1; transform: translateY(0); }
 .avaliacao-data{ color: var(--texto-suave); font-size: 0.78rem; margin-left: auto; }
 .avaliacao-fotos{ display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
 .avaliacao-fotos img{ width:64px; height:64px; object-fit:cover; border-radius: var(--radius); cursor:pointer; }
+
+/* Grid de "relacionados" (4 itens) — evita coluna vazia em telas grandes */
+@media (min-width: 1000px){
+  .prod-grid-4col{ grid-template-columns: repeat(4, 1fr) !important; }
+}

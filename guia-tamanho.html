@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Minha Conta | Pavan & Co.</title>
+<title>Como Descobrir seu Tamanho de Anel | Pavan & Co.</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -41,48 +41,38 @@
   </div>
 </header>
 
-<div class="conta-wrap">
-  <div class="page-title" style="padding-top:0;">
-    <span class="eyebrow">Bem-vinda(o)</span>
-    <h1>Minha conta</h1>
-    <div class="linha"></div>
-  </div>
+<div class="page-content">
+  <span class="eyebrow" style="display:block;text-align:center;">Guia rápido</span>
+  <h1>Como descobrir seu tamanho de anel</h1>
+  <div class="linha"></div>
 
-  <div class="conta-tabs">
-    <button type="button" class="active" data-aba="entrar">Entrar</button>
-    <button type="button" data-aba="criar">Criar conta</button>
-  </div>
+  <p>Nossos aros seguem a numeração brasileira (medida em circunferência interna). Aqui vão duas formas simples de descobrir o seu, sem sair de casa:</p>
 
-  <div id="msgConta" class="conta-msg sucesso"></div>
+  <h2>Método do barbante ou tira de papel</h2>
+  <p>Enrole uma tira de papel ou um pedaço de barbante ao redor do dedo onde vai usar o anel, marque onde ele se fecha, e meça o comprimento com uma régua (em milímetros). Esse número é a circunferência do seu dedo.</p>
 
-  <form class="conta-form active" id="formEntrar" data-form="entrar">
-    <div>
-      <label for="loginEmail">E-mail</label>
-      <input type="email" id="loginEmail" required placeholder="seu@email.com">
-    </div>
-    <div>
-      <label for="loginSenha">Senha</label>
-      <input type="password" id="loginSenha" required minlength="6" placeholder="••••••••">
-    </div>
-    <button type="submit" class="btn btn-primary">Entrar</button>
-    <a href="#" style="text-align:center;font-size:0.82rem;text-decoration:underline;color:var(--texto-suave);">Esqueci minha senha</a>
-  </form>
+  <h2>Método do anel que você já tem</h2>
+  <p>Pegue um anel que já sirva bem no dedo desejado, meça o diâmetro interno dele (de uma borda à outra, passando pelo centro) com uma régua, e compare na tabela abaixo.</p>
 
-  <form class="conta-form" id="formCriar" data-form="criar">
-    <div>
-      <label for="cadNome">Nome completo</label>
-      <input type="text" id="cadNome" required placeholder="Seu nome">
-    </div>
-    <div>
-      <label for="cadEmail">E-mail</label>
-      <input type="email" id="cadEmail" required placeholder="seu@email.com">
-    </div>
-    <div>
-      <label for="cadSenha">Senha</label>
-      <input type="password" id="cadSenha" required minlength="6" placeholder="Mínimo 6 caracteres">
-    </div>
-    <button type="submit" class="btn btn-primary">Criar minha conta</button>
-  </form>
+  <h2>Tabela de conversão</h2>
+  <table class="tabela-detalhes" style="margin: 20px 0;">
+    <tr><td>Diâmetro interno (mm)</td><td>Tamanho do aro (BR)</td></tr>
+    <tr><td>15,3 mm</td><td>12</td></tr>
+    <tr><td>15,7 mm</td><td>13</td></tr>
+    <tr><td>16,0 mm</td><td>14</td></tr>
+    <tr><td>16,3 mm</td><td>15</td></tr>
+    <tr><td>16,7 mm</td><td>16</td></tr>
+    <tr><td>17,0 mm</td><td>17</td></tr>
+    <tr><td>17,3 mm</td><td>18</td></tr>
+    <tr><td>17,7 mm</td><td>19</td></tr>
+    <tr><td>18,0 mm</td><td>20</td></tr>
+    <tr><td>18,3 mm</td><td>21</td></tr>
+    <tr><td>18,7 mm</td><td>22</td></tr>
+  </table>
+
+  <p class="suave">Dica: meça no fim do dia, quando os dedos estão naturalmente um pouco mais inchados, e evite medir em dias muito frios. Ficou entre dois tamanhos? Prefira o maior.</p>
+
+  <p class="suave">Ainda com dúvida? <a href="contato.html" style="text-decoration:underline;color:var(--bordo);">Fale com a gente</a> que ajudamos a escolher.</p>
 </div>
 
 <footer>
@@ -116,34 +106,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="shared.js"></script>
-<script>
-initBuscaForm('searchFormHeader', true);
-
-// Abas Entrar / Criar conta
-const abas = document.querySelectorAll('.conta-tabs button');
-const formularios = document.querySelectorAll('.conta-form');
-abas.forEach(aba => {
-  aba.addEventListener('click', () => {
-    abas.forEach(a => a.classList.remove('active'));
-    aba.classList.add('active');
-    const alvo = aba.getAttribute('data-aba');
-    formularios.forEach(f => f.classList.toggle('active', f.getAttribute('data-form') === alvo));
-    document.getElementById('msgConta').classList.remove('show');
-  });
-});
-
-// Envio (mock — sem backend de autenticação ainda)
-function mockSubmit(form, mensagem){
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const msg = document.getElementById('msgConta');
-    msg.textContent = mensagem;
-    msg.classList.add('show');
-  });
-}
-mockSubmit(document.getElementById('formEntrar'), 'Login ainda não conectado — isto é um mock. Vamos ligar ao Supabase Auth em seguida.');
-mockSubmit(document.getElementById('formCriar'), 'Cadastro ainda não conectado — isto é um mock. Vamos ligar ao Supabase Auth em seguida.');
-</script>
+<script>initBuscaForm('searchFormHeader', true);</script>
 
 </body>
 </html>
