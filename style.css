@@ -374,7 +374,6 @@
 
   @media (min-width: 700px){ .prod-grid{ grid-template-columns: repeat(3, 1fr); gap: 22px 16px; } }
   @media (min-width: 1000px){ .prod-grid{ grid-template-columns: repeat(5, 1fr); gap: 20px 16px; } }
-  @media (min-width: 1300px){ .prod-grid{ grid-template-columns: repeat(6, 1fr); } }
 
   /* ---------------- NEWSLETTER STRIP ---------------- */
   .newsletter-strip{
@@ -1026,11 +1025,9 @@ body.pronto{ opacity: 1; transition: opacity .45s ease; }
 }
 .reveal.revelado{ opacity: 1; transform: translateY(0); }
 
-/* leve "respiro" de profundidade nos cards ao passar o mouse */
-.prod-card{ transition: transform .25s ease; }
-.prod-card:hover{ transform: translateY(-4px); }
-.prod-img{ transition: transform .4s ease; }
-.prod-card:hover .prod-img{ transform: scale(1.035); }
+/* Zoom só na foto, só quando o mouse passa em cima DELA (não no card todo) */
+.prod-img{ transition: transform .4s ease; overflow:hidden; }
+.prod-img:hover{ transform: scale(1.08); }
 
 .btn{ transition: background .25s ease, color .25s ease, transform .15s ease, box-shadow .25s ease; }
 .btn:active{ transform: scale(0.96); }
@@ -1190,4 +1187,62 @@ body.pronto .entra-com-pagina{ opacity: 1; transform: translateY(0); }
   font-size: 1rem;
   color: var(--texto);
   text-align: center;
+}
+
+/* ============================================================
+   FAIXA (banner contido, imagem + texto lado a lado)
+   Usado no hero da home e nos blocos educativos da página de produto
+   (estilo comum em sites de joalheria: banner "boxed", não tela cheia)
+   ============================================================ */
+.faixa{
+  display:grid;
+  grid-template-columns: 1fr;
+  border-radius: var(--radius);
+  overflow:hidden;
+  background: var(--creme-escuro);
+}
+.faixa-img{
+  aspect-ratio: 4/3;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--creme-escuro);
+}
+.faixa-content{
+  padding: 30px 24px 34px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+.faixa-content .eyebrow{ margin-bottom: 8px; }
+.faixa-content h1, .faixa-content h3{
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: clamp(1.6rem, 5vw, 2.2rem);
+  line-height: 1.15;
+  margin-bottom: 18px;
+  color: var(--texto);
+}
+.faixa-content p{
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--texto);
+  margin-bottom: 8px;
+}
+.faixa .btn{ align-self:flex-start; }
+
+/* variação escura (fundo bordô), pra blocos que precisam de mais contraste/destaque */
+.faixa--escura{ background: var(--bordo-escuro); }
+.faixa--escura .faixa-content .eyebrow{ color: var(--creme); opacity:.85; }
+.faixa--escura .faixa-content h1, .faixa--escura .faixa-content h3{ color: var(--creme); }
+.faixa--escura .faixa-content p{ color: var(--creme); opacity:.9; }
+
+/* inverte a ordem (imagem à direita) em telas grandes */
+.faixa--reverso .faixa-content{ order: 2; }
+.faixa--reverso .faixa-img{ order: 1; }
+
+@media (min-width: 900px){
+  .faixa{ grid-template-columns: 1.2fr 1fr; }
+  .faixa-img{ aspect-ratio: auto; min-height: 420px; }
+  .faixa-content{ padding: 50px 60px; }
+  .faixa--reverso{ grid-template-columns: 1fr 1.2fr; }
 }

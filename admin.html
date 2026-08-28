@@ -20,7 +20,7 @@
   - Fotos: o upload aqui vai de verdade pro Supabase Storage
     (bucket "produtos"). A miniatura que aparece antes de salvar
     é só uma prévia local — a foto só é enviada quando você clica
-    em "Salvar produto". atual
+    em "Salvar produto".
   ============================================================
 -->
 
@@ -276,12 +276,13 @@
 
   /* ---------- MODAL DE CATEGORIAS ---------- */
   .categoria-linha{
-    display:flex; align-items:center; justify-content:space-between;
+    display:flex; align-items:center; gap:10px;
     padding: 10px 0;
     border-bottom: 1px solid var(--cinza-borda);
     font-size: 0.9rem;
   }
-  .categoria-linha button{ color: var(--vermelho); font-size:0.78rem; text-decoration:underline; }
+  .categoria-linha img.admin-thumb{ flex-shrink:0; }
+  .categoria-linha button{ color: var(--vermelho); font-size:0.78rem; text-decoration:underline; white-space:nowrap; }
   .nova-categoria-form{ display:flex; gap:8px; margin-top: 16px; }
   .nova-categoria-form input{
     flex:1;
@@ -357,8 +358,13 @@
   <div class="modal-card" style="max-width:460px;">
     <h2>Categorias</h2>
     <div id="listaCategoriasAdmin"></div>
-    <form class="nova-categoria-form" id="formNovaCategoria">
+    <form class="nova-categoria-form" id="formNovaCategoria" style="flex-direction:column;align-items:stretch;">
       <input type="text" id="novaCategoriaNome" placeholder="Nome da nova categoria (ex: Pingentes)" required>
+      <div class="fotos-drop" id="novaCategoriaFotoDrop" style="padding:14px;font-size:0.8rem;">
+        Clique para escolher uma foto (opcional — aparece no card da home)
+      </div>
+      <input type="file" id="novaCategoriaFotoInput" accept="image/*" style="display:none;">
+      <div class="fotos-preview" id="novaCategoriaFotoPreview"></div>
       <button type="submit" class="btn-admin btn-admin-primary">Criar</button>
     </form>
     <div class="modal-footer">
@@ -366,6 +372,8 @@
     </div>
   </div>
 </div>
+
+<input type="file" id="trocarFotoCategoriaInput" accept="image/*" style="display:none;">
 
 <div class="modal-overlay" id="modalProduto">
   <div class="modal-card">
@@ -643,13 +651,16 @@ async function renderListaCategoriasModal(){
   popularSelectsDeCategoria();
   document.getElementById('listaCategoriasAdmin').innerHTML = categoriasAdminCache.map(c => `
     <div class="categoria-linha">
-      <span>${c.nome} <span style="color:var(--texto-suave);">(/${c.slug})</span></span>
-      <button type="button" data-slug="${c.slug}" data-id="${c.id}">Excluir</button>
+      <img class="admin-thumb" src="${c.foto_url || ''}" alt="" style="${c.foto_url ? '' : 'background:var(--cinza-bg);'}">
+      <span style="flex:1;">${c.nome} <span style="color:var(--texto-suave);">(/${c.slug})</span></span>
+      <button type="button" data-acao="trocar-foto" data-id="${c.id}" style="color:var(--azul);">Trocar foto</button>
+      <button type="button" data-acao="excluir" data-id="${c.id}" data-nome="${c.nome}">Excluir</button>
     </div>
   `).join('');
-  document.querySelectorAll('#listaCategoriasAdmin button[data-id]').forEach(btn => {
+
+  document.querySelectorAll('#listaCategoriasAdmin button[data-acao="excluir"]').forEach(btn => {
     btn.addEventListener('click', async () => {
-      if (!confirm(`Excluir a categoria "${btn.parentElement.textContent.trim()}"? Só funciona se não houver produtos nela.`)) return;
+      if (!confirm(`Excluir a categoria "${btn.getAttribute('data-nome')}"? Só funciona se não houver produtos nela.`)) return;
       const { error } = await sb.from('categorias').delete().eq('id', btn.getAttribute('data-id'));
       if (error){
         alert('Não foi possível excluir: existem produtos usando essa categoria (mova ou exclua eles primeiro).');
@@ -658,7 +669,36 @@ async function renderListaCategoriasModal(){
       renderListaCategoriasModal();
     });
   });
+
+  document.querySelectorAll('#listaCategoriasAdmin button[data-acao="trocar-foto"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const input = document.getElementById('trocarFotoCategoriaInput');
+      input.dataset.categoriaId = btn.getAttribute('data-id');
+      input.click();
+    });
+  });
 }
+
+document.getElementById('trocarFotoCategoriaInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  const categoriaId = e.target.dataset.categoriaId;
+  if (!file || !categoriaId) return;
+
+  const nomeArquivo = `categorias/${categoriaId}-${crypto.randomUUID()}-${file.name}`;
+  const { error: erroUpload } = await sb.storage.from('produtos').upload(nomeArquivo, file);
+  if (erroUpload){
+    alert('Erro ao enviar foto: ' + erroUpload.message);
+    return;
+  }
+  const { data: urlData } = sb.storage.from('produtos').getPublicUrl(nomeArquivo);
+  const { error } = await sb.from('categorias').update({ foto_url: urlData.publicUrl }).eq('id', categoriaId);
+  if (error){
+    alert('Erro ao salvar foto da categoria: ' + error.message);
+    return;
+  }
+  e.target.value = '';
+  renderListaCategoriasModal();
+});
 
 document.getElementById('btnGerenciarCategorias').addEventListener('click', () => {
   renderListaCategoriasModal();
@@ -669,18 +709,49 @@ document.getElementById('btnFecharCategorias').addEventListener('click', () => {
   renderTabela();
 });
 
+// Preview da foto ao criar categoria nova
+let novaCategoriaArquivoFoto = null;
+document.getElementById('novaCategoriaFotoDrop').addEventListener('click', () => document.getElementById('novaCategoriaFotoInput').click());
+document.getElementById('novaCategoriaFotoInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  novaCategoriaArquivoFoto = file;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    document.getElementById('novaCategoriaFotoPreview').innerHTML = `
+      <div class="foto-item capa"><img src="${ev.target.result}" alt=""></div>
+    `;
+  };
+  reader.readAsDataURL(file);
+});
+
 document.getElementById('formNovaCategoria').addEventListener('submit', async (e) => {
   e.preventDefault();
   const nome = document.getElementById('novaCategoriaNome').value.trim();
   if (!nome) return;
   const slug = gerarSlug(nome);
   const maiorOrdem = Math.max(0, ...categoriasAdminCache.map(c => c.ordem || 0));
-  const { error } = await sb.from('categorias').insert({ nome, slug, icone: 'padrao', ordem: maiorOrdem + 1 });
+
+  let foto_url = null;
+  if (novaCategoriaArquivoFoto){
+    const nomeArquivo = `categorias/${slug}-${crypto.randomUUID()}-${novaCategoriaArquivoFoto.name}`;
+    const { error: erroUpload } = await sb.storage.from('produtos').upload(nomeArquivo, novaCategoriaArquivoFoto);
+    if (erroUpload){
+      alert('Erro ao enviar foto: ' + erroUpload.message);
+      return;
+    }
+    const { data: urlData } = sb.storage.from('produtos').getPublicUrl(nomeArquivo);
+    foto_url = urlData.publicUrl;
+  }
+
+  const { error } = await sb.from('categorias').insert({ nome, slug, icone: 'padrao', ordem: maiorOrdem + 1, foto_url });
   if (error){
     alert('Erro ao criar categoria: ' + error.message);
     return;
   }
   document.getElementById('novaCategoriaNome').value = '';
+  novaCategoriaArquivoFoto = null;
+  document.getElementById('novaCategoriaFotoPreview').innerHTML = '';
   renderListaCategoriasModal();
 });
 

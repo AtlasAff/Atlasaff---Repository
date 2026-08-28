@@ -71,7 +71,7 @@ async function carregarCategorias(){
     slug: c.slug,
     href: `categoria.html?c=${c.slug}`,
     icon: ICONES_CATEGORIA[c.icone] || ICONES_CATEGORIA.padrao,
-    foto: FOTOS_CATEGORIA[c.icone] || FOTOS_CATEGORIA.padrao
+    foto: c.foto_url || FOTOS_CATEGORIA[c.icone] || FOTOS_CATEGORIA.padrao
   }));
   return categoriasCache;
 }
@@ -603,6 +603,37 @@ async function renderProdutoPage(){
       ${detalhes.map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}
     </table>
   `;
+
+  // Blocos educativos sobre Moissanite + certificado + FAQ — só aparecem nas peças com essa pedra
+  if (p.pedra === 'Moissanite'){
+    document.getElementById('secaoMoissanite').style.display = 'block';
+    document.getElementById('faixaMoissaniteImg').style.backgroundImage = `url('${p.fotos[0]}')`;
+    document.getElementById('faixaMoissaniteTexto').textContent =
+      'Pedra criada em laboratório com brilho e dispersão de luz ainda mais intensos que os do diamante, e dureza que fica atrás apenas dele — resistente ao uso diário. Uma alternativa mais acessível, sem abrir mão de brilho ou durabilidade.';
+
+    document.getElementById('secaoCertificado').style.display = 'block';
+
+    document.getElementById('secaoFaqMoissanite').style.display = 'block';
+    const perguntasMoissanite = [
+      { p: "A moissanita brilha mais que o diamante?", r: "Em termos de fogo e dispersão de luz, sim — a moissanita costuma refratar mais luz colorida que o diamante, resultando num brilho mais intenso sob certas iluminações." },
+      { p: "A moissanita escurece ou perde o brilho com o tempo?", r: "Não. É uma pedra quimicamente estável, que não muda de cor nem perde brilho com o uso normal. Cuidados básicos de limpeza mantêm o brilho original por muito tempo." },
+      { p: "Posso usar a peça no dia a dia?", r: "Sim. A moissanita está entre as pedras mais duras que existem, atrás apenas do diamante — perfeita para uso diário sem se preocupar tanto com riscos." },
+      { p: "Qual a diferença entre moissanita e zircônia?", r: "A moissanita é mais dura e mais brilhante, e não perde o brilho com o tempo. A zircônia tende a arranhar e opacar mais rápido com o uso." },
+      { p: "A peça vem com certificado?", r: "Sim, toda peça com moissanita da Pavan & Co. acompanha certificado de avaliação da pedra, com informações de corte, cor e clareza." }
+    ];
+    document.getElementById('listaFaqMoissanite').innerHTML = perguntasMoissanite.map((item, i) => `
+      <div class="faq-item" data-i="moissanite-${i}">
+        <button type="button" class="faq-pergunta">
+          ${item.p}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <div class="faq-resposta"><p>${item.r}</p></div>
+      </div>
+    `).join('');
+    document.querySelectorAll('#listaFaqMoissanite .faq-pergunta').forEach(btn => {
+      btn.addEventListener('click', () => btn.closest('.faq-item').classList.toggle('open'));
+    });
+  }
 
   // Avaliações
   const avaliacoes = await carregarAvaliacoes(p.id);

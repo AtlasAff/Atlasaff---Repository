@@ -75,12 +75,17 @@
   </div>
 </header>
 
-<!-- ============ HERO ============ -->
-<section class="hero" id="hero">
-  <div class="hero-content entra-com-pagina">
-    <span class="eyebrow" id="heroEyebrow"></span>
-    <h1 id="heroTitle"></h1>
-    <a href="#produtos" class="btn btn-primary" id="heroCta"></a>
+<!-- ============ HERO (faixa contida, imagem + texto) ============ -->
+<section class="section" style="padding-top:24px; padding-bottom:8px;">
+  <div class="container">
+    <div class="faixa faixa--principal entra-com-pagina">
+      <div class="faixa-img" id="heroFaixaImg"></div>
+      <div class="faixa-content">
+        <span class="eyebrow" id="heroEyebrow"></span>
+        <h1 id="heroTitle"></h1>
+        <a href="#produtos" class="btn btn-primary" id="heroCta"></a>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -198,7 +203,7 @@ const vitrine = [
    ============================================================ */
 
 const banner = heroBanners[0];
-document.getElementById('hero').style.backgroundImage = `url('${banner.image}')`;
+document.getElementById('heroFaixaImg').style.backgroundImage = `url('${banner.image}')`;
 document.getElementById('heroEyebrow').textContent = banner.eyebrow;
 document.getElementById('heroTitle').textContent = banner.title;
 document.getElementById('heroCta').textContent = banner.ctaText;
@@ -228,7 +233,7 @@ revelarNovosElementos();
 
 const prodGrid = document.getElementById('prodGrid');
 prodGrid.innerHTML = skeletonGridHTML();
-carregarProdutosDestaque(6).then(destaques => {
+carregarProdutosDestaque(5).then(destaques => {
   prodGrid.innerHTML = destaques.length
     ? destaques.map(cardProdutoHTML).join('')
     : `<p class="sem-resultados">Nenhum produto em destaque cadastrado ainda.</p>`;
