@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>Produto | Pavan & Co.</title>
 
 <!--
@@ -34,7 +37,7 @@
       </a>
       <a class="icon-btn" href="carrinho.html" aria-label="Carrinho">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h7.2a2 2 0 0 0 2-1.6L21 8H6"/><circle cx="9" cy="21" r="1"/><circle cx="18" cy="21" r="1"/></svg>
-        <span class="cart-count" id="cartCount">3</span>
+        <span class="cart-count" id="cartCount">0</span>
       </a>
       <button class="hamburger" id="hamburgerBtn" aria-label="Abrir menu" aria-expanded="false"><span></span><span></span><span></span></button>
     </div>
@@ -65,6 +68,17 @@
     <div class="produto-galeria">
       <div class="galeria-principal" id="galeriaPrincipal"></div>
       <div class="galeria-thumbs" id="galeriaThumbs"></div>
+
+      <!-- Detalhes técnicos fica aqui embaixo da imagem, já expandido —
+           preenche o espaço que sobraria vazio quando a coluna da imagem
+           é mais curta que a de compra. -->
+      <div class="faq-item open" style="margin-top:24px;">
+        <button type="button" class="faq-pergunta">
+          Detalhes técnicos
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <div class="faq-resposta" id="produtoDetalhes" style="max-height:none;"></div>
+      </div>
     </div>
 
     <!-- ============ INFO ============ -->
@@ -74,8 +88,23 @@
       <div class="prod-tags" id="produtoTags"></div>
       <div class="rating-resumo" id="produtoRatingResumo"></div>
 
+      <span class="badge-esgotado" id="produtoEsgotado" style="display:none;">Esgotado</span>
       <div class="produto-preco" id="produtoPreco"></div>
       <div class="produto-parcelas" id="produtoParcelas"></div>
+
+      <div class="tamanho-wrap" id="quilateWrap">
+        <div class="tamanho-topo">
+          <h4>Quilate da pedra</h4>
+        </div>
+        <div class="tamanho-pills"></div>
+      </div>
+
+      <div class="tamanho-wrap" id="banhoWrap">
+        <div class="tamanho-topo">
+          <h4>Banho: <span id="banhoSelecionadoNome"></span></h4>
+        </div>
+        <div class="banho-swatches"></div>
+      </div>
 
       <div class="tamanho-wrap" id="tamanhoWrap">
         <div class="tamanho-topo">
@@ -100,6 +129,20 @@
         Dúvidas sobre esta peça? <a href="https://wa.me/5511900000000" target="_blank" rel="noopener">Fale com a gente</a>
       </div>
 
+      <button type="button" class="whatsapp-linha" id="btnCompartilharProduto" style="padding:0;margin:0;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="10.6" x2="15.4" y2="6.4"/><line x1="8.6" y1="13.4" x2="15.4" y2="17.6"/></svg>
+        <span style="text-decoration:underline;color:var(--bordo);">Compartilhar esta peça</span>
+      </button>
+
+      <div class="frete-calc">
+        <label for="freteCep">Calcular frete e prazo de entrega</label>
+        <div class="frete-calc-linha">
+          <input type="text" id="freteCep" placeholder="Seu CEP" inputmode="numeric" maxlength="9">
+          <button type="button" class="btn btn-outline" id="btnCalcularFrete">Calcular</button>
+        </div>
+        <div id="freteResultado"></div>
+      </div>
+
       <div class="trust-row">
         <div>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="18" cy="18" r="1.6"/></svg>
@@ -111,24 +154,16 @@
         </div>
         <div>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>
-          Troca fácil em 30 dias
+          Não serviu? Troque gratuitamente
         </div>
       </div>
 
-      <!-- Acordeão (reaproveita o visual do FAQ) -->
       <div class="faq-item open">
         <button type="button" class="faq-pergunta">
           Descrição
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         </button>
         <div class="faq-resposta" id="produtoDescricao" style="max-height:none;"></div>
-      </div>
-      <div class="faq-item">
-        <button type="button" class="faq-pergunta">
-          Detalhes técnicos
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        </button>
-        <div class="faq-resposta" id="produtoDetalhes"></div>
       </div>
     </div>
   </div>
@@ -139,7 +174,6 @@
   <div class="container avaliacoes-wrap">
     <div class="avaliacoes-topo">
       <h2 id="faqAvaliacoesTitulo">Avaliações</h2>
-      <button type="button" class="btn btn-outline" id="btnEscreverAvaliacao">Escrever avaliação</button>
     </div>
     <div id="listaAvaliacoes"></div>
   </div>
@@ -162,16 +196,9 @@
 <section class="section reveal" id="secaoCertificado" style="display:none; padding-top:0;">
   <div class="container">
     <div class="faixa faixa--escura faixa--reverso">
-      <div class="faixa-img" style="display:flex;align-items:center;justify-content:center;">
-        <svg viewBox="0 0 100 100" width="46%" style="max-width:180px;" fill="none" stroke="var(--creme)" stroke-width="1.6">
-          <rect x="18" y="10" width="64" height="80" rx="2"/>
-          <circle cx="50" cy="42" r="16"/>
-          <path d="M42 55 L36 88 L50 80 L64 88 L58 55" fill="none"/>
-          <line x1="30" y1="20" x2="70" y2="20"/>
-          <line x1="30" y1="70" x2="70" y2="70"/>
-          <line x1="30" y1="76" x2="70" y2="76"/>
-        </svg>
-      </div>
+      <!-- Foto fixa (não muda por produto) — troque o arquivo certificado.jpg
+           na raiz do site pra atualizar a imagem em todas as páginas de produto. -->
+      <div class="faixa-img" style="background-image:url('certificado.jpg');"></div>
       <div class="faixa-content">
         <span class="eyebrow">Autenticidade</span>
         <h3>Certificado de avaliação</h3>
@@ -239,7 +266,7 @@ initBuscaForm('searchFormHeader', true);
 renderProdutoPage();
 
 // Acordeão da página de produto
-document.querySelectorAll('.produto-info .faq-pergunta').forEach(btn => {
+document.querySelectorAll('.faq-pergunta').forEach(btn => {
   btn.addEventListener('click', () => btn.closest('.faq-item').classList.toggle('open'));
 });
 </script>

@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>Minha Conta | Pavan & Co.</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +30,7 @@
       </a>
       <a class="icon-btn" href="carrinho.html" aria-label="Carrinho">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h7.2a2 2 0 0 0 2-1.6L21 8H6"/><circle cx="9" cy="21" r="1"/><circle cx="18" cy="21" r="1"/></svg>
-        <span class="cart-count" id="cartCount">3</span>
+        <span class="cart-count" id="cartCount">0</span>
       </a>
       <button class="hamburger" id="hamburgerBtn" aria-label="Abrir menu" aria-expanded="false"><span></span><span></span><span></span></button>
     </div>
@@ -48,41 +51,115 @@
     <div class="linha"></div>
   </div>
 
-  <div class="conta-tabs">
-    <button type="button" class="active" data-aba="entrar">Entrar</button>
-    <button type="button" data-aba="criar">Criar conta</button>
+  <!-- ============ DESLOGADO: entrar / criar conta ============ -->
+  <div id="contaDeslogado">
+    <div class="conta-tabs">
+      <button type="button" class="active" data-aba="entrar">Entrar</button>
+      <button type="button" data-aba="criar">Criar conta</button>
+    </div>
+
+    <div id="msgConta" class="conta-msg"></div>
+
+    <form class="conta-form active" id="formEntrar" data-form="entrar">
+      <div>
+        <label for="loginEmail">E-mail</label>
+        <input type="email" id="loginEmail" required placeholder="seu@email.com">
+      </div>
+      <div>
+        <label for="loginSenha">Senha</label>
+        <input type="password" id="loginSenha" required minlength="6" placeholder="••••••••">
+      </div>
+      <button type="submit" class="btn btn-primary">Entrar</button>
+    </form>
+
+    <form class="conta-form" id="formCriar" data-form="criar">
+      <div>
+        <label for="cadNome">Nome completo</label>
+        <input type="text" id="cadNome" required placeholder="Seu nome">
+      </div>
+      <div>
+        <label for="cadEmail">E-mail</label>
+        <input type="email" id="cadEmail" required placeholder="seu@email.com">
+      </div>
+      <div>
+        <label for="cadSenha">Senha</label>
+        <input type="password" id="cadSenha" required minlength="6" placeholder="Mínimo 6 caracteres">
+      </div>
+      <button type="submit" class="btn btn-primary">Criar minha conta</button>
+    </form>
   </div>
 
-  <div id="msgConta" class="conta-msg sucesso"></div>
+  <!-- ============ LOGADO: perfil + meus pedidos ============ -->
+  <div id="contaLogado" style="display:none;">
+    <div class="conta-perfil">
+      <p>Logada(o) como</p>
+      <h3 id="contaPerfilNome"></h3>
+      <span id="contaPerfilEmail"></span>
+      <div class="conta-perfil-acoes">
+        <a href="admin.html" class="btn btn-outline" id="btnIrParaAdmin" style="display:none;">Painel administrativo</a>
+        <button type="button" class="btn btn-outline" id="btnSairConta">Sair da conta</button>
+      </div>
+    </div>
 
-  <form class="conta-form active" id="formEntrar" data-form="entrar">
-    <div>
-      <label for="loginEmail">E-mail</label>
-      <input type="email" id="loginEmail" required placeholder="seu@email.com">
-    </div>
-    <div>
-      <label for="loginSenha">Senha</label>
-      <input type="password" id="loginSenha" required minlength="6" placeholder="••••••••">
-    </div>
-    <button type="submit" class="btn btn-primary">Entrar</button>
-    <a href="#" style="text-align:center;font-size:0.82rem;text-decoration:underline;color:var(--texto-suave);">Esqueci minha senha</a>
-  </form>
+    <h3 class="conta-secao-titulo">Meus dados</h3>
+    <div id="msgPerfil" class="conta-msg"></div>
+    <form class="conta-form active" id="formPerfil" style="margin-bottom:34px;">
+      <div class="conta-linha-2">
+        <div>
+          <label for="pfNome">Nome completo</label>
+          <input type="text" id="pfNome" required>
+        </div>
+        <div>
+          <label for="pfTelefone">WhatsApp</label>
+          <input type="tel" id="pfTelefone" placeholder="(00) 00000-0000">
+        </div>
+      </div>
+      <div class="conta-linha-2">
+        <div>
+          <label for="pfCep">CEP</label>
+          <input type="text" id="pfCep" inputmode="numeric" maxlength="9" placeholder="00000-000">
+        </div>
+        <div>
+          <label for="pfNumero">Número</label>
+          <input type="text" id="pfNumero">
+        </div>
+      </div>
+      <div>
+        <label for="pfEndereco">Endereço</label>
+        <input type="text" id="pfEndereco">
+      </div>
+      <div>
+        <label for="pfComplemento">Complemento</label>
+        <input type="text" id="pfComplemento">
+      </div>
+      <div class="conta-linha-3">
+        <div>
+          <label for="pfBairro">Bairro</label>
+          <input type="text" id="pfBairro">
+        </div>
+        <div>
+          <label for="pfCidade">Cidade</label>
+          <input type="text" id="pfCidade">
+        </div>
+        <div>
+          <label for="pfEstado">UF</label>
+          <select id="pfEstado">
+            <option value="">—</option>
+            <option>AC</option><option>AL</option><option>AP</option><option>AM</option><option>BA</option>
+            <option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option>
+            <option>MT</option><option>MS</option><option>MG</option><option>PA</option><option>PB</option>
+            <option>PR</option><option>PE</option><option>PI</option><option>RJ</option><option>RN</option>
+            <option>RS</option><option>RO</option><option>RR</option><option>SC</option><option>SP</option>
+            <option>SE</option><option>TO</option>
+          </select>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary">Salvar dados</button>
+    </form>
 
-  <form class="conta-form" id="formCriar" data-form="criar">
-    <div>
-      <label for="cadNome">Nome completo</label>
-      <input type="text" id="cadNome" required placeholder="Seu nome">
-    </div>
-    <div>
-      <label for="cadEmail">E-mail</label>
-      <input type="email" id="cadEmail" required placeholder="seu@email.com">
-    </div>
-    <div>
-      <label for="cadSenha">Senha</label>
-      <input type="password" id="cadSenha" required minlength="6" placeholder="Mínimo 6 caracteres">
-    </div>
-    <button type="submit" class="btn btn-primary">Criar minha conta</button>
-  </form>
+    <h3 class="conta-secao-titulo">Meus pedidos</h3>
+    <div id="contaPedidos"></div>
+  </div>
 </div>
 
 <footer>
@@ -121,7 +198,7 @@ initBuscaForm('searchFormHeader', true);
 
 // Abas Entrar / Criar conta
 const abas = document.querySelectorAll('.conta-tabs button');
-const formularios = document.querySelectorAll('.conta-form');
+const formularios = document.querySelectorAll('#contaDeslogado .conta-form');
 abas.forEach(aba => {
   aba.addEventListener('click', () => {
     abas.forEach(a => a.classList.remove('active'));
@@ -132,17 +209,181 @@ abas.forEach(aba => {
   });
 });
 
-// Envio (mock — sem backend de autenticação ainda)
-function mockSubmit(form, mensagem){
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const msg = document.getElementById('msgConta');
-    msg.textContent = mensagem;
-    msg.classList.add('show');
-  });
+function mostrarMsgConta(mensagem, tipo){
+  const msg = document.getElementById('msgConta');
+  msg.textContent = mensagem;
+  msg.className = `conta-msg show ${tipo}`;
 }
-mockSubmit(document.getElementById('formEntrar'), 'Login ainda não conectado — isto é um mock. Vamos ligar ao Supabase Auth em seguida.');
-mockSubmit(document.getElementById('formCriar'), 'Cadastro ainda não conectado — isto é um mock. Vamos ligar ao Supabase Auth em seguida.');
+
+// ---------- Criar conta ----------
+document.getElementById('formCriar').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const botao = e.target.querySelector('button[type="submit"]');
+  botao.disabled = true;
+  botao.textContent = 'Criando...';
+
+  const nome = document.getElementById('cadNome').value.trim();
+  const email = document.getElementById('cadEmail').value.trim();
+  const senha = document.getElementById('cadSenha').value;
+
+  const { data, error } = await sb.auth.signUp({
+    email, password: senha,
+    options: { data: { nome } }
+  });
+
+  botao.disabled = false;
+  botao.textContent = 'Criar minha conta';
+
+  if (error){
+    mostrarMsgConta(error.message.includes('already registered') ? 'Já existe uma conta com esse e-mail — tenta entrar.' : error.message, 'erro');
+    return;
+  }
+
+  if (data.session){
+    // Confirmação de e-mail desativada no projeto: já entra direto
+    mostrarConta();
+  } else {
+    mostrarMsgConta('Conta criada! Confere seu e-mail pra confirmar antes de entrar.', 'sucesso');
+  }
+});
+
+// ---------- Entrar ----------
+document.getElementById('formEntrar').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const botao = e.target.querySelector('button[type="submit"]');
+  botao.disabled = true;
+  botao.textContent = 'Entrando...';
+
+  const email = document.getElementById('loginEmail').value.trim();
+  const senha = document.getElementById('loginSenha').value;
+
+  const { error } = await sb.auth.signInWithPassword({ email, password: senha });
+
+  botao.disabled = false;
+  botao.textContent = 'Entrar';
+
+  if (error){
+    mostrarMsgConta('E-mail ou senha incorretos.', 'erro');
+    return;
+  }
+  mostrarConta();
+});
+
+// ---------- Sair ----------
+document.getElementById('btnSairConta').addEventListener('click', async () => {
+  await sb.auth.signOut();
+  location.reload();
+});
+
+// ---------- Mostra a tela certa (logado ou não) ----------
+async function mostrarConta(){
+  const { data } = await sb.auth.getSession();
+  const sessao = data.session;
+
+  if (!sessao){
+    document.getElementById('contaDeslogado').style.display = 'block';
+    document.getElementById('contaLogado').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('contaDeslogado').style.display = 'none';
+  document.getElementById('contaLogado').style.display = 'block';
+  document.getElementById('contaPerfilEmail').textContent = sessao.user.email;
+
+  // Só mostra o botão do painel administrativo pra quem realmente é
+  // admin (checado no banco via RPC — não dá pra fingir isso no navegador).
+  const { data: ehAdmin } = await sb.rpc('is_admin');
+  document.getElementById('btnIrParaAdmin').style.display = ehAdmin ? 'inline-flex' : 'none';
+
+  // Preenche o formulário de dados com o que já foi salvo antes (se houver)
+  const { data: perfil } = await sb.from('perfis').select('*').eq('user_id', sessao.user.id).maybeSingle();
+  document.getElementById('contaPerfilNome').textContent = perfil?.nome || sessao.user.user_metadata?.nome || sessao.user.email;
+  document.getElementById('pfNome').value = perfil?.nome || sessao.user.user_metadata?.nome || '';
+  document.getElementById('pfTelefone').value = perfil?.telefone || '';
+  document.getElementById('pfCep').value = perfil?.cep ? formatarCep(perfil.cep) : '';
+  document.getElementById('pfEndereco').value = perfil?.endereco || '';
+  document.getElementById('pfNumero').value = perfil?.numero || '';
+  document.getElementById('pfComplemento').value = perfil?.complemento || '';
+  document.getElementById('pfBairro').value = perfil?.bairro || '';
+  document.getElementById('pfCidade').value = perfil?.cidade || '';
+  document.getElementById('pfEstado').value = perfil?.estado || '';
+
+  const pedidosWrap = document.getElementById('contaPedidos');
+  pedidosWrap.innerHTML = `<p class="suave" style="color:var(--texto-suave);font-size:0.85rem;">Carregando pedidos...</p>`;
+  const { data: pedidos, error } = await sb.from('pedidos').select('*').order('criado_em', { ascending: false });
+  if (error || !pedidos || !pedidos.length){
+    pedidosWrap.innerHTML = `<p class="suave" style="color:var(--texto-suave);font-size:0.85rem;">Você ainda não fez nenhum pedido por aqui logada(o). Pedidos feitos sem estar logada(o) não aparecem nessa lista.</p>`;
+    return;
+  }
+  pedidosWrap.innerHTML = pedidos.map(p => `
+    <div class="conta-pedido-item">
+      <div>
+        <strong>#${p.id.slice(0, 8).toUpperCase()}</strong>
+        <span class="conta-pedido-data">${new Date(p.criado_em).toLocaleDateString('pt-BR')}</span>
+      </div>
+      <span class="status-pedido status-${p.status}">${p.status}</span>
+      <span class="conta-pedido-total">${formatarPreco(p.total)}</span>
+    </div>
+  `).join('');
+}
+
+// ---------- Busca endereço automático pelo CEP (igual ao checkout) ----------
+const pfCep = document.getElementById('pfCep');
+pfCep.addEventListener('input', (e) => { e.target.value = formatarCep(e.target.value); });
+pfCep.addEventListener('blur', async () => {
+  const cep = pfCep.value.replace(/\D/g, '');
+  if (cep.length !== 8) return;
+  try {
+    const resp = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+    const dados = await resp.json();
+    if (!dados.erro){
+      document.getElementById('pfEndereco').value = dados.logradouro || '';
+      document.getElementById('pfBairro').value = dados.bairro || '';
+      document.getElementById('pfCidade').value = dados.localidade || '';
+      document.getElementById('pfEstado').value = dados.uf || '';
+    }
+  } catch {}
+});
+
+// ---------- Salvar dados do perfil ----------
+document.getElementById('formPerfil').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const { data } = await sb.auth.getSession();
+  if (!data.session) return;
+
+  const botao = e.target.querySelector('button[type="submit"]');
+  botao.disabled = true;
+  botao.textContent = 'Salvando...';
+
+  const { error } = await sb.from('perfis').upsert({
+    user_id: data.session.user.id,
+    nome: document.getElementById('pfNome').value.trim(),
+    telefone: document.getElementById('pfTelefone').value.trim(),
+    cep: pfCep.value.replace(/\D/g, ''),
+    endereco: document.getElementById('pfEndereco').value.trim(),
+    numero: document.getElementById('pfNumero').value.trim(),
+    complemento: document.getElementById('pfComplemento').value.trim(),
+    bairro: document.getElementById('pfBairro').value.trim(),
+    cidade: document.getElementById('pfCidade').value.trim(),
+    estado: document.getElementById('pfEstado').value,
+    atualizado_em: new Date().toISOString()
+  }, { onConflict: 'user_id' });
+
+  botao.disabled = false;
+  botao.textContent = 'Salvar dados';
+
+  const msg = document.getElementById('msgPerfil');
+  if (error){
+    msg.textContent = 'Não foi possível salvar agora — tenta de novo.';
+    msg.className = 'conta-msg show erro';
+    return;
+  }
+  msg.textContent = 'Dados salvos ✓';
+  msg.className = 'conta-msg show sucesso';
+  document.getElementById('contaPerfilNome').textContent = document.getElementById('pfNome').value.trim() || data.session.user.email;
+});
+
+mostrarConta();
 </script>
 
 </body>

@@ -3,14 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>Carrinho | Pavan & Co.</title>
 
 <!--
-  Este carrinho usa itens de EXEMPLO (array `itensCarrinho` abaixo)
-  pra já demonstrar quantidade, remoção e subtotal funcionando.
-  Como o site ainda não tem backend, o carrinho não persiste entre
-  páginas — isso é normal nesta fase e vai ser resolvido quando
-  ligarmos ao Supabase (carrinho por usuário/sessão de verdade).
+  Carrinho persistente de verdade (localStorage, ver CARRINHO_STORAGE_KEY
+  no shared.js) — os mesmos itens aparecem aqui e na gaveta lateral que
+  abre ao clicar no ícone do carrinho ou em "Adicionar ao carrinho".
 -->
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -35,7 +36,7 @@
       </a>
       <a class="icon-btn" href="carrinho.html" aria-label="Carrinho">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h7.2a2 2 0 0 0 2-1.6L21 8H6"/><circle cx="9" cy="21" r="1"/><circle cx="18" cy="21" r="1"/></svg>
-        <span class="cart-count" id="cartCount">3</span>
+        <span class="cart-count" id="cartCount">0</span>
       </a>
       <button class="hamburger" id="hamburgerBtn" aria-label="Abrir menu" aria-expanded="false"><span></span><span></span><span></span></button>
     </div>
@@ -94,21 +95,12 @@
 <script>
 initBuscaForm('searchFormHeader', true);
 
-// Itens de EXEMPLO já "no carrinho" — busca 3 produtos reais do Supabase
-// pra ilustrar o funcionamento (quantidade, remover, subtotal).
-let itensCarrinho = [];
-
-async function iniciarCarrinhoExemplo(){
-  const produtos = await carregarTodosProdutosAtivos();
-  itensCarrinho = produtos.slice(0, 3).map(p => ({ ...p, qtd: 1 }));
-  renderCarrinho();
-}
-
 function renderCarrinho(){
+  const itens = obterCarrinho();
   const lista = document.getElementById('listaCarrinho');
   const resumo = document.getElementById('resumoCarrinho');
 
-  if (itensCarrinho.length === 0){
+  if (itens.length === 0){
     lista.innerHTML = '';
     resumo.innerHTML = `
       <div class="carrinho-vazio">
@@ -119,46 +111,51 @@ function renderCarrinho(){
     return;
   }
 
-  lista.innerHTML = itensCarrinho.map((item, i) => `
+  lista.innerHTML = itens.map(item => `
     <div class="carrinho-item">
-      <img src="${item.image}" alt="${item.nome}">
+      <img src="${item.imagem}" alt="${item.nome}">
       <div class="carrinho-info">
         <div class="nome">${item.nome}</div>
-        <div class="tags">${item.material}${item.pedra !== 'Sem pedra' ? ' · ' + item.pedra : ''}</div>
+        ${item.quilate ? `<div class="tags">${item.quilate}</div>` : ''}
+        ${item.banho ? `<div class="tags">${item.banho}</div>` : ''}
+        ${item.tamanho ? `<div class="tags">Aro ${item.tamanho}</div>` : ''}
         <div class="carrinho-qtd">
-          <button type="button" data-acao="menos" data-i="${i}" aria-label="Diminuir quantidade">−</button>
+          <button type="button" data-acao="menos" data-id="${item.id}" data-tamanho="${item.tamanho || ''}" data-quilate="${item.quilate || ''}" data-banho="${item.banho || ''}" aria-label="Diminuir quantidade">−</button>
           <span>${item.qtd}</span>
-          <button type="button" data-acao="mais" data-i="${i}" aria-label="Aumentar quantidade">+</button>
+          <button type="button" data-acao="mais" data-id="${item.id}" data-tamanho="${item.tamanho || ''}" data-quilate="${item.quilate || ''}" data-banho="${item.banho || ''}" aria-label="Aumentar quantidade">+</button>
         </div>
-        <button type="button" class="carrinho-remover" data-acao="remover" data-i="${i}">Remover</button>
+        <button type="button" class="carrinho-remover" data-acao="remover" data-id="${item.id}" data-tamanho="${item.tamanho || ''}" data-quilate="${item.quilate || ''}" data-banho="${item.banho || ''}">Remover</button>
       </div>
       <div class="carrinho-preco">${formatarPreco(item.preco * item.qtd)}</div>
     </div>
   `).join('');
 
-  const subtotal = itensCarrinho.reduce((soma, item) => soma + item.preco * item.qtd, 0);
+  const subtotal = itens.reduce((soma, item) => soma + item.preco * item.qtd, 0);
   resumo.innerHTML = `
     <div class="carrinho-resumo">
       <span>Subtotal</span>
       <span>${formatarPreco(subtotal)}</span>
     </div>
-    <p class="suave" style="margin-top:8px;font-size:0.82rem;color:var(--texto-suave);">Frete e parcelamento calculados na próxima etapa.</p>
-    <button type="button" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:18px;" onclick="alert('Checkout ainda não conectado — próxima etapa quando integrarmos pagamento/Supabase.')">Finalizar compra</button>
+    <p class="suave" style="margin-top:8px;font-size:0.82rem;color:var(--texto-suave);">Frete calculado na página de cada peça por enquanto — a etapa de pagamento vem a seguir.</p>
+    <a href="checkout.html" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:18px;">Finalizar compra</a>
   `;
 
   lista.querySelectorAll('button[data-acao]').forEach(btn => {
     btn.addEventListener('click', () => {
-      const i = Number(btn.getAttribute('data-i'));
+      const id = btn.getAttribute('data-id');
+      const tamanho = btn.getAttribute('data-tamanho') || null;
+      const quilate = btn.getAttribute('data-quilate') || null;
+      const banho = btn.getAttribute('data-banho') || null;
       const acao = btn.getAttribute('data-acao');
-      if (acao === 'mais') itensCarrinho[i].qtd++;
-      if (acao === 'menos') itensCarrinho[i].qtd = Math.max(1, itensCarrinho[i].qtd - 1);
-      if (acao === 'remover') itensCarrinho.splice(i, 1);
+      if (acao === 'mais') alterarQtdCarrinho(id, tamanho, quilate, banho, 1);
+      if (acao === 'menos') alterarQtdCarrinho(id, tamanho, quilate, banho, -1);
+      if (acao === 'remover') removerDoCarrinho(id, tamanho, quilate, banho);
       renderCarrinho();
     });
   });
 }
 
-iniciarCarrinhoExemplo();
+renderCarrinho();
 </script>
 
 </body>

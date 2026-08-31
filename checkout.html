@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Finalizar compra | Pavan & Co.</title>
+
+<!--
+  Checkout sem pagamento integrado ainda: grava um pedido de verdade
+  na tabela `pedidos` do Supabase (status "novo"), some com o CEP
+  de origem que já configuramos e o token do Melhor Envio pra
+  cobrar o frete do carrinho inteiro. A cobrança em si (Pix/cartão)
+  é a próxima etapa — por enquanto o time entra em contato pelo
+  WhatsApp pra combinar o pagamento.
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=Lato:wght@300;400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header id="siteHeader">
+  <div class="header-inner container">
+    <a href="index.html" class="logo" aria-label="Pavan & Co. - início">
+      <img class="logo-mark" src="logo.png" alt="Pavan & Co.">
+    </a>
+    <nav class="main-nav" aria-label="Categorias principais"><ul id="navList"></ul></nav>
+    <div class="header-icons">
+      <button class="icon-btn" id="searchBtn" aria-label="Buscar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
+      <a class="icon-btn" href="conta.html" aria-label="Minha conta">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+      </a>
+      <a class="icon-btn" href="carrinho.html" aria-label="Carrinho">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h7.2a2 2 0 0 0 2-1.6L21 8H6"/><circle cx="9" cy="21" r="1"/><circle cx="18" cy="21" r="1"/></svg>
+        <span class="cart-count" id="cartCount">0</span>
+      </a>
+      <button class="hamburger" id="hamburgerBtn" aria-label="Abrir menu" aria-expanded="false"><span></span><span></span><span></span></button>
+    </div>
+  </div>
+  <div class="mobile-nav" id="mobileNav"><ul id="mobileNavList"></ul></div>
+  <div class="search-overlay" id="searchOverlay">
+    <form id="searchFormHeader">
+      <input type="search" placeholder="Buscar por nome, material ou pedra..." required>
+      <button type="submit" class="btn btn-primary">Buscar</button>
+    </form>
+  </div>
+</header>
+
+<div class="page-title container">
+  <span class="eyebrow">Quase lá</span>
+  <h1>Finalizar compra</h1>
+  <div class="linha"></div>
+</div>
+
+<!-- ============ CARRINHO VAZIO ============ -->
+<div class="container" id="checkoutVazio" style="display:none; max-width:600px; text-align:center; padding-bottom:100px;">
+  <p style="color:var(--texto-suave);">Seu carrinho está vazio — adicione alguma peça antes de finalizar a compra.</p>
+  <a href="index.html" class="btn btn-primary" style="margin-top:18px;display:inline-flex;">Ver o catálogo</a>
+</div>
+
+<!-- ============ FORMULÁRIO + RESUMO ============ -->
+<div class="checkout-grid container" id="checkoutConteudo">
+  <form id="formCheckout" class="checkout-form">
+    <div class="checkout-secao">
+      <h2>1. Seus dados</h2>
+      <div class="checkout-linha cols-2">
+        <div class="checkout-campo">
+          <label for="ckNome">Nome completo *</label>
+          <input type="text" id="ckNome" required>
+        </div>
+        <div class="checkout-campo">
+          <label for="ckTelefone">WhatsApp *</label>
+          <input type="tel" id="ckTelefone" placeholder="(00) 00000-0000" required>
+        </div>
+      </div>
+      <div class="checkout-campo">
+        <label for="ckEmail">E-mail *</label>
+        <input type="email" id="ckEmail" required>
+      </div>
+    </div>
+
+    <div class="checkout-secao">
+      <h2>2. Endereço de entrega</h2>
+      <div class="checkout-linha cols-2">
+        <div class="checkout-campo">
+          <label for="ckCep">CEP *</label>
+          <input type="text" id="ckCep" inputmode="numeric" maxlength="9" placeholder="00000-000" required>
+          <span class="checkout-campo-aviso" id="ckCepAviso"></span>
+        </div>
+        <div class="checkout-campo">
+          <label for="ckNumero">Número *</label>
+          <input type="text" id="ckNumero" required>
+        </div>
+      </div>
+      <div class="checkout-campo">
+        <label for="ckEndereco">Endereço *</label>
+        <input type="text" id="ckEndereco" required>
+      </div>
+      <div class="checkout-campo">
+        <label for="ckComplemento">Complemento</label>
+        <input type="text" id="ckComplemento" placeholder="Apto, bloco, referência (opcional)">
+      </div>
+      <div class="checkout-linha cols-3">
+        <div class="checkout-campo">
+          <label for="ckBairro">Bairro *</label>
+          <input type="text" id="ckBairro" required>
+        </div>
+        <div class="checkout-campo">
+          <label for="ckCidade">Cidade *</label>
+          <input type="text" id="ckCidade" required>
+        </div>
+        <div class="checkout-campo">
+          <label for="ckEstado">UF *</label>
+          <select id="ckEstado" required>
+            <option value="">—</option>
+            <option>AC</option><option>AL</option><option>AP</option><option>AM</option><option>BA</option>
+            <option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option>
+            <option>MT</option><option>MS</option><option>MG</option><option>PA</option><option>PB</option>
+            <option>PR</option><option>PE</option><option>PI</option><option>RJ</option><option>RN</option>
+            <option>RS</option><option>RO</option><option>RR</option><option>SC</option><option>SP</option>
+            <option>SE</option><option>TO</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="checkout-secao">
+      <h2>3. Frete</h2>
+      <div id="checkoutFrete">
+        <p class="checkout-frete-msg">Preencha o CEP acima pra calcular o frete.</p>
+      </div>
+    </div>
+
+    <div class="checkout-secao">
+      <h2>4. Observações <span style="font-weight:400;color:var(--texto-suave);">(opcional)</span></h2>
+      <div class="checkout-campo">
+        <textarea id="ckObservacoes" rows="3" placeholder="Alguma instrução de entrega (ex: deixar com o porteiro, ponto de referência)"></textarea>
+      </div>
+    </div>
+  </form>
+
+  <aside class="checkout-resumo">
+    <h2>Seu pedido</h2>
+    <div id="checkoutItens"></div>
+    <div class="checkout-totais" id="checkoutTotais"></div>
+    <button type="submit" form="formCheckout" class="btn btn-primary" id="btnConfirmarPedido" style="width:100%;justify-content:center;margin-top:16px;">Confirmar pedido</button>
+    <p class="checkout-aviso-pagamento">Ainda não cobramos pagamento aqui — depois de confirmar, nossa equipe entra em contato pelo WhatsApp pra combinar Pix ou cartão.</p>
+  </aside>
+</div>
+
+<!-- ============ CONFIRMAÇÃO ============ -->
+<div class="container" id="checkoutConfirmado" style="display:none; max-width:560px; text-align:center; padding:40px 20px 100px;">
+  <div class="checkout-confirmado-icone">✓</div>
+  <h2 style="font-family:var(--serif);font-style:italic;font-size:1.6rem;margin-bottom:10px;">Pedido recebido!</h2>
+  <p style="color:var(--texto-suave);margin-bottom:6px;">Número do pedido: <strong id="confirmadoNumero" style="color:var(--bordo);"></strong></p>
+  <p style="color:var(--texto-suave);">Nossa equipe vai te chamar no WhatsApp em breve pra combinar o pagamento e confirmar os detalhes da entrega.</p>
+  <a id="confirmadoWhatsapp" href="#" target="_blank" rel="noopener" class="btn btn-primary" style="margin-top:22px;display:inline-flex;">Falar no WhatsApp agora</a>
+  <br>
+  <a href="index.html" style="display:inline-block;margin-top:16px;font-size:0.85rem;text-decoration:underline;color:var(--texto-suave);">Voltar pra loja</a>
+</div>
+
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-col">
+        <div class="footer-logo"><img src="logo.png" alt="Pavan & Co."></div>
+        <p>Joias atemporais, feitas para acompanhar cada capítulo da sua história. Peças pensadas para durar gerações.</p>
+        <a href="sobre.html" style="display:inline-block;margin-top:10px;text-decoration:underline;">Nossa história →</a>
+      </div>
+      <div class="footer-col">
+        <h4>Atendimento</h4>
+        <ul>
+          <li><a href="faq.html">Perguntas frequentes</a></li>
+          <li><a href="trocas-devolucoes.html">Trocas e devoluções</a></li>
+          <li><a href="privacidade.html">Política de privacidade</a></li>
+          <li><a href="contato.html">Fale conosco</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Redes sociais</h4>
+        <div class="social-row">
+          <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg></a>
+          <a href="#" aria-label="WhatsApp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 11.5a8.5 8.5 0 1 1-3.6-6.9L21 3l-1.2 4A8.4 8.4 0 0 1 21 11.5Z"/><path d="M8 10c.5 2.5 2.5 4.5 5 5"/></svg></a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">© <span id="year"></span> Pavan &amp; Co. — CNPJ: 00.000.000/0001-00</div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="shared.js"></script>
+<script>
+initBuscaForm('searchFormHeader', true);
+
+const WHATSAPP_NUMERO = '5511900000000';
+
+const itensCarrinho = obterCarrinho();
+let freteEscolhido = null; // { transportadora, servico, preco, prazoDias }
+
+if (itensCarrinho.length === 0){
+  document.getElementById('checkoutVazio').style.display = 'block';
+  document.getElementById('checkoutConteudo').style.display = 'none';
+} else {
+  renderResumo();
+  preencherComPerfilSalvo();
+}
+
+// Cliente logado: preenche o formulário com o que já foi salvo em "Meus
+// dados" (conta.html), pra não precisar digitar tudo de novo toda vez.
+async function preencherComPerfilSalvo(){
+  const { data } = await sb.auth.getSession();
+  if (!data.session) return;
+
+  document.getElementById('ckEmail').value = data.session.user.email;
+
+  const { data: perfil } = await sb.from('perfis').select('*').eq('user_id', data.session.user.id).maybeSingle();
+  if (!perfil) return;
+
+  if (perfil.nome) document.getElementById('ckNome').value = perfil.nome;
+  if (perfil.telefone) document.getElementById('ckTelefone').value = perfil.telefone;
+  if (perfil.endereco) document.getElementById('ckEndereco').value = perfil.endereco;
+  if (perfil.numero) document.getElementById('ckNumero').value = perfil.numero;
+  if (perfil.complemento) document.getElementById('ckComplemento').value = perfil.complemento;
+  if (perfil.bairro) document.getElementById('ckBairro').value = perfil.bairro;
+  if (perfil.cidade) document.getElementById('ckCidade').value = perfil.cidade;
+  if (perfil.estado) document.getElementById('ckEstado').value = perfil.estado;
+  if (perfil.cep){
+    ckCep.value = formatarCep(perfil.cep);
+    ckCep.dispatchEvent(new Event('blur')); // já calcula o frete direto
+  }
+}
+
+function subtotalCarrinho(){
+  return itensCarrinho.reduce((soma, item) => soma + item.preco * item.qtd, 0);
+}
+
+function renderResumo(){
+  const subtotal = subtotalCarrinho();
+
+  document.getElementById('checkoutItens').innerHTML = itensCarrinho.map(item => `
+    <div class="carrinho-item" style="padding:12px 0;">
+      <img src="${item.imagem}" alt="${item.nome}">
+      <div class="carrinho-info">
+        <div class="nome" style="font-size:0.9rem;">${item.nome}</div>
+        ${item.quilate ? `<div class="tags">${item.quilate}</div>` : ''}
+        ${item.banho ? `<div class="tags">${item.banho}</div>` : ''}
+        ${item.tamanho ? `<div class="tags">Aro ${item.tamanho}</div>` : ''}
+        <div class="tags">Qtd: ${item.qtd}</div>
+      </div>
+      <div class="carrinho-preco">${formatarPreco(item.preco * item.qtd)}</div>
+    </div>
+  `).join('');
+
+  const freteValor = freteEscolhido ? freteEscolhido.preco : null;
+  const freteGratis = subtotal >= 399;
+  const freteFinal = freteValor === null ? null : (freteGratis ? 0 : freteValor);
+  const total = subtotal + (freteFinal || 0);
+
+  document.getElementById('checkoutTotais').innerHTML = `
+    <div class="checkout-total-linha"><span>Subtotal</span><span>${formatarPreco(subtotal)}</span></div>
+    <div class="checkout-total-linha"><span>Frete</span><span>${freteFinal === null ? 'Calcule o CEP' : (freteFinal === 0 ? 'Grátis' : formatarPreco(freteFinal))}</span></div>
+    <div class="checkout-total-linha checkout-total-final"><span>Total</span><span>${formatarPreco(total)}</span></div>
+  `;
+
+  document.getElementById('btnConfirmarPedido').disabled = !freteEscolhido;
+}
+
+// ---------- CEP: busca endereço (ViaCEP) + calcula frete do carrinho inteiro ----------
+const ckCep = document.getElementById('ckCep');
+ckCep.addEventListener('input', (e) => { e.target.value = formatarCep(e.target.value); });
+ckCep.addEventListener('blur', async () => {
+  const cep = ckCep.value.replace(/\D/g, '');
+  const aviso = document.getElementById('ckCepAviso');
+  if (cep.length !== 8){
+    aviso.textContent = '';
+    return;
+  }
+
+  aviso.textContent = 'Buscando endereço...';
+  try {
+    const resp = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+    const dados = await resp.json();
+    if (!dados.erro){
+      document.getElementById('ckEndereco').value = dados.logradouro || '';
+      document.getElementById('ckBairro').value = dados.bairro || '';
+      document.getElementById('ckCidade').value = dados.localidade || '';
+      document.getElementById('ckEstado').value = dados.uf || '';
+      aviso.textContent = '';
+    } else {
+      aviso.textContent = 'CEP não encontrado — preencha o endereço manualmente.';
+    }
+  } catch {
+    aviso.textContent = 'Não consegui buscar o endereço — preencha manualmente.';
+  }
+
+  document.getElementById('checkoutFrete').innerHTML = `<p class="checkout-frete-msg">Calculando frete...</p>`;
+  try {
+    const resultado = await calcularFrete(cep, null, itensCarrinho.map(i => ({ preco: i.preco, qtd: i.qtd })));
+    if (resultado.error || !resultado.opcoes || !resultado.opcoes.length){
+      document.getElementById('checkoutFrete').innerHTML = `<p class="checkout-frete-msg erro">Não foi possível calcular o frete pra esse CEP. Confere se ele tá certo.</p>`;
+      freteEscolhido = null;
+      renderResumo();
+      return;
+    }
+    freteEscolhido = resultado.opcoes[0];
+    const gratis = subtotalCarrinho() >= 399;
+    document.getElementById('checkoutFrete').innerHTML = `
+      <div class="frete-opcao">
+        <div>
+          <span class="transportadora">${freteEscolhido.transportadora} — ${freteEscolhido.servico}</span>
+          <span class="prazo">${freteEscolhido.prazoConfeccaoDias} dias de confecção + ${freteEscolhido.prazoEntregaDiasMin} a ${freteEscolhido.prazoEntregaDias} dias úteis de entrega</span>
+        </div>
+        <span class="preco">${gratis ? 'Grátis' : formatarPreco(freteEscolhido.preco)}</span>
+      </div>
+    `;
+    renderResumo();
+  } catch {
+    document.getElementById('checkoutFrete').innerHTML = `<p class="checkout-frete-msg erro">Não foi possível calcular o frete agora. Tente de novo.</p>`;
+    freteEscolhido = null;
+    renderResumo();
+  }
+});
+
+// ---------- Envio do pedido ----------
+document.getElementById('formCheckout').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!freteEscolhido){
+    alert('Calcule o frete (preenchendo o CEP) antes de confirmar o pedido.');
+    return;
+  }
+
+  const botao = document.getElementById('btnConfirmarPedido');
+  botao.disabled = true;
+  botao.textContent = 'Enviando...';
+
+  const subtotal = subtotalCarrinho();
+  const gratis = subtotal >= 399;
+  const freteFinal = gratis ? 0 : freteEscolhido.preco;
+
+  const pedido = {
+    nome_cliente: document.getElementById('ckNome').value.trim(),
+    email_cliente: document.getElementById('ckEmail').value.trim(),
+    telefone_cliente: document.getElementById('ckTelefone').value.trim(),
+    cep: ckCep.value.replace(/\D/g, ''),
+    endereco: document.getElementById('ckEndereco').value.trim(),
+    numero: document.getElementById('ckNumero').value.trim(),
+    complemento: document.getElementById('ckComplemento').value.trim() || null,
+    bairro: document.getElementById('ckBairro').value.trim(),
+    cidade: document.getElementById('ckCidade').value.trim(),
+    estado: document.getElementById('ckEstado').value,
+    itens: itensCarrinho,
+    subtotal,
+    frete: freteFinal,
+    frete_servico: `${freteEscolhido.transportadora} — ${freteEscolhido.servico}`,
+    frete_prazo_dias: freteEscolhido.prazoDias,
+    total: subtotal + freteFinal,
+    observacoes: document.getElementById('ckObservacoes').value.trim() || null
+  };
+
+  try {
+    const { data, error } = await sb.rpc('criar_pedido', { payload: pedido }).single();
+    if (error) throw new Error(error.message);
+
+    localStorage.removeItem(CARRINHO_STORAGE_KEY);
+    atualizarContadorCarrinho();
+
+    const numero = data.id.slice(0, 8).toUpperCase();
+    document.getElementById('confirmadoNumero').textContent = `#${numero}`;
+    const msgWhats = encodeURIComponent(`Oi! Acabei de fazer o pedido #${numero} na Pavan & Co. (${pedido.nome_cliente}) e quero combinar o pagamento.`);
+    document.getElementById('confirmadoWhatsapp').href = `https://wa.me/${WHATSAPP_NUMERO}?text=${msgWhats}`;
+
+    document.getElementById('checkoutConteudo').style.display = 'none';
+    document.getElementById('checkoutConfirmado').style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch (err){
+    alert('Não foi possível registrar o pedido: ' + err.message);
+    botao.disabled = false;
+    botao.textContent = 'Confirmar pedido';
+  }
+});
+</script>
+
+</body>
+</html>

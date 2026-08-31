@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>Admin | Pavan & Co.</title>
 <meta name="robots" content="noindex, nofollow">
 
@@ -24,20 +27,26 @@
   ============================================================
 -->
 
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,400&family=Lato:wght@300;400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=Lato:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --cinza-bg: #F4F5F7;
+    /* Mesma paleta do site público (style.css) — bordô, creme — mais o
+       petróleo como cor de apoio, só do admin, pra diferenciar do site. */
+    --cinza-bg: #F7F2E8;
     --cinza-card: #FFFFFF;
-    --cinza-borda: #DDE1E6;
-    --texto: #1F2429;
-    --texto-suave: #656D76;
-    --azul: #2B4C7E;
-    --azul-escuro: #1E3A5F;
+    --cinza-borda: rgba(107,15,26,0.16);
+    --texto: #2B211F;
+    --texto-suave: #6E6259;
+    --bordo: #6B0F1A;
+    --bordo-escuro: #4A0A13;
+    --petroleo: #1F4B4E;
+    --petroleo-escuro: #143234;
+    --petroleo-bg: #E9F0EF;
+    --bordo-bg: #F3E6E3;
     --verde: #2C6E37;
-    --vermelho: #B3261E;
+    --vermelho: #A8281D;
     --vermelho-bg: #FBEAE9;
-    --radius: 6px;
+    --radius: 3px;
     --serif: 'Playfair Display', Georgia, serif;
     --sans: 'Lato', -apple-system, sans-serif;
   }
@@ -48,24 +57,37 @@
   ul{ list-style:none; }
   img{ max-width:100%; display:block; }
 
-  /* ---------- LOGIN ---------- */
+  /* ---------- LOGIN (mesma linguagem visual do conta.html do site) ---------- */
   #telaLogin{
     min-height:100vh;
     display:flex;
     align-items:center;
     justify-content:center;
     padding: 20px;
+    background:
+      radial-gradient(circle at 25% 15%, #2C6367 0%, transparent 55%),
+      linear-gradient(160deg, var(--petroleo) 0%, var(--petroleo-escuro) 100%);
   }
   .login-card{
     background: var(--cinza-card);
-    border: 1px solid var(--cinza-borda);
-    border-radius: var(--radius);
-    padding: 40px 32px;
-    max-width: 360px;
+    padding: 44px 36px;
+    max-width: 380px;
     width:100%;
     text-align:center;
+    box-shadow: 0 24px 60px rgba(10,30,32,0.35);
   }
-  .login-card h1{ font-family: var(--serif); font-size:1.5rem; margin-bottom:6px; }
+  .login-logo{ height:36px; width:auto; margin:0 auto 22px; display:block; }
+  .login-eyebrow{
+    display:block;
+    font-size:0.72rem;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    font-weight:700;
+    color: var(--bordo);
+    margin-bottom:10px;
+  }
+  .login-card h1{ font-family: var(--serif); font-style:italic; font-weight:500; font-size:1.7rem; }
+  .login-linha{ width:42px; height:2px; background:var(--bordo); margin:14px auto 22px; }
   .login-card p{ font-size:0.85rem; color:var(--texto-suave); margin-bottom:24px; }
   .login-card input{
     width:100%;
@@ -74,16 +96,19 @@
     border-radius: var(--radius);
     margin-bottom: 12px;
     font-size:0.95rem;
+    font-family: var(--sans);
   }
   .login-card button{
     width:100%;
-    padding: 12px;
-    background: var(--azul);
+    padding: 13px;
+    background: var(--bordo);
     color:#fff;
     border-radius: var(--radius);
     font-weight:600;
+    letter-spacing:0.02em;
+    transition: background .2s ease;
   }
-  .login-card button:hover{ background: var(--azul-escuro); }
+  .login-card button:hover{ background: var(--bordo-escuro); }
   .login-erro{ color: var(--vermelho); font-size:0.82rem; margin-top:10px; display:none; }
   .login-erro.show{ display:block; }
 
@@ -92,22 +117,27 @@
   #painelAdmin.show{ display:block; }
 
   .admin-topbar{
-    background: var(--azul-escuro);
+    background: var(--petroleo);
     color:#fff;
-    padding: 14px 24px;
+    padding: 14px 20px;
     display:flex;
     align-items:center;
     justify-content:space-between;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
   }
-  .admin-topbar .marca{ font-family: var(--serif); font-size:1.1rem; }
-  .admin-topbar button{ color:#fff; font-size:0.85rem; text-decoration:underline; }
+  .admin-topbar .marca{ display:flex; align-items:center; gap:10px; font-family: var(--serif); font-style:italic; font-size:1.05rem; }
+  .admin-topbar .marca img{ height:24px; width:auto; filter:brightness(0) invert(1); opacity:.92; }
+  .admin-topbar button, .admin-topbar a{ color:#fff; font-size:0.82rem; text-decoration:underline; white-space:nowrap; }
 
-  .admin-wrap{ max-width: 1200px; margin: 0 auto; padding: 26px 20px 80px; }
+  .admin-wrap{ max-width: 1240px; margin: 0 auto; padding: 22px 16px 80px; }
 
   .admin-toolbar{
     display:flex;
     flex-wrap:wrap;
-    gap: 12px;
+    gap: 10px;
     margin-bottom: 20px;
     align-items:center;
   }
@@ -116,6 +146,7 @@
     border:1px solid var(--cinza-borda);
     border-radius: var(--radius);
     font-size:0.88rem;
+    background: var(--cinza-card);
   }
   .admin-toolbar input{ flex:1; min-width:180px; }
   .btn-admin{
@@ -123,11 +154,59 @@
     border-radius: var(--radius);
     font-size:0.85rem;
     font-weight:600;
+    white-space:nowrap;
   }
-  .btn-admin-primary{ background: var(--azul); color:#fff; }
-  .btn-admin-primary:hover{ background: var(--azul-escuro); }
-  .btn-admin-outline{ border:1px solid var(--cinza-borda); background:#fff; }
+  .btn-admin-primary{ background: var(--bordo); color:#fff; }
+  .btn-admin-primary:hover{ background: var(--bordo-escuro); }
+  .btn-admin-outline{ border:1px solid var(--cinza-borda); background:#fff; color: var(--texto); }
   .btn-admin-outline:hover{ background: var(--cinza-bg); }
+
+  @media (max-width: 640px){
+    .admin-toolbar{ flex-direction:column; align-items:stretch; }
+    .admin-toolbar input, .admin-toolbar select, .admin-toolbar .btn-admin{ width:100%; }
+  }
+
+  /* ---------- PAINEL (tela inicial em cards, estilo dashboard) ---------- */
+  .admin-dash-grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 18px;
+    margin: 8px 0 40px;
+  }
+  .admin-tile{
+    position:relative;
+    aspect-ratio: 1 / 0.9;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap: 12px;
+    background: var(--cinza-card);
+    border: 1px solid var(--cinza-borda);
+    border-radius: var(--radius);
+    padding: 18px;
+    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease, background .18s ease;
+  }
+  .admin-tile:hover{
+    transform: translateY(-5px);
+    border-color: var(--bordo);
+    background: var(--bordo-bg);
+    box-shadow: 0 16px 32px rgba(107,15,26,0.14);
+  }
+  .admin-tile svg{ width:32px; height:32px; color: var(--petroleo); transition: color .18s ease; flex-shrink:0; }
+  .admin-tile:hover svg{ color: var(--bordo); }
+  .admin-tile .tile-label{ font-size:0.86rem; font-weight:700; color: var(--texto); text-align:center; }
+  .admin-tile .tile-badge{
+    position:absolute; top:10px; right:10px;
+    background: var(--bordo); color:#fff;
+    min-width:20px; height:20px; padding:0 5px;
+    border-radius:20px; font-size:0.7rem; font-weight:700;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  .admin-voltar-painel{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:0.85rem; font-weight:600; color: var(--bordo);
+    margin-bottom:18px;
+  }
+  .admin-voltar-painel:hover{ text-decoration:underline; }
 
   /* ---------- TABELA ---------- */
   .admin-tabela-wrap{
@@ -163,9 +242,42 @@
   }
   .status-ativo{ background:#E8F3E9; color: var(--verde); }
   .status-rascunho{ background:#F1EFE0; color:#8A6D1D; }
-  .acoes-linha{ display:flex; gap:10px; }
-  .acoes-linha button{ font-size:0.78rem; color: var(--azul); text-decoration:underline; }
+  .status-destaque{ background: var(--petroleo-bg); color: var(--petroleo); margin-left:4px; white-space:nowrap; }
+  #badgeMensagensNaoLidas{
+    display:inline-flex; align-items:center; justify-content:center;
+    min-width:18px; height:18px; padding:0 5px;
+    background: var(--bordo); color:#fff;
+    border-radius:20px; font-size:0.68rem; font-weight:700;
+    margin-left:4px;
+  }
+  .mensagem-linha{
+    padding: 12px 0;
+    border-bottom: 1px solid var(--cinza-borda);
+    font-size: 0.86rem;
+  }
+  .mensagem-linha.lida{ opacity:.6; }
+  .mensagem-cabecalho{ display:flex; justify-content:space-between; gap:10px; margin-bottom:4px; }
+  .mensagem-remetente{ font-weight:700; }
+  .mensagem-data{ color: var(--texto-suave); font-size:0.76rem; white-space:nowrap; }
+  .mensagem-assunto{ font-weight:600; margin-bottom:4px; }
+  .mensagem-corpo{ color: var(--texto-suave); margin-bottom:8px; }
+  .mensagem-acoes button{ font-size:0.76rem; color: var(--bordo); text-decoration:underline; margin-right:14px; }
+  .newsletter-linha{
+    display:flex; justify-content:space-between; align-items:center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--cinza-borda);
+    font-size: 0.85rem;
+  }
+  .newsletter-linha button{ font-size:0.76rem; color: var(--vermelho); text-decoration:underline; }
+  .acoes-linha{ display:flex; flex-wrap:wrap; gap:4px 10px; }
+  .acoes-linha button{ font-size:0.78rem; color: var(--bordo); text-decoration:underline; }
   .acoes-linha button.excluir{ color: var(--vermelho); }
+
+  @media (max-width: 900px){
+    table.admin-tabela{ min-width: 620px; }
+    .admin-tabela th, .admin-tabela td{ padding: 9px 10px; font-size:0.82rem; }
+    .admin-thumb{ width:38px; height:38px; }
+  }
 
   /* ---------- MODAL FORMULÁRIO ---------- */
   .modal-overlay{
@@ -186,11 +298,64 @@
     width:100%;
     padding: 28px;
   }
+  @media (max-width: 640px){
+    .modal-overlay{ padding: 0; align-items:stretch; }
+    .modal-card{ padding: 20px 18px; min-height:100vh; border-radius:0; }
+    .modal-confirma{ padding: 20px; align-items:center; }
+    .modal-confirma .modal-card{ min-height:auto; border-radius: var(--radius); }
+  }
   .modal-card h2{ font-family: var(--serif); font-size:1.3rem; margin-bottom: 20px; }
-  .form-secao{ margin-bottom: 22px; padding-bottom:18px; border-bottom:1px solid var(--cinza-borda); }
-  .form-secao:last-of-type{ border-bottom:none; }
-  .form-secao h3{ font-size:0.82rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--texto-suave); margin-bottom:12px; }
+
+  /* ---------- ABAS DO FORMULÁRIO DE PRODUTO ---------- */
+  .produto-tabs{
+    display:flex;
+    gap:6px;
+    overflow-x:auto;
+    padding: 6px 0 14px;
+    margin-bottom: 18px;
+    border-bottom: 1px solid var(--cinza-borda);
+    position: sticky;
+    top: 0;
+    background: var(--cinza-card);
+    z-index: 2;
+  }
+  .produto-tab{
+    flex-shrink:0;
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight:600;
+    color: var(--texto-suave);
+    white-space:nowrap;
+  }
+  .produto-tab:hover{ background: var(--cinza-bg); }
+  .produto-tab.active{ background: var(--bordo); color:#fff; }
+  .produto-tab.tem-erro::after{ content:"!"; display:inline-flex; align-items:center; justify-content:center; width:14px; height:14px; margin-left:6px; border-radius:50%; background:var(--vermelho); color:#fff; font-size:0.62rem; font-weight:700; }
+  .tab-painel{ display:none; }
+  .tab-painel.tab-ativa{ display:block; }
+
+  .form-secao h3{ font-family: var(--serif); font-size:1.05rem; color:var(--texto); margin-bottom:16px; }
   .form-linha{ display:grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 12px; }
+
+  .calc-lucro-box{
+    background: var(--petroleo-bg);
+    border: 1px solid var(--petroleo);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .calc-lucro-titulo{ font-size:0.8rem; font-weight:700; color: var(--petroleo); margin-bottom:12px; }
+  .calc-lucro-titulo span{ font-weight:400; color: var(--texto-suave); text-transform:none; }
+  .calc-lucro-resultado{
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(31,75,78,0.25);
+    display:flex; flex-wrap:wrap; align-items:center; gap: 18px;
+  }
+  .calc-lucro-resultado > div{ display:flex; flex-direction:column; gap:2px; }
+  .calc-lucro-resultado span{ font-size:0.72rem; color: var(--texto-suave); text-transform:uppercase; letter-spacing:0.03em; }
+  .calc-lucro-resultado strong{ font-size:1.1rem; color: var(--bordo); }
+  .calc-lucro-resultado .btn-admin{ margin-left:auto; }
   .form-campo label{ font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px; }
   .form-campo input, .form-campo select, .form-campo textarea{
     width:100%;
@@ -208,7 +373,7 @@
 
   .detalhes-toggle{
     font-size:0.82rem;
-    color: var(--azul);
+    color: var(--bordo);
     text-decoration:underline;
     margin: 4px 0 12px;
     display:inline-block;
@@ -223,7 +388,17 @@
     border-radius: var(--radius);
     font-size:0.82rem;
   }
-  .tamanhos-multi button.active{ background: var(--azul); color:#fff; border-color: var(--azul); }
+  .tamanhos-multi button.active{ background: var(--bordo); color:#fff; border-color: var(--bordo); }
+
+  .quilates-add-linha{ display:flex; gap:8px; }
+  .quilates-add-linha input{
+    flex:1;
+    padding: 10px 12px;
+    border: 1px solid var(--cinza-borda);
+    border-radius: var(--radius);
+    font-size:0.88rem;
+  }
+  .tamanhos-multi button.quilate-chip{ background: var(--bordo-bg); border-color: var(--bordo); color: var(--bordo); }
 
   .fotos-drop{
     border: 2px dashed var(--cinza-borda);
@@ -235,12 +410,13 @@
     cursor:pointer;
   }
   .fotos-preview{ display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
-  .foto-item{ position:relative; width:74px; height:74px; }
-  .foto-item img{ width:100%; height:100%; object-fit:cover; border-radius:4px; }
+  .foto-item{ position:relative; width:74px; height:74px; cursor:grab; }
+  .foto-item img{ width:100%; height:100%; object-fit:cover; border-radius:4px; pointer-events:none; }
+  .foto-item.arrastando{ opacity:.4; }
   .foto-item.capa::after{
     content:"Capa";
     position:absolute; bottom:0; left:0; right:0;
-    background: rgba(43,76,126,0.85);
+    background: rgba(107,15,26,0.85);
     color:#fff; font-size:0.6rem; text-align:center; padding:2px 0;
   }
   .foto-remover{
@@ -255,6 +431,29 @@
 
   .checkbox-linha{ display:flex; align-items:center; gap:8px; margin-bottom:10px; font-size:0.88rem; }
   .checkbox-linha input{ width:16px; height:16px; }
+
+  /* ---------- OPÇÕES DE BANHO (checkbox + expande foto/preço) ---------- */
+  .banho-opcoes{ display:flex; flex-direction:column; gap:2px; }
+  .banho-opcao{ border:1px solid var(--cinza-borda); border-radius: var(--radius); padding:10px 12px; }
+  .banho-opcao + .banho-opcao{ margin-top:8px; }
+  .banho-opcao-campos{ display:none; gap:10px; align-items:center; margin-top:10px; padding-top:10px; border-top:1px dashed var(--cinza-borda); }
+  .banho-opcao.marcado .banho-opcao-campos{ display:flex; flex-wrap:wrap; }
+  .banho-foto-drop{
+    width:52px; height:52px; flex-shrink:0;
+    border: 2px dashed var(--cinza-borda);
+    border-radius: 8px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:0.65rem; text-align:center; color: var(--texto-suave);
+    cursor:pointer; overflow:hidden; background-size:cover; background-position:center;
+  }
+  .banho-opcao input[type="text"], .banho-opcao input[type="number"]{
+    padding: 8px 10px;
+    border: 1px solid var(--cinza-borda);
+    border-radius: var(--radius);
+    font-size:0.82rem;
+    max-width: 160px;
+  }
+  .banho-opcao-preco{ font-size:0.78rem; color: var(--texto-suave); white-space:nowrap; }
 
   .modal-footer{ display:flex; justify-content:flex-end; gap:10px; margin-top: 10px; }
 
@@ -271,8 +470,21 @@
     font-size: 0.7rem;
     color: var(--texto-suave);
   }
-  .formato-admin-pill svg{ width:22px; height:22px; }
-  .formato-admin-pill.active{ border-color: var(--azul); background: #EAF0F8; color: var(--azul); }
+  .formato-admin-pill img{ width:22px; height:22px; object-fit:contain; }
+  .formato-admin-pill.active{ border-color: var(--bordo); background: var(--bordo-bg); color: var(--bordo); }
+
+  /* Acesso rápido ao link do fornecedor, ao lado do estoque na tabela */
+  .link-fornecedor-btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:20px; height:20px;
+    margin-left:6px;
+    border-radius:4px;
+    background: var(--cinza-bg);
+    text-decoration:none;
+    font-size:0.75rem;
+    vertical-align:middle;
+  }
+  .link-fornecedor-btn:hover{ background: var(--petroleo-bg); }
 
   /* ---------- MODAL DE CATEGORIAS ---------- */
   .categoria-linha{
@@ -310,8 +522,10 @@
 
 <div id="telaLogin">
   <div class="login-card">
-    <h1>Pavan & Co.</h1>
-    <p>Painel administrativo — acesso restrito</p>
+    <img class="login-logo" src="logo.png" alt="Pavan & Co.">
+    <span class="login-eyebrow">Acesso restrito</span>
+    <h1>Painel administrativo</h1>
+    <div class="login-linha"></div>
     <input type="email" id="emailInput" placeholder="E-mail" autofocus>
     <input type="password" id="senhaInput" placeholder="Senha de acesso">
     <button type="button" id="btnEntrarAdmin">Entrar</button>
@@ -321,35 +535,82 @@
 
 <div id="painelAdmin">
   <div class="admin-topbar">
-    <span class="marca">Pavan & Co. — Admin</span>
-    <button type="button" id="btnSair">Sair</button>
+    <span class="marca">Admin</span>
+    <div style="display:flex; align-items:center; gap:18px;">
+      <a href="index.html" id="btnVoltarSite">← Voltar pro site</a>
+      <button type="button" id="btnSair">Sair</button>
+    </div>
   </div>
 
   <div class="admin-wrap">
-    <div class="admin-toolbar">
-      <input type="text" id="buscaAdmin" placeholder="Buscar por nome...">
-      <select id="filtroCategoriaAdmin">
-        <option value="">Todas as categorias</option>
-      </select>
-      <button type="button" class="btn-admin btn-admin-outline" id="btnGerenciarCategorias">Categorias</button>
-      <button type="button" class="btn-admin btn-admin-primary" id="btnNovoProduto">+ Novo produto</button>
+
+    <!-- ============ PAINEL (tela inicial, estilo dashboard) ============ -->
+    <div id="adminDashboard">
+      <div class="admin-dash-grid">
+        <button type="button" class="admin-tile" data-secao="produtos">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 8l-9-5-9 5 9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
+          <span class="tile-label">Produtos</span>
+        </button>
+        <button type="button" class="admin-tile" data-secao="categorias">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg>
+          <span class="tile-label">Categorias</span>
+        </button>
+        <button type="button" class="admin-tile" data-secao="pagina-inicial">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/></svg>
+          <span class="tile-label">Página inicial</span>
+        </button>
+        <button type="button" class="admin-tile" data-secao="pedidos">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 8V6a6 6 0 0 1 12 0v2"/><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M9 12h6"/></svg>
+          <span class="tile-label">Pedidos</span>
+        </button>
+        <button type="button" class="admin-tile" data-secao="mensagens">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+          <span class="tile-label">Mensagens</span>
+          <span class="tile-badge" id="tileBadgeMensagens" style="display:none;"></span>
+        </button>
+        <button type="button" class="admin-tile" data-secao="promocoes">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20.6 12.6 12 21.2 2.8 12 12 2.8h8.6z" transform="rotate(45 12 12)"/><circle cx="9" cy="9" r="1.4" fill="currentColor" stroke="none"/><path d="m8.5 15.5 7-7"/></svg>
+          <span class="tile-label">Promoções</span>
+        </button>
+      </div>
     </div>
 
-    <div class="admin-tabela-wrap">
-      <table class="admin-tabela">
-        <thead>
-          <tr>
-            <th></th>
-            <th>Nome</th>
-            <th>Categoria</th>
-            <th>Preço</th>
-            <th>Estoque</th>
+    <!-- ============ SEÇÃO: PRODUTOS ============ -->
+    <div id="adminProdutosView" style="display:none;">
+      <button type="button" class="admin-voltar-painel" id="btnVoltarPainel">← Painel</button>
+
+      <div class="admin-toolbar">
+        <input type="text" id="buscaAdmin" placeholder="Buscar por nome...">
+        <select id="filtroCategoriaAdmin">
+          <option value="">Todas as categorias</option>
+        </select>
+        <button type="button" class="btn-admin btn-admin-primary" id="btnNovoProduto">+ Novo produto</button>
+      </div>
+
+      <!-- Botões originais dessas seções continuam existindo (escondidos)
+           pra não duplicar toda a lógica de abrir cada modal — os cards
+           do painel só "clicam" neles por baixo dos panos. -->
+      <button type="button" id="btnGerenciarCategorias" style="display:none;"></button>
+      <button type="button" id="btnPaginaInicial" style="display:none;"></button>
+      <button type="button" id="btnPedidos" style="display:none;"></button>
+      <button type="button" id="btnMensagens" style="display:none;"><span id="badgeMensagensNaoLidas" style="display:none;"></span></button>
+
+      <div class="admin-tabela-wrap">
+        <table class="admin-tabela">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Nome</th>
+              <th>Categoria</th>
+              <th>Preço</th>
+              <th>Estoque</th>
             <th>Status</th>
             <th>Ações</th>
           </tr>
         </thead>
         <tbody id="corpoTabelaAdmin"></tbody>
       </table>
+      </div>
     </div>
   </div>
 </div>
@@ -375,14 +636,155 @@
 
 <input type="file" id="trocarFotoCategoriaInput" accept="image/*" style="display:none;">
 
+<div class="modal-overlay" id="modalHomeConfig">
+  <div class="modal-card" style="max-width:520px;">
+    <h2>Página inicial</h2>
+
+    <h3 style="margin:0 0 12px;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--texto-suave);">Destaque principal <span style="text-transform:none;letter-spacing:0;font-size:0.78rem;">(banner do topo)</span></h3>
+    <form id="formHomeHero" style="display:flex;flex-direction:column;gap:10px;">
+      <div class="form-campo">
+        <label for="heroSubtexto">Subtexto (acima do título)</label>
+        <input type="text" id="heroSubtexto" placeholder="Ex: Coleção Primavera" required>
+      </div>
+      <div class="form-campo">
+        <label for="heroTitulo">Título</label>
+        <input type="text" id="heroTitulo" placeholder="Ex: Peças que contam sua história." required>
+      </div>
+      <div class="form-campo">
+        <label for="heroTextoBotao">Texto do botão</label>
+        <input type="text" id="heroTextoBotao" placeholder="Ex: Ver coleção" required>
+      </div>
+      <div class="form-campo">
+        <label>Foto</label>
+        <div class="fotos-drop" id="heroFotoDrop" style="padding:14px;font-size:0.8rem;">Clique para escolher a foto do destaque</div>
+        <input type="file" id="heroFotoInput" accept="image/*" style="display:none;">
+        <div class="fotos-preview" id="heroFotoPreview"></div>
+      </div>
+      <button type="submit" class="btn-admin btn-admin-primary">Salvar destaque principal</button>
+    </form>
+
+    <hr style="margin:22px 0;border:none;border-top:1px solid var(--cinza-borda);">
+
+    <h3 style="margin:0 0 12px;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--texto-suave);">Coleções em destaque <span style="text-transform:none;letter-spacing:0;font-size:0.78rem;">(máx. 3)</span></h3>
+    <div id="listaColecoesAdmin"></div>
+    <p id="limiteColecoesAviso" style="display:none;font-size:0.8rem;color:var(--texto-suave);margin-top:8px;">Limite de 3 coleções atingido — exclua uma para adicionar outra.</p>
+    <button type="button" class="btn-admin btn-admin-outline" id="btnNovaColecao" style="margin-top:10px;">+ Nova coleção</button>
+
+    <form id="formColecao" style="display:none;flex-direction:column;gap:10px;margin-top:12px;">
+      <input type="hidden" id="colecaoId">
+      <div class="form-campo">
+        <label for="colecaoSubtexto">Subtexto (acima do título)</label>
+        <input type="text" id="colecaoSubtexto" placeholder="Ex: Para sempre" required>
+      </div>
+      <div class="form-campo">
+        <label for="colecaoTitulo">Título</label>
+        <input type="text" id="colecaoTitulo" placeholder="Ex: Coleção Noivado" required>
+      </div>
+      <div class="form-campo">
+        <label for="colecaoTextoBotao">Texto do botão</label>
+        <input type="text" id="colecaoTextoBotao" placeholder="Ex: Descobrir" required>
+      </div>
+      <div class="form-campo">
+        <label for="colecaoTipo">Pra onde o clique leva</label>
+        <select id="colecaoTipo" required>
+          <option value="">Selecione...</option>
+          <option value="noivado">Coleção Noivado (produtos marcados com essa tag)</option>
+          <option value="mais-vendidos">Mais vendidos (produtos marcados com essa tag)</option>
+          <option value="novidades">Novidades (produtos marcados com essa tag)</option>
+        </select>
+        <p style="font-size:0.76rem;color:var(--texto-suave);margin-top:4px;">O título e subtexto acima podem ser o que você quiser — é só esse campo que decide qual grade de produtos abre.</p>
+      </div>
+      <div class="form-campo">
+        <label>Foto</label>
+        <div class="fotos-drop" id="colecaoFotoDrop" style="padding:14px;font-size:0.8rem;">Clique para escolher a foto</div>
+        <input type="file" id="colecaoFotoInput" accept="image/*" style="display:none;">
+        <div class="fotos-preview" id="colecaoFotoPreview"></div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button type="submit" class="btn-admin btn-admin-primary">Salvar coleção</button>
+        <button type="button" class="btn-admin btn-admin-outline" id="btnCancelarColecao">Cancelar</button>
+      </div>
+    </form>
+
+    <div class="modal-footer">
+      <button type="button" class="btn-admin btn-admin-outline" id="btnFecharHomeConfig">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalPedidos">
+  <div class="modal-card" style="max-width:980px;">
+    <h2>Pedidos</h2>
+    <div class="admin-tabela-wrap" style="border:1px solid var(--cinza-borda);">
+      <table class="admin-tabela">
+        <thead>
+          <tr>
+            <th>Nº</th>
+            <th>Data</th>
+            <th>Cliente</th>
+            <th>Itens</th>
+            <th>Total</th>
+            <th>Status</th>
+            <th>Frete</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="corpoTabelaPedidos"></tbody>
+      </table>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-admin btn-admin-outline" id="btnFecharPedidos">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalDetalhesPedido">
+  <div class="modal-card" style="max-width:520px;">
+    <h2>Pedido <span id="detalhesPedidoNumero"></span></h2>
+    <div id="detalhesPedidoConteudo"></div>
+    <div class="modal-footer">
+      <button type="button" class="btn-admin btn-admin-outline" id="btnFecharDetalhesPedido">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalMensagens">
+  <div class="modal-card" style="max-width:760px;">
+    <h2>Mensagens</h2>
+
+    <h3 style="margin:0 0 12px;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--texto-suave);">Fale conosco</h3>
+    <div id="listaMensagensContato"></div>
+
+    <hr style="margin:24px 0;border:none;border-top:1px solid var(--cinza-borda);">
+
+    <h3 style="margin:0 0 12px;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--texto-suave);">
+      Newsletter <span id="contagemAssinantes" style="text-transform:none;letter-spacing:0;"></span>
+    </h3>
+    <div id="listaNewsletter"></div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn-admin btn-admin-outline" id="btnFecharMensagens">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modalProduto">
   <div class="modal-card">
     <h2 id="modalProdutoTitulo">Novo produto</h2>
-    <form id="formProduto">
+    <form id="formProduto" novalidate>
       <input type="hidden" id="fId">
 
-      <div class="form-secao">
-        <h3>1. Informações básicas</h3>
+      <div class="produto-tabs" id="produtoTabs">
+        <button type="button" class="produto-tab active" data-tab="basico">Básico</button>
+        <button type="button" class="produto-tab" data-tab="material">Material &amp; Pedra</button>
+        <button type="button" class="produto-tab" data-tab="preco">Preço &amp; Estoque</button>
+        <button type="button" class="produto-tab" data-tab="fornecedor">Fornecedor</button>
+        <button type="button" class="produto-tab" data-tab="fotos">Fotos</button>
+        <button type="button" class="produto-tab" data-tab="publicacao">Publicação</button>
+      </div>
+
+      <div class="form-secao tab-painel tab-ativa" data-tab="basico">
+        <h3>Informações básicas</h3>
         <div class="form-linha cols-2">
           <div class="form-campo">
             <label for="fNome">Nome *</label>
@@ -395,12 +797,12 @@
         </div>
         <div class="form-campo">
           <label for="fDescricao">Descrição</label>
-          <textarea id="fDescricao" rows="3" placeholder="Descrição de venda, estilo editorial..."></textarea>
+          <textarea id="fDescricao" rows="8" style="resize:vertical;" placeholder="Descrição de venda, estilo editorial..."></textarea>
         </div>
       </div>
 
-      <div class="form-secao">
-        <h3>2. Material e pedra</h3>
+      <div class="form-secao tab-painel" data-tab="material">
+        <h3>Material e pedra</h3>
         <div class="form-linha cols-2">
           <div class="form-campo">
             <label for="fMaterial">Material do aro</label>
@@ -425,11 +827,26 @@
             </select>
           </div>
         </div>
-        <div class="form-linha cols-3">
+        <div class="form-linha cols-2">
           <div class="form-campo">
-            <label for="fQuilate">Quilate / tamanho da pedra</label>
-            <input type="text" id="fQuilate" placeholder="Ex: 2ct (8mm)">
+            <label for="fBanho">Banho</label>
+            <select id="fBanho">
+              <option>Sem banho</option>
+              <option>Ouro 18k</option>
+              <option>Ouro Rosé</option>
+              <option>Ouro Branco</option>
+              <option>Ródio</option>
+              <option>Ródio negro</option>
+              <option>Outro</option>
+            </select>
           </div>
+        </div>
+
+        <div class="form-campo">
+          <label>Opções de banho com foto e preço próprio <span style="font-weight:400;color:var(--texto-suave);">(opcional — marque só as cores que essa peça realmente tem à venda; se não marcar nenhuma, o campo "Banho" simples acima continua valendo sozinho, sem aparecer seletor pro cliente)</span></label>
+          <div class="banho-opcoes" id="banhoOpcoes"></div>
+        </div>
+        <div class="form-linha cols-2">
           <div class="form-campo">
             <label>Formato da pedra</label>
             <div class="formato-admin-pills" id="formatoAdminPills"></div>
@@ -439,6 +856,21 @@
             <label for="fCravacao">Cravação</label>
             <input type="text" id="fCravacao" placeholder="Ex: 4 garras">
           </div>
+        </div>
+
+        <div class="form-campo">
+          <label>Quilate(s) disponíveis <span style="font-weight:400;color:var(--texto-suave);">(coloque o custo original de cada um no AliExpress — o preço de venda é calculado sozinho com a margem de lucro lá embaixo; deixe vazio se a peça não varia)</span></label>
+          <div class="quilates-add-linha">
+            <input type="text" id="fQuilateNovo" placeholder="Ex: 1ct (6.5mm)">
+            <input type="number" id="fQuilateCustoNovo" step="0.01" placeholder="Custo original (R$)" style="max-width:150px;">
+            <button type="button" class="btn-admin btn-admin-outline" id="btnAdicionarQuilate">+ Adicionar</button>
+          </div>
+          <div class="tamanhos-multi" id="quilatesMulti" style="margin-top:10px;"></div>
+        </div>
+
+        <div class="form-campo">
+          <label>Tamanhos disponíveis (marque como aparece no AliExpress — <span style="font-weight:400;color:var(--texto-suave);">é convertido pra numeração BR sozinho, o site nunca mostra o tamanho americano</span>)</label>
+          <div class="tamanhos-multi" id="tamanhosMulti"></div>
         </div>
 
         <button type="button" class="detalhes-toggle" id="toggleDetalhesExtra">+ Mostrar detalhes de grau (cor / clareza / corte)</button>
@@ -473,15 +905,54 @@
         </div>
       </div>
 
-      <div class="form-secao">
-        <h3>3. Tamanhos e preço</h3>
-        <div class="form-campo" style="margin-bottom:14px;">
-          <label>Tamanhos disponíveis (aros)</label>
-          <div class="tamanhos-multi" id="tamanhosMulti"></div>
+      <div class="form-secao tab-painel" data-tab="preco">
+        <h3>Preço e estoque</h3>
+
+        <div class="calc-lucro-box">
+          <p class="calc-lucro-titulo">Calculadora de preço <span>(uso interno — o cliente nunca vê isso)</span></p>
+          <div class="form-linha cols-3">
+            <div class="form-campo">
+              <label for="fCustoPeca">Custo da peça (R$)</label>
+              <input type="number" id="fCustoPeca" step="0.01" placeholder="Ex: 25.00">
+            </div>
+            <div class="form-campo">
+              <label for="fCotacaoDolar">Cotação do dólar (R$) <span id="fCotacaoDolarStatus" style="font-weight:400;color:var(--texto-suave);"></span></label>
+              <div style="display:flex;gap:6px;">
+                <input type="number" id="fCotacaoDolar" step="0.01" placeholder="Buscando...">
+                <button type="button" class="btn-admin btn-admin-outline" id="btnAtualizarCotacao" title="Buscar cotação de hoje" style="padding:10px 12px;">↻</button>
+              </div>
+            </div>
+            <div class="form-campo">
+              <label for="fIcmsPct">ICMS (%) <span style="font-weight:400;color:var(--texto-suave);">— SP, fixo</span></label>
+              <input type="number" id="fIcmsPct" step="0.1" value="18">
+            </div>
+          </div>
+          <div class="form-linha cols-3">
+            <div class="form-campo">
+              <label for="fCustoImposto">Imposto calculado (R$) <span style="font-weight:400;color:var(--texto-suave);">(automático)</span></label>
+              <input type="number" id="fCustoImposto" step="0.01" readonly style="background:var(--cinza-bg);">
+            </div>
+            <div class="form-campo">
+              <label for="fCustoFrete">Frete (R$)</label>
+              <input type="number" id="fCustoFrete" step="0.01" placeholder="Ex: 12.00">
+            </div>
+            <div class="form-campo">
+              <label for="fMargemLucro">Margem de lucro (%)</label>
+              <input type="number" id="fMargemLucro" step="0.1" placeholder="Ex: 150">
+            </div>
+          </div>
+          <p style="font-size:0.74rem;color:var(--texto-suave);margin:-4px 0 12px;">
+            Regra Remessa Conforme: até US$50 só ICMS; acima de US$50, Imposto de Importação (60% − US$30) + ICMS sobre o total.
+            O ICMS real varia por estado (17–20%) — isso aqui é uma estimativa.
+          </p>
+          <div class="calc-lucro-resultado" id="calcLucroResultado" style="display:none;">
+            <div><span>Lucro por peça</span><strong id="calcLucroValor"></strong></div>
+          </div>
         </div>
+
         <div class="form-linha cols-2">
           <div class="form-campo">
-            <label for="fPreco">Preço (R$) *</label>
+            <label for="fPreco">Preço de venda (R$) * <span style="font-weight:400;color:var(--texto-suave);">(calculado sozinho acima — pode editar na mão também)</span></label>
             <input type="number" id="fPreco" step="0.01" required placeholder="Ex: 589.00">
           </div>
           <div class="form-campo">
@@ -491,16 +962,31 @@
         </div>
       </div>
 
-      <div class="form-secao">
-        <h3>4. Fotos *</h3>
-        <div class="fotos-drop" id="fotosDrop">Clique para escolher fotos (a primeira vira a capa)</div>
+      <div class="form-secao tab-painel" data-tab="fornecedor">
+        <h3>Fornecedor <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--texto-suave);">(uso interno — nunca aparece na loja)</span></h3>
+        <div class="form-campo">
+          <label for="fLinkFornecedor">Link do produto no fornecedor</label>
+          <input type="url" id="fLinkFornecedor" placeholder="Ex: https://www.aliexpress.com/item/...">
+        </div>
+      </div>
+
+      <div class="form-secao tab-painel" data-tab="fotos">
+        <h3>Fotos *</h3>
+        <div class="fotos-drop" id="fotosDrop">Clique pra escolher fotos, ou cole um print (Ctrl+V) — arraste pra reordenar (a primeira vira a capa)</div>
         <input type="file" id="fotosInput" accept="image/*" multiple style="display:none;">
         <div class="fotos-preview" id="fotosPreview"></div>
       </div>
 
-      <div class="form-secao">
+      <div class="form-secao tab-painel" data-tab="publicacao">
+        <h3>Publicação</h3>
         <label class="checkbox-linha"><input type="checkbox" id="fDestaque"> Marcar como destaque (aparece na home)</label>
         <label class="checkbox-linha"><input type="checkbox" id="fAtivo" checked> Ativar produto (visível na loja — desmarque para rascunho)</label>
+
+        <h3 style="margin-top:22px;">Coleções temáticas</h3>
+        <p style="font-size:0.8rem;color:var(--texto-suave);margin-bottom:10px;">Marque se essa peça deve aparecer nas vitrines "Coleções em destaque" da home (configure o link de cada card em Início → Coleções em destaque).</p>
+        <label class="checkbox-linha"><input type="checkbox" id="fColecaoNoivado" value="noivado"> Coleção Noivado</label>
+        <label class="checkbox-linha"><input type="checkbox" id="fColecaoMaisVendidos" value="mais-vendidos"> Mais vendidos</label>
+        <label class="checkbox-linha"><input type="checkbox" id="fColecaoNovidades" value="novidades"> Novidades</label>
       </div>
 
       <div class="modal-footer">
@@ -577,6 +1063,28 @@ document.getElementById('btnEntrarAdmin').addEventListener('click', tentarLogin)
 document.getElementById('senhaInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') tentarLogin(); });
 document.getElementById('emailInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') tentarLogin(); });
 
+// O login do admin usa a MESMA autenticação dos clientes (é o mesmo
+// Supabase Auth) — então um e-mail/senha válido de qualquer conta de
+// cliente também "loga" aqui. Sem essa checagem extra, um cliente comum
+// conseguiria abrir o painel (mesmo sem poder editar nada, alguns dados
+// como custo/margem/link do fornecedor ficam junto dos produtos ativos,
+// que são públicos por natureza — então vazariam pra tela dele). Por
+// isso, depois de logar, sempre confirma is_admin() antes de mostrar
+// qualquer coisa; se não for admin, desloga na hora.
+async function confirmarAcessoAdmin(){
+  const { data: ehAdmin, error } = await sb.rpc('is_admin');
+  if (error || !ehAdmin){
+    await sb.auth.signOut();
+    return false;
+  }
+  document.getElementById('telaLogin').style.display = 'none';
+  document.getElementById('painelAdmin').classList.add('show');
+  await carregarCategoriasAdmin();
+  popularSelectsDeCategoria();
+  atualizarBadgeMensagens();
+  return true;
+}
+
 async function tentarLogin(){
   const email = document.getElementById('emailInput').value.trim();
   const senha = document.getElementById('senhaInput').value;
@@ -591,22 +1099,17 @@ async function tentarLogin(){
     return;
   }
 
-  document.getElementById('telaLogin').style.display = 'none';
-  document.getElementById('painelAdmin').classList.add('show');
-  await carregarCategoriasAdmin();
-  popularSelectsDeCategoria();
-  renderTabela();
+  const temAcesso = await confirmarAcessoAdmin();
+  if (!temAcesso){
+    erroEl.textContent = 'Essa conta não tem acesso ao painel administrativo.';
+    erroEl.classList.add('show');
+  }
 }
 
 // Se já existir uma sessão válida (ex: página recarregada), entra direto
+// — mas só depois de confirmar is_admin() de novo (ver comentário acima).
 sb.auth.getSession().then(async ({ data }) => {
-  if (data.session){
-    document.getElementById('telaLogin').style.display = 'none';
-    document.getElementById('painelAdmin').classList.add('show');
-    await carregarCategoriasAdmin();
-    popularSelectsDeCategoria();
-    renderTabela();
-  }
+  if (data.session) await confirmarAcessoAdmin();
 });
 
 document.getElementById('btnSair').addEventListener('click', async () => {
@@ -616,12 +1119,49 @@ document.getElementById('btnSair').addEventListener('click', async () => {
   document.getElementById('senhaInput').value = '';
 });
 
+/* ============================================================
+   NAVEGAÇÃO DO PAINEL (cards -> seção)
+   ============================================================ */
+let produtosCarregadosUmaVez = false;
+
+function abrirSecaoProdutos(){
+  document.getElementById('adminDashboard').style.display = 'none';
+  document.getElementById('adminProdutosView').style.display = 'block';
+  if (!produtosCarregadosUmaVez){
+    produtosCarregadosUmaVez = true;
+    renderTabela();
+  }
+}
+
+document.getElementById('btnVoltarPainel').addEventListener('click', () => {
+  document.getElementById('adminProdutosView').style.display = 'none';
+  document.getElementById('adminDashboard').style.display = 'block';
+});
+
+document.querySelectorAll('.admin-tile').forEach(tile => {
+  tile.addEventListener('click', () => {
+    const secao = tile.getAttribute('data-secao');
+    // Categorias/Página inicial/Pedidos/Mensagens reaproveitam os botões
+    // originais (escondidos) — clicar no card só aciona o clique deles,
+    // sem duplicar a lógica de abrir cada modal.
+    if (secao === 'produtos') abrirSecaoProdutos();
+    else if (secao === 'categorias') document.getElementById('btnGerenciarCategorias').click();
+    else if (secao === 'pagina-inicial') document.getElementById('btnPaginaInicial').click();
+    else if (secao === 'pedidos') document.getElementById('btnPedidos').click();
+    else if (secao === 'mensagens') document.getElementById('btnMensagens').click();
+    else if (secao === 'promocoes') alert('Em breve! Cupons de desconto chegam numa próxima atualização.');
+  });
+});
+
 let produtosAdmin = [];
 let categoriasAdminCache = [];
 let fotosFormAtual = [];
 let arquivosFotosNovas = []; // Arquivos reais escolhidos agora, aguardando upload no Storage ao salvar
 let tamanhosFormAtual = new Set();
+let quilatesFormAtual = [];
 let formatoSelecionado = '';
+const BANHO_PRESETS = ['Ouro 18k', 'Ouro Rosé', 'Ouro Branco', 'Ródio', 'Ródio negro', 'Prata 925'];
+let banhoFotosPendentes = {}; // { [chave]: {tipo:'novo',file,previewUrl} | {tipo:'existente',url} }
 
 async function carregarCategoriasAdmin(){
   const { data, error } = await sb.from('categorias').select('*').order('ordem');
@@ -653,7 +1193,7 @@ async function renderListaCategoriasModal(){
     <div class="categoria-linha">
       <img class="admin-thumb" src="${c.foto_url || ''}" alt="" style="${c.foto_url ? '' : 'background:var(--cinza-bg);'}">
       <span style="flex:1;">${c.nome} <span style="color:var(--texto-suave);">(/${c.slug})</span></span>
-      <button type="button" data-acao="trocar-foto" data-id="${c.id}" style="color:var(--azul);">Trocar foto</button>
+      <button type="button" data-acao="trocar-foto" data-id="${c.id}" style="color:var(--bordo);">Trocar foto</button>
       <button type="button" data-acao="excluir" data-id="${c.id}" data-nome="${c.nome}">Excluir</button>
     </div>
   `).join('');
@@ -755,6 +1295,411 @@ document.getElementById('formNovaCategoria').addEventListener('submit', async (e
   renderListaCategoriasModal();
 });
 
+/* ============================================================
+   PÁGINA INICIAL — destaque principal (home_hero) e coleções em
+   destaque (home_colecoes, máx. 3)
+   ============================================================ */
+let heroIdAtual = null;
+let heroFotoArquivoNovo = null;
+let heroFotoUrlAtual = null;
+let colecoesAdminCache = [];
+let colecaoFotoArquivoNovo = null;
+let colecaoFotoUrlAtual = null;
+const LIMITE_COLECOES = 3;
+
+async function abrirModalHomeConfig(){
+  // Destaque principal
+  const { data: hero, error: erroHero } = await sb.from('home_hero').select('*').limit(1).maybeSingle();
+  if (erroHero){ alert('Erro ao carregar destaque principal: ' + erroHero.message); return; }
+  heroIdAtual = hero ? hero.id : null;
+  heroFotoArquivoNovo = null;
+  heroFotoUrlAtual = hero ? hero.foto_url : null;
+  document.getElementById('heroSubtexto').value = hero ? hero.subtexto : '';
+  document.getElementById('heroTitulo').value = hero ? hero.titulo : '';
+  document.getElementById('heroTextoBotao').value = hero ? hero.texto_botao : '';
+  document.getElementById('heroFotoPreview').innerHTML = heroFotoUrlAtual
+    ? `<div class="foto-item capa"><img src="${heroFotoUrlAtual}" alt=""></div>` : '';
+
+  await renderListaColecoesModal();
+  fecharFormColecao();
+
+  document.getElementById('modalHomeConfig').classList.add('show');
+}
+
+document.getElementById('btnPaginaInicial').addEventListener('click', abrirModalHomeConfig);
+document.getElementById('btnFecharHomeConfig').addEventListener('click', () => {
+  document.getElementById('modalHomeConfig').classList.remove('show');
+});
+
+document.getElementById('heroFotoDrop').addEventListener('click', () => document.getElementById('heroFotoInput').click());
+document.getElementById('heroFotoInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  heroFotoArquivoNovo = file;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    document.getElementById('heroFotoPreview').innerHTML = `<div class="foto-item capa"><img src="${ev.target.result}" alt=""></div>`;
+  };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('formHomeHero').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const botao = e.target.querySelector('button[type="submit"]');
+  botao.disabled = true;
+  botao.textContent = 'Salvando...';
+
+  try {
+    let foto_url = heroFotoUrlAtual;
+    if (heroFotoArquivoNovo){
+      const nomeArquivo = `home/hero-${crypto.randomUUID()}-${heroFotoArquivoNovo.name}`;
+      const { error: erroUpload } = await sb.storage.from('produtos').upload(nomeArquivo, heroFotoArquivoNovo);
+      if (erroUpload) throw new Error('Erro ao enviar foto: ' + erroUpload.message);
+      const { data: urlData } = sb.storage.from('produtos').getPublicUrl(nomeArquivo);
+      foto_url = urlData.publicUrl;
+    }
+
+    const dados = {
+      subtexto: document.getElementById('heroSubtexto').value.trim(),
+      titulo: document.getElementById('heroTitulo').value.trim(),
+      texto_botao: document.getElementById('heroTextoBotao').value.trim(),
+      foto_url,
+      atualizado_em: new Date().toISOString()
+    };
+
+    const { error } = heroIdAtual
+      ? await sb.from('home_hero').update(dados).eq('id', heroIdAtual)
+      : await sb.from('home_hero').insert(dados);
+    if (error) throw new Error(error.message);
+
+    botao.textContent = 'Salvo ✓';
+    setTimeout(() => { botao.textContent = 'Salvar destaque principal'; }, 1800);
+  } catch (err){
+    alert(err.message);
+    botao.textContent = 'Salvar destaque principal';
+  } finally {
+    botao.disabled = false;
+  }
+});
+
+async function carregarColecoesAdmin(){
+  const { data, error } = await sb.from('home_colecoes').select('*').order('ordem');
+  if (error){ console.error('Erro ao carregar coleções:', error); return []; }
+  colecoesAdminCache = data;
+  return data;
+}
+
+async function renderListaColecoesModal(){
+  await carregarColecoesAdmin();
+  document.getElementById('listaColecoesAdmin').innerHTML = colecoesAdminCache.map(c => `
+    <div class="categoria-linha">
+      <img class="admin-thumb" src="${c.foto_url || ''}" alt="" style="${c.foto_url ? '' : 'background:var(--cinza-bg);'}">
+      <span style="flex:1;">${c.titulo} <span style="color:var(--texto-suave);">(${c.subtexto})</span></span>
+      <button type="button" data-acao="editar-colecao" data-id="${c.id}" style="color:var(--bordo);">Editar</button>
+      <button type="button" data-acao="excluir-colecao" data-id="${c.id}">Excluir</button>
+    </div>
+  `).join('') || `<p style="font-size:0.85rem;color:var(--texto-suave);">Nenhuma coleção cadastrada ainda.</p>`;
+
+  const atingiuLimite = colecoesAdminCache.length >= LIMITE_COLECOES;
+  document.getElementById('btnNovaColecao').style.display = atingiuLimite ? 'none' : '';
+  document.getElementById('limiteColecoesAviso').style.display = atingiuLimite ? '' : 'none';
+
+  document.querySelectorAll('#listaColecoesAdmin button[data-acao="editar-colecao"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const colecao = colecoesAdminCache.find(c => c.id === btn.getAttribute('data-id'));
+      abrirFormColecao(colecao);
+    });
+  });
+  document.querySelectorAll('#listaColecoesAdmin button[data-acao="excluir-colecao"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Excluir esta coleção em destaque?')) return;
+      const { error } = await sb.from('home_colecoes').delete().eq('id', btn.getAttribute('data-id'));
+      if (error){ alert('Erro ao excluir: ' + error.message); return; }
+      renderListaColecoesModal();
+    });
+  });
+}
+
+function abrirFormColecao(colecao){
+  document.getElementById('colecaoId').value = colecao ? colecao.id : '';
+  document.getElementById('colecaoSubtexto').value = colecao ? colecao.subtexto : '';
+  document.getElementById('colecaoTitulo').value = colecao ? colecao.titulo : '';
+  document.getElementById('colecaoTextoBotao').value = colecao ? colecao.texto_botao : '';
+  document.getElementById('colecaoTipo').value = colecao ? (colecao.tipo || '') : '';
+  colecaoFotoArquivoNovo = null;
+  colecaoFotoUrlAtual = colecao ? colecao.foto_url : null;
+  document.getElementById('colecaoFotoPreview').innerHTML = colecaoFotoUrlAtual
+    ? `<div class="foto-item capa"><img src="${colecaoFotoUrlAtual}" alt=""></div>` : '';
+  document.getElementById('formColecao').style.display = 'flex';
+}
+
+function fecharFormColecao(){
+  document.getElementById('formColecao').style.display = 'none';
+  document.getElementById('formColecao').reset();
+  colecaoFotoArquivoNovo = null;
+  colecaoFotoUrlAtual = null;
+  document.getElementById('colecaoFotoPreview').innerHTML = '';
+}
+
+document.getElementById('btnNovaColecao').addEventListener('click', () => {
+  if (colecoesAdminCache.length >= LIMITE_COLECOES){
+    alert(`Limite de ${LIMITE_COLECOES} coleções em destaque atingido. Exclua uma para adicionar outra.`);
+    return;
+  }
+  abrirFormColecao(null);
+});
+document.getElementById('btnCancelarColecao').addEventListener('click', fecharFormColecao);
+
+document.getElementById('colecaoFotoDrop').addEventListener('click', () => document.getElementById('colecaoFotoInput').click());
+document.getElementById('colecaoFotoInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  colecaoFotoArquivoNovo = file;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    document.getElementById('colecaoFotoPreview').innerHTML = `<div class="foto-item capa"><img src="${ev.target.result}" alt=""></div>`;
+  };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('formColecao').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const idExistente = document.getElementById('colecaoId').value;
+
+  if (!idExistente && colecoesAdminCache.length >= LIMITE_COLECOES){
+    alert(`Limite de ${LIMITE_COLECOES} coleções em destaque atingido. Exclua uma para adicionar outra.`);
+    return;
+  }
+
+  const botao = e.target.querySelector('button[type="submit"]');
+  botao.disabled = true;
+  botao.textContent = 'Salvando...';
+
+  try {
+    let foto_url = colecaoFotoUrlAtual;
+    if (colecaoFotoArquivoNovo){
+      const nomeArquivo = `home/colecao-${crypto.randomUUID()}-${colecaoFotoArquivoNovo.name}`;
+      const { error: erroUpload } = await sb.storage.from('produtos').upload(nomeArquivo, colecaoFotoArquivoNovo);
+      if (erroUpload) throw new Error('Erro ao enviar foto: ' + erroUpload.message);
+      const { data: urlData } = sb.storage.from('produtos').getPublicUrl(nomeArquivo);
+      foto_url = urlData.publicUrl;
+    }
+
+    const dados = {
+      subtexto: document.getElementById('colecaoSubtexto').value.trim(),
+      titulo: document.getElementById('colecaoTitulo').value.trim(),
+      texto_botao: document.getElementById('colecaoTextoBotao').value.trim(),
+      tipo: document.getElementById('colecaoTipo').value || null,
+      foto_url
+    };
+
+    const { error } = idExistente
+      ? await sb.from('home_colecoes').update(dados).eq('id', idExistente)
+      : await sb.from('home_colecoes').insert({ ...dados, ordem: Math.max(0, ...colecoesAdminCache.map(c => c.ordem || 0)) + 1 });
+    if (error) throw new Error(error.message);
+
+    fecharFormColecao();
+    renderListaColecoesModal();
+  } catch (err){
+    alert(err.message);
+  } finally {
+    botao.disabled = false;
+    botao.textContent = 'Salvar coleção';
+  }
+});
+
+// Limite de peças marcadas como "destaque" (aparecem no catálogo da home)
+const LIMITE_PRODUTOS_DESTAQUE = 5;
+document.getElementById('fDestaque').addEventListener('change', (e) => {
+  if (!e.target.checked) return;
+  const idAtual = document.getElementById('fId').value;
+  const qtdJaDestaque = produtosAdmin.filter(p => p.destaque && p.id !== idAtual).length;
+  if (qtdJaDestaque >= LIMITE_PRODUTOS_DESTAQUE){
+    alert(`Limite de ${LIMITE_PRODUTOS_DESTAQUE} peças em destaque atingido. Desmarque outra peça antes de marcar esta.`);
+    e.target.checked = false;
+  }
+});
+
+/* ============================================================
+   PEDIDOS
+   ============================================================ */
+let pedidosAdminCache = [];
+const STATUS_PEDIDO_LABEL = {
+  novo: 'Novo',
+  confirmado: 'Confirmado',
+  enviado: 'Enviado',
+  entregue: 'Entregue',
+  cancelado: 'Cancelado'
+};
+
+async function carregarPedidosAdmin(){
+  const { data, error } = await sb.from('pedidos').select('*').order('criado_em', { ascending: false });
+  if (error){ console.error('Erro ao carregar pedidos:', error); return []; }
+  pedidosAdminCache = data;
+  return data;
+}
+
+async function renderTabelaPedidos(){
+  await carregarPedidosAdmin();
+  document.getElementById('corpoTabelaPedidos').innerHTML = pedidosAdminCache.map(p => {
+    const numero = p.id.slice(0, 8).toUpperCase();
+    const dataFormatada = new Date(p.criado_em).toLocaleDateString('pt-BR');
+    const qtdItens = (p.itens || []).reduce((s, i) => s + i.qtd, 0);
+    return `
+      <tr>
+        <td>#${numero}</td>
+        <td>${dataFormatada}</td>
+        <td>${p.nome_cliente}</td>
+        <td>${qtdItens}</td>
+        <td>${formatarPreco(p.total)}</td>
+        <td>
+          <select data-acao="status" data-id="${p.id}" style="padding:5px 6px;border:1px solid var(--cinza-borda);border-radius:4px;font-size:0.8rem;">
+            ${Object.entries(STATUS_PEDIDO_LABEL).map(([valor, label]) => `<option value="${valor}" ${p.status === valor ? 'selected' : ''}>${label}</option>`).join('')}
+          </select>
+        </td>
+        <td>${p.frete === 0 ? 'Grátis' : formatarPreco(p.frete)}</td>
+        <td><button type="button" data-acao="detalhes" data-id="${p.id}" style="color:var(--bordo);text-decoration:underline;font-size:0.8rem;white-space:nowrap;">Detalhes</button></td>
+      </tr>
+    `;
+  }).join('') || `<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--texto-suave);">Nenhum pedido ainda.</td></tr>`;
+
+  document.querySelectorAll('#corpoTabelaPedidos select[data-acao="status"]').forEach(sel => {
+    sel.addEventListener('change', async () => {
+      const { error } = await sb.from('pedidos').update({ status: sel.value }).eq('id', sel.getAttribute('data-id'));
+      if (error) alert('Erro ao atualizar status: ' + error.message);
+    });
+  });
+
+  document.querySelectorAll('#corpoTabelaPedidos button[data-acao="detalhes"]').forEach(btn => {
+    btn.addEventListener('click', () => abrirDetalhesPedido(pedidosAdminCache.find(p => p.id === btn.getAttribute('data-id'))));
+  });
+}
+
+function abrirDetalhesPedido(pedido){
+  const numero = pedido.id.slice(0, 8).toUpperCase();
+  document.getElementById('detalhesPedidoNumero').textContent = `#${numero}`;
+  document.getElementById('detalhesPedidoConteudo').innerHTML = `
+    <div style="font-size:0.88rem;line-height:1.7;margin-bottom:18px;">
+      <strong>${pedido.nome_cliente}</strong><br>
+      ${pedido.email_cliente} · ${pedido.telefone_cliente}<br><br>
+      ${pedido.endereco}, ${pedido.numero}${pedido.complemento ? ' - ' + pedido.complemento : ''}<br>
+      ${pedido.bairro} — ${pedido.cidade}/${pedido.estado}<br>
+      CEP: ${pedido.cep}
+      ${pedido.observacoes ? `<br><br><em>Obs: ${pedido.observacoes}</em>` : ''}
+    </div>
+    <div style="border-top:1px solid var(--cinza-borda);padding-top:14px;">
+      ${(pedido.itens || []).map(item => `
+        <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:8px;">
+          <span>${item.nome}${item.quilate ? ' — ' + item.quilate : ''}${item.banho ? ' — ' + item.banho : ''}${item.tamanho ? ' (aro ' + item.tamanho + ')' : ''} × ${item.qtd}</span>
+          <span>${formatarPreco(item.preco * item.qtd)}</span>
+        </div>
+      `).join('')}
+      <div style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--texto-suave);margin-top:10px;">
+        <span>Frete (${pedido.frete_servico || '—'})</span>
+        <span>${pedido.frete === 0 ? 'Grátis' : formatarPreco(pedido.frete)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-weight:700;margin-top:10px;font-size:0.95rem;">
+        <span>Total</span>
+        <span>${formatarPreco(pedido.total)}</span>
+      </div>
+    </div>
+  `;
+  document.getElementById('modalDetalhesPedido').classList.add('show');
+}
+
+document.getElementById('btnPedidos').addEventListener('click', () => {
+  renderTabelaPedidos();
+  document.getElementById('modalPedidos').classList.add('show');
+});
+document.getElementById('btnFecharPedidos').addEventListener('click', () => {
+  document.getElementById('modalPedidos').classList.remove('show');
+});
+document.getElementById('btnFecharDetalhesPedido').addEventListener('click', () => {
+  document.getElementById('modalDetalhesPedido').classList.remove('show');
+});
+
+/* ============================================================
+   MENSAGENS (Fale conosco + Newsletter)
+   ============================================================ */
+async function atualizarBadgeMensagens(){
+  const { count } = await sb.from('mensagens_contato').select('id', { count: 'exact', head: true }).eq('lida', false);
+  [document.getElementById('badgeMensagensNaoLidas'), document.getElementById('tileBadgeMensagens')].forEach(badge => {
+    if (count > 0){
+      badge.textContent = count;
+      badge.style.display = 'flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  });
+}
+
+async function renderMensagensContato(){
+  const { data, error } = await sb.from('mensagens_contato').select('*').order('criado_em', { ascending: false });
+  if (error){ console.error('Erro ao carregar mensagens:', error); return; }
+
+  document.getElementById('listaMensagensContato').innerHTML = data.map(m => `
+    <div class="mensagem-linha ${m.lida ? 'lida' : ''}">
+      <div class="mensagem-cabecalho">
+        <span class="mensagem-remetente">${m.nome} <span style="font-weight:400;color:var(--texto-suave);">(${m.email})</span></span>
+        <span class="mensagem-data">${new Date(m.criado_em).toLocaleString('pt-BR')}</span>
+      </div>
+      <div class="mensagem-assunto">${m.assunto}</div>
+      <div class="mensagem-corpo">${m.mensagem}</div>
+      <div class="mensagem-acoes">
+        <a href="mailto:${m.email}?subject=Re: ${encodeURIComponent(m.assunto)}">Responder por e-mail</a>
+        ${!m.lida ? `<button type="button" data-acao="marcar-lida" data-id="${m.id}">Marcar como lida</button>` : ''}
+        <button type="button" data-acao="excluir-mensagem" data-id="${m.id}">Excluir</button>
+      </div>
+    </div>
+  `).join('') || `<p style="color:var(--texto-suave);font-size:0.85rem;">Nenhuma mensagem ainda.</p>`;
+
+  document.querySelectorAll('#listaMensagensContato button[data-acao="marcar-lida"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await sb.from('mensagens_contato').update({ lida: true }).eq('id', btn.getAttribute('data-id'));
+      renderMensagensContato();
+      atualizarBadgeMensagens();
+    });
+  });
+  document.querySelectorAll('#listaMensagensContato button[data-acao="excluir-mensagem"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Excluir essa mensagem?')) return;
+      await sb.from('mensagens_contato').delete().eq('id', btn.getAttribute('data-id'));
+      renderMensagensContato();
+      atualizarBadgeMensagens();
+    });
+  });
+}
+
+async function renderNewsletter(){
+  const { data, error } = await sb.from('newsletter_assinantes').select('*').order('criado_em', { ascending: false });
+  if (error){ console.error('Erro ao carregar assinantes:', error); return; }
+
+  document.getElementById('contagemAssinantes').textContent = `(${data.length})`;
+  document.getElementById('listaNewsletter').innerHTML = data.map(a => `
+    <div class="newsletter-linha">
+      <span>${a.email}</span>
+      <button type="button" data-acao="excluir-assinante" data-id="${a.id}">Remover</button>
+    </div>
+  `).join('') || `<p style="color:var(--texto-suave);font-size:0.85rem;">Nenhum assinante ainda.</p>`;
+
+  document.querySelectorAll('#listaNewsletter button[data-acao="excluir-assinante"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await sb.from('newsletter_assinantes').delete().eq('id', btn.getAttribute('data-id'));
+      renderNewsletter();
+    });
+  });
+}
+
+document.getElementById('btnMensagens').addEventListener('click', () => {
+  renderMensagensContato();
+  renderNewsletter();
+  document.getElementById('modalMensagens').classList.add('show');
+});
+document.getElementById('btnFecharMensagens').addEventListener('click', () => {
+  document.getElementById('modalMensagens').classList.remove('show');
+  atualizarBadgeMensagens();
+});
+
 const CATEGORIA_LABEL = { aliancas: "Alianças", aneis: "Anéis", brincos: "Brincos", colares: "Colares", pulseiras: "Pulseiras", joias: "Joias" };
 
 async function carregarProdutosAdmin(){
@@ -780,10 +1725,13 @@ async function renderTabela(){
   document.getElementById('corpoTabelaAdmin').innerHTML = lista.map(p => `
     <tr>
       <td><img class="admin-thumb" src="${(p.fotos && p.fotos[0]) || ''}" alt=""></td>
-      <td>${p.nome}</td>
+      <td>${p.nome} ${p.destaque ? `<span class="status-pill status-destaque" title="Aparece no catálogo 'Peças em destaque' da home">★ Destaque</span>` : ''}</td>
       <td>${(categoriasAdminCache.find(c => c.slug === p.categoria) || {}).nome || CATEGORIA_LABEL[p.categoria] || p.categoria}</td>
       <td>${formatarPreco(p.preco)}</td>
-      <td>${p.estoque ?? '—'}</td>
+      <td>
+        ${p.estoque ?? '—'}
+        ${p.link_fornecedor ? `<a href="${p.link_fornecedor}" target="_blank" rel="noopener" class="link-fornecedor-btn" title="Abrir link do fornecedor">🔗</a>` : ''}
+      </td>
       <td><span class="status-pill ${p.ativo ? 'status-ativo' : 'status-rascunho'}">${p.ativo ? 'Ativo' : 'Rascunho'}</span></td>
       <td>
         <div class="acoes-linha">
@@ -828,20 +1776,253 @@ async function duplicarProduto(id){
   abrirModalProduto(data);
 }
 
-const TAMANHOS_PADRAO = ["12","14","16","18","20","22","24"];
+// Conversão de tamanho de anel EUA -> BR, pela fórmula padrão da joalheria
+// (comprimento interno/circunferência em mm = aro BR + 40), cruzada com a
+// tabela padrão de circunferência por tamanho americano. Você marca os
+// tamanhos EXATAMENTE como aparecem no AliExpress — o site já guarda (e
+// mostra pro cliente) só o BR convertido, nunca o número americano.
+const CONVERSAO_TAMANHO_EUA_BR = {
+  "3": "4", "3.5": "6", "4": "7", "4.5": "8", "5": "9", "5.5": "11",
+  "6": "12", "6.5": "13", "7": "14", "7.5": "16", "8": "17", "8.5": "18",
+  "9": "20", "9.5": "21", "10": "22", "10.5": "23", "11": "25", "11.5": "26",
+  "12": "27", "12.5": "29", "13": "30"
+};
+const TAMANHOS_EUA_PADRAO = Object.keys(CONVERSAO_TAMANHO_EUA_BR);
 
-document.getElementById('tamanhosMulti').innerHTML = TAMANHOS_PADRAO.map(t => `<button type="button" data-tam="${t}">${t}</button>`).join('');
+document.getElementById('tamanhosMulti').innerHTML = TAMANHOS_EUA_PADRAO.map(t => `<button type="button" data-tam-eua="${t}">${t}</button>`).join('');
 document.querySelectorAll('#tamanhosMulti button').forEach(btn => {
   btn.addEventListener('click', () => {
-    const t = btn.getAttribute('data-tam');
-    if (tamanhosFormAtual.has(t)){ tamanhosFormAtual.delete(t); btn.classList.remove('active'); }
-    else { tamanhosFormAtual.add(t); btn.classList.add('active'); }
+    const br = CONVERSAO_TAMANHO_EUA_BR[btn.getAttribute('data-tam-eua')];
+    if (tamanhosFormAtual.has(br)){ tamanhosFormAtual.delete(br); btn.classList.remove('active'); }
+    else { tamanhosFormAtual.add(br); btn.classList.add('active'); }
   });
 });
 
-document.getElementById('formatoAdminPills').innerHTML = Object.keys(ICONES_FORMATO).map(f => `
+// Quilate(s) disponíveis — cada um com o próprio preço (diferente do
+// tamanho de aro, que não muda preço). Admin digita valor + preço e
+// adiciona o custo original; o preço de venda é calculado sozinho com a
+// margem de lucro. quilatesFormAtual guarda [{valor, custo, preco}, ...].
+function renderQuilatesMulti(){
+  document.getElementById('quilatesMulti').innerHTML = quilatesFormAtual.map((q, i) => `
+    <button type="button" class="quilate-chip" data-i="${i}" title="Clique pra remover">${q.valor} — custo ${formatarPreco(q.custo)} → venda ${formatarPreco(q.preco)} ×</button>
+  `).join('');
+  document.querySelectorAll('#quilatesMulti .quilate-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      quilatesFormAtual.splice(Number(btn.getAttribute('data-i')), 1);
+      renderQuilatesMulti();
+    });
+  });
+}
+function adicionarQuilate(){
+  const inputValor = document.getElementById('fQuilateNovo');
+  const inputCusto = document.getElementById('fQuilateCustoNovo');
+  const valor = inputValor.value.trim();
+  const custo = parseFloat(inputCusto.value);
+  if (!valor || !custo || quilatesFormAtual.some(q => q.valor === valor)) return;
+  quilatesFormAtual.push({ valor, custo, preco: calcularPrecoFinal(custo) });
+  inputValor.value = '';
+  inputCusto.value = '';
+  renderQuilatesMulti();
+}
+document.getElementById('btnAdicionarQuilate').addEventListener('click', adicionarQuilate);
+['fQuilateNovo', 'fQuilateCustoNovo'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', (e) => {
+    if (e.key === 'Enter'){ e.preventDefault(); adicionarQuilate(); }
+  });
+});
+
+/* ============================================================
+   OPÇÕES DE BANHO (checkbox por cor — marca e expande foto + custo,
+   pra não poluir a tela com tudo aberto de uma vez). "Outro" é um
+   slot único pra cor personalizada (nome livre).
+   ============================================================ */
+function renderBanhoOpcoes(){
+  const wrap = document.getElementById('banhoOpcoes');
+  const itens = [...BANHO_PRESETS.map(nome => ({ chave: nome, nome, ehOutro: false })), { chave: 'outro', nome: 'Outra cor (personalizada)', ehOutro: true }];
+  wrap.innerHTML = itens.map(({ chave, nome, ehOutro }) => `
+    <div class="banho-opcao" data-chave="${chave}">
+      <label class="checkbox-linha" style="margin-bottom:0;">
+        <input type="checkbox" class="banho-check" data-chave="${chave}">
+        ${nome}
+      </label>
+      <div class="banho-opcao-campos">
+        ${ehOutro ? `<input type="text" class="banho-nome-custom" placeholder="Nome da cor (ex: Ouro Champanhe)" style="max-width:200px;">` : ''}
+        <div class="banho-foto-drop" data-chave="${chave}">+ Foto</div>
+        <input type="file" accept="image/*" class="banho-foto-input" data-chave="${chave}" style="display:none;">
+        <input type="number" class="banho-custo" data-chave="${chave}" step="0.01" placeholder="Custo original (R$)">
+        <span class="banho-opcao-preco" data-chave="${chave}"></span>
+      </div>
+    </div>
+  `).join('');
+
+  wrap.querySelectorAll('.banho-check').forEach(chk => {
+    chk.addEventListener('change', () => {
+      chk.closest('.banho-opcao').classList.toggle('marcado', chk.checked);
+    });
+  });
+  wrap.querySelectorAll('.banho-foto-drop').forEach(drop => {
+    drop.addEventListener('click', () => {
+      wrap.querySelector(`.banho-foto-input[data-chave="${drop.getAttribute('data-chave')}"]`).click();
+    });
+  });
+  wrap.querySelectorAll('.banho-foto-input').forEach(input => {
+    input.addEventListener('change', (e) => {
+      const chave = input.getAttribute('data-chave');
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        banhoFotosPendentes[chave] = { tipo: 'novo', file, previewUrl: ev.target.result };
+        const drop = wrap.querySelector(`.banho-foto-drop[data-chave="${chave}"]`);
+        drop.style.backgroundImage = `url('${ev.target.result}')`;
+        drop.textContent = '';
+      };
+      reader.readAsDataURL(file);
+    });
+  });
+  wrap.querySelectorAll('.banho-custo').forEach(input => {
+    input.addEventListener('input', () => atualizarPrecoBanho(input.getAttribute('data-chave')));
+  });
+}
+
+function atualizarPrecoBanho(chave){
+  const input = document.querySelector(`.banho-custo[data-chave="${chave}"]`);
+  const span = document.querySelector(`.banho-opcao-preco[data-chave="${chave}"]`);
+  if (!input || !span) return;
+  const custo = parseFloat(input.value);
+  span.textContent = custo ? `venda ${formatarPreco(calcularPrecoFinal(custo))}` : '';
+}
+
+// Roda no submit: valida (checou mas esqueceu foto/custo/nome?), sobe as
+// fotos novas pro Storage e monta os dois arrays (público + custo privado).
+async function enviarBanhosEObterDados(categoria){
+  const disponiveis = [];
+  const custos = [];
+  const marcados = document.querySelectorAll('#banhoOpcoes .banho-check:checked');
+  for (const chk of marcados){
+    const chave = chk.getAttribute('data-chave');
+    const opcaoEl = chk.closest('.banho-opcao');
+    const ehOutro = chave === 'outro';
+    const nome = ehOutro ? opcaoEl.querySelector('.banho-nome-custom').value.trim() : chave;
+    const custo = parseFloat(opcaoEl.querySelector('.banho-custo').value);
+    const foto = banhoFotosPendentes[chave];
+    if (!nome || !custo || !foto){
+      throw new Error(`Complete a cor de banho marcada "${nome || chave}": falta ${!nome ? 'o nome' : !custo ? 'o custo' : 'a foto'}.`);
+    }
+    let foto_url;
+    if (foto.tipo === 'existente'){
+      foto_url = foto.url;
+    } else {
+      const nomeArquivo = `${categoria}/banho-${crypto.randomUUID()}-${foto.file.name}`;
+      const { error: erroUpload } = await sb.storage.from('produtos').upload(nomeArquivo, foto.file);
+      if (erroUpload) throw new Error('Erro ao enviar foto do banho: ' + erroUpload.message);
+      const { data: urlData } = sb.storage.from('produtos').getPublicUrl(nomeArquivo);
+      foto_url = urlData.publicUrl;
+    }
+    disponiveis.push({ nome, preco: calcularPrecoFinal(custo), foto_url });
+    custos.push({ nome, custo });
+  }
+  return { disponiveis, custos };
+}
+
+/* ============================================================
+   CALCULADORA DE PREÇO — custo + imposto (calculado sozinho pela
+   regra real da Remessa Conforme, não é fixo) + frete + margem%
+   já CALCULA E JOGA o preço de venda direto no campo Preço (não é
+   só uma sugestão) e mostra o lucro. A mesma margem/cotação/ICMS
+   também recalcula o preço de cada quilate automaticamente, cada
+   um com o IMPOSTO PRÓPRIO calculado em cima do custo dele — não
+   um imposto fixo herdado do produto base.
+   Uso interno — esses campos nunca são expostos nas consultas
+   públicas do site.
+   ============================================================ */
+function margemAtual(){
+  return parseFloat(document.getElementById('fMargemLucro').value) || 0;
+}
+
+// Busca a cotação do dólar do dia sozinha (AwesomeAPI, pública e gratuita)
+async function buscarCotacaoDolar(){
+  const status = document.getElementById('fCotacaoDolarStatus');
+  status.textContent = '(buscando...)';
+  try {
+    const resp = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL');
+    const dados = await resp.json();
+    const cotacao = parseFloat(dados.USDBRL.ask);
+    document.getElementById('fCotacaoDolar').value = cotacao.toFixed(2);
+    status.textContent = '(atualizada agora)';
+    atualizarCalcLucro();
+  } catch {
+    status.textContent = '(não consegui buscar — preencha na mão)';
+  }
+}
+document.getElementById('btnAtualizarCotacao').addEventListener('click', buscarCotacaoDolar);
+
+// Regra "Remessa Conforme": até US$50 só ICMS; acima de US$50, Imposto de
+// Importação (60% do valor, com desconto de US$30) + ICMS sobre o total.
+function calcularImpostoImportacao(custoBRL, cotacaoDolar, icmsPct){
+  if (!custoBRL || !cotacaoDolar || !icmsPct) return 0;
+  const valorUsd = custoBRL / cotacaoDolar;
+  const icms = icmsPct / 100;
+  if (valorUsd <= 50){
+    return custoBRL * icms;
+  }
+  const iiUsd = Math.max(0, valorUsd * 0.6 - 30);
+  const iiBRL = iiUsd * cotacaoDolar;
+  const icmsBRL = (custoBRL + iiBRL) * icms;
+  return iiBRL + icmsBRL;
+}
+
+// Preço de venda final pra QUALQUER custo de origem (produto base ou um
+// quilate específico) — inclui o imposto calculado pra ESSE custo + o
+// frete + a margem, tudo puxando os valores atuais da calculadora.
+function calcularPrecoFinal(custo){
+  const cotacao = parseFloat(document.getElementById('fCotacaoDolar').value) || 0;
+  const icmsPct = parseFloat(document.getElementById('fIcmsPct').value) || 0;
+  const custoFrete = parseFloat(document.getElementById('fCustoFrete').value) || 0;
+  const imposto = calcularImpostoImportacao(custo, cotacao, icmsPct);
+  return (custo + imposto + custoFrete) * (1 + margemAtual() / 100);
+}
+
+function atualizarCalcLucro(){
+  const custoPeca = parseFloat(document.getElementById('fCustoPeca').value) || 0;
+  const cotacao = parseFloat(document.getElementById('fCotacaoDolar').value) || 0;
+  const icmsPct = parseFloat(document.getElementById('fIcmsPct').value) || 0;
+  const custoFrete = parseFloat(document.getElementById('fCustoFrete').value) || 0;
+  const margem = margemAtual();
+
+  const impostoCalculado = calcularImpostoImportacao(custoPeca, cotacao, icmsPct);
+  document.getElementById('fCustoImposto').value = custoPeca ? impostoCalculado.toFixed(2) : '';
+
+  const custoTotal = custoPeca + impostoCalculado + custoFrete;
+  const resultado = document.getElementById('calcLucroResultado');
+
+  if (custoTotal > 0 && margem > 0){
+    const precoFinal = custoTotal * (1 + margem / 100);
+    const lucro = precoFinal - custoTotal;
+    document.getElementById('fPreco').value = precoFinal.toFixed(2);
+    document.getElementById('calcLucroValor').textContent = `${formatarPreco(lucro)} (${margem}%)`;
+    resultado.style.display = 'flex';
+  } else {
+    resultado.style.display = 'none';
+  }
+
+  // Recalcula o preço de venda de cada quilate já cadastrado, com o
+  // imposto PRÓPRIO de cada um (não herdado do produto base).
+  if (quilatesFormAtual.length){
+    quilatesFormAtual.forEach(q => { q.preco = calcularPrecoFinal(q.custo); });
+    renderQuilatesMulti();
+  }
+  document.querySelectorAll('#banhoOpcoes .banho-check:checked').forEach(chk => {
+    atualizarPrecoBanho(chk.getAttribute('data-chave'));
+  });
+}
+['fCustoPeca', 'fCotacaoDolar', 'fIcmsPct', 'fCustoFrete', 'fMargemLucro'].forEach(id => {
+  document.getElementById(id).addEventListener('input', atualizarCalcLucro);
+});
+
+document.getElementById('formatoAdminPills').innerHTML = Object.keys(FOTOS_FORMATO).map(f => `
   <button type="button" class="formato-admin-pill" data-formato="${f}">
-    ${ICONES_FORMATO[f]}
+    ${fotoFormatoHTML(f)}
     <span>${f}</span>
   </button>
 `).join('');
@@ -867,15 +2048,33 @@ document.getElementById('toggleDetalhesExtra').addEventListener('click', (e) => 
 });
 
 // fotosFormAtual guarda objetos: { tipo: 'existente', url } ou { tipo: 'novo', file, previewUrl }
+// Abas do formulário de produto — trocar de aba só esconde/mostra as
+// seções que já existiam, nenhum campo muda de lugar nem de lógica.
+function ativarAbaProduto(nomeAba){
+  document.querySelectorAll('.produto-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === nomeAba));
+  document.querySelectorAll('.tab-painel').forEach(p => p.classList.toggle('tab-ativa', p.dataset.tab === nomeAba));
+  document.getElementById('modalProduto').scrollTop = 0;
+}
+document.querySelectorAll('.produto-tab').forEach(btn => {
+  btn.addEventListener('click', () => ativarAbaProduto(btn.dataset.tab));
+});
+
 function abrirModalProduto(produto){
   const form = document.getElementById('formProduto');
   form.reset();
   fotosFormAtual = [];
   tamanhosFormAtual = new Set();
+  quilatesFormAtual = [];
+  renderQuilatesMulti();
+  banhoFotosPendentes = {};
+  renderBanhoOpcoes();
   formatoSelecionado = '';
   document.querySelectorAll('#tamanhosMulti button').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.formato-admin-pill').forEach(b => b.classList.remove('active'));
   document.getElementById('detalhesExtra').classList.remove('show');
+  document.querySelectorAll('.produto-tab').forEach(b => b.classList.remove('tem-erro'));
+  ativarAbaProduto('basico');
+  atualizarCalcLucro();
 
   document.getElementById('modalProdutoTitulo').textContent = produto ? 'Editar produto' : 'Novo produto';
   document.getElementById('fId').value = produto ? produto.id : '';
@@ -886,7 +2085,32 @@ function abrirModalProduto(produto){
     document.getElementById('fDescricao').value = produto.descricao || '';
     document.getElementById('fMaterial').value = produto.material_aro || 'Prata 925';
     document.getElementById('fPedra').value = produto.pedra_central || 'Sem pedra';
-    document.getElementById('fQuilate').value = produto.quilate_pedra || '';
+    document.getElementById('fBanho').value = produto.banho || 'Sem banho';
+    // Junta o preço público (quilates_disponiveis) com o custo privado
+    // (quilates_custos), casando pelo "valor" de cada opção.
+    quilatesFormAtual = (produto.quilates_disponiveis || []).map(q => {
+      const custoInfo = (produto.quilates_custos || []).find(c => c.valor === q.valor);
+      return { valor: q.valor, preco: q.preco, custo: custoInfo ? custoInfo.custo : 0 };
+    });
+    renderQuilatesMulti();
+    // Cada cor salva "casa" com a checkbox do preset de mesmo nome, ou
+    // cai no slot "outro" se for um nome personalizado (não tá na lista fixa).
+    (produto.banhos_disponiveis || []).forEach(b => {
+      const custoInfo = (produto.banhos_custos || []).find(c => c.nome === b.nome);
+      const ehPreset = BANHO_PRESETS.includes(b.nome);
+      const chave = ehPreset ? b.nome : 'outro';
+      const opcaoEl = document.querySelector(`.banho-opcao[data-chave="${chave}"]`);
+      if (!opcaoEl) return;
+      opcaoEl.querySelector('.banho-check').checked = true;
+      opcaoEl.classList.add('marcado');
+      if (!ehPreset) opcaoEl.querySelector('.banho-nome-custom').value = b.nome;
+      opcaoEl.querySelector('.banho-custo').value = custoInfo ? custoInfo.custo : '';
+      banhoFotosPendentes[chave] = { tipo: 'existente', url: b.foto_url };
+      const drop = opcaoEl.querySelector('.banho-foto-drop');
+      drop.style.backgroundImage = `url('${b.foto_url}')`;
+      drop.textContent = '';
+      atualizarPrecoBanho(chave);
+    });
     formatoSelecionado = produto.formato_pedra || '';
     document.getElementById('fFormato').value = formatoSelecionado;
     if (formatoSelecionado){
@@ -900,18 +2124,33 @@ function abrirModalProduto(produto){
     document.getElementById('fLargura').value = produto.largura_mm || '';
     document.getElementById('fPreco').value = produto.preco || '';
     document.getElementById('fEstoque').value = produto.estoque || '';
+    document.getElementById('fCustoPeca').value = produto.custo_peca ?? '';
+    document.getElementById('fCotacaoDolar').value = produto.cotacao_dolar ?? '';
+    document.getElementById('fIcmsPct').value = produto.icms_pct ?? 18;
+    document.getElementById('fCustoFrete').value = produto.custo_frete ?? '';
+    document.getElementById('fMargemLucro').value = produto.margem_lucro ?? '';
+    atualizarCalcLucro(); // já recalcula o imposto (fCustoImposto é derivado, não salvo direto)
+    document.getElementById('fLinkFornecedor').value = produto.link_fornecedor || '';
     document.getElementById('fDestaque').checked = !!produto.destaque;
     document.getElementById('fAtivo').checked = produto.ativo !== false;
+    const colecoesDoProduto = produto.colecoes || [];
+    document.getElementById('fColecaoNoivado').checked = colecoesDoProduto.includes('noivado');
+    document.getElementById('fColecaoMaisVendidos').checked = colecoesDoProduto.includes('mais-vendidos');
+    document.getElementById('fColecaoNovidades').checked = colecoesDoProduto.includes('novidades');
     (produto.tamanhos_disponiveis || []).forEach(t => {
       tamanhosFormAtual.add(t);
-      const btn = document.querySelector(`#tamanhosMulti button[data-tam="${t}"]`);
-      if (btn) btn.classList.add('active');
+      // Acha o(s) botão(ões) EUA cujo BR convertido bate com o tamanho salvo
+      document.querySelectorAll('#tamanhosMulti button').forEach(btn => {
+        if (CONVERSAO_TAMANHO_EUA_BR[btn.getAttribute('data-tam-eua')] === t) btn.classList.add('active');
+      });
     });
     fotosFormAtual = (produto.fotos || []).map(url => ({ tipo: 'existente', url }));
   } else {
     document.getElementById('fAtivo').checked = true;
   }
   renderFotosPreview();
+  document.getElementById('fCotacaoDolarStatus').textContent = '';
+  if (!document.getElementById('fCotacaoDolar').value) buscarCotacaoDolar();
   document.getElementById('modalProduto').classList.add('show');
 }
 
@@ -921,28 +2160,65 @@ function fecharModalProduto(){
 
 document.getElementById('fotosDrop').addEventListener('click', () => document.getElementById('fotosInput').click());
 document.getElementById('fotosInput').addEventListener('change', (e) => {
-  [...e.target.files].forEach(file => {
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      fotosFormAtual.push({ tipo: 'novo', file, previewUrl: ev.target.result });
-      renderFotosPreview();
-    };
-    reader.readAsDataURL(file);
-  });
+  [...e.target.files].forEach(adicionarFotoAoForm);
   e.target.value = '';
 });
+
+function adicionarFotoAoForm(file){
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    fotosFormAtual.push({ tipo: 'novo', file, previewUrl: ev.target.result });
+    renderFotosPreview();
+  };
+  reader.readAsDataURL(file);
+}
+
+// Colar print (Ctrl+V) direto — só funciona com o modal de produto aberto,
+// pra não interferir em colar texto em outro lugar da tela.
+document.addEventListener('paste', (e) => {
+  if (!document.getElementById('modalProduto').classList.contains('show')) return;
+  const arquivos = [...(e.clipboardData?.items || [])]
+    .filter(item => item.type.startsWith('image/'))
+    .map(item => item.getAsFile())
+    .filter(Boolean);
+  if (!arquivos.length) return;
+  e.preventDefault();
+  arquivos.forEach(adicionarFotoAoForm);
+});
+
+let fotoArrastada = null;
 
 function renderFotosPreview(){
   const wrap = document.getElementById('fotosPreview');
   wrap.innerHTML = fotosFormAtual.map((foto, i) => `
-    <div class="foto-item ${i === 0 ? 'capa' : ''}">
+    <div class="foto-item ${i === 0 ? 'capa' : ''}" draggable="true" data-i="${i}">
       <img src="${foto.tipo === 'existente' ? foto.url : foto.previewUrl}" alt="">
       <button type="button" class="foto-remover" data-i="${i}" aria-label="Remover foto">×</button>
     </div>
   `).join('');
   wrap.querySelectorAll('.foto-remover').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
       fotosFormAtual.splice(Number(btn.getAttribute('data-i')), 1);
+      renderFotosPreview();
+    });
+  });
+
+  // Arrastar pra reordenar — a primeira foto da lista sempre vira a capa.
+  wrap.querySelectorAll('.foto-item').forEach(item => {
+    item.addEventListener('dragstart', () => {
+      fotoArrastada = Number(item.getAttribute('data-i'));
+      item.classList.add('arrastando');
+    });
+    item.addEventListener('dragend', () => item.classList.remove('arrastando'));
+    item.addEventListener('dragover', (e) => e.preventDefault());
+    item.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const destino = Number(item.getAttribute('data-i'));
+      if (fotoArrastada === null || fotoArrastada === destino) return;
+      const [movida] = fotosFormAtual.splice(fotoArrastada, 1);
+      fotosFormAtual.splice(destino, 0, movida);
+      fotoArrastada = null;
       renderFotosPreview();
     });
   });
@@ -970,7 +2246,27 @@ async function enviarFotosEObterUrls(categoria){
 document.getElementById('formProduto').addEventListener('submit', async (e) => {
   e.preventDefault();
 
+  // O formulário tem "novalidate" (as abas escondem seções, e o navegador
+  // não consegue mostrar o aviso de campo obrigatório numa aba escondida —
+  // ficaria "travado" sem dar nenhum erro visível). Por isso a validação
+  // é manual aqui: acha o primeiro campo inválido, troca pra aba dele, e
+  // só então mostra o aviso nativo (que agora consegue aparecer, pois o
+  // campo já está visível).
+  document.querySelectorAll('.produto-tab').forEach(b => b.classList.remove('tem-erro'));
+  const campoInvalido = e.target.querySelector(':invalid');
+  if (campoInvalido){
+    const painel = campoInvalido.closest('.tab-painel');
+    if (painel){
+      ativarAbaProduto(painel.dataset.tab);
+      document.querySelector(`.produto-tab[data-tab="${painel.dataset.tab}"]`).classList.add('tem-erro');
+    }
+    campoInvalido.reportValidity();
+    return;
+  }
+
   if (fotosFormAtual.length === 0){
+    ativarAbaProduto('fotos');
+    document.querySelector('.produto-tab[data-tab="fotos"]').classList.add('tem-erro');
     alert('Adicione pelo menos 1 foto antes de salvar.');
     return;
   }
@@ -982,6 +2278,7 @@ document.getElementById('formProduto').addEventListener('submit', async (e) => {
   try {
     const categoria = document.getElementById('fCategoria').value;
     const fotosUrls = await enviarFotosEObterUrls(categoria);
+    const { disponiveis: banhosDisp, custos: banhosCustos } = await enviarBanhosEObterDados(categoria);
 
     const dados = {
       nome: document.getElementById('fNome').value.trim(),
@@ -989,19 +2286,37 @@ document.getElementById('formProduto').addEventListener('submit', async (e) => {
       descricao: document.getElementById('fDescricao').value.trim(),
       material_aro: document.getElementById('fMaterial').value,
       pedra_central: document.getElementById('fPedra').value,
-      quilate_pedra: document.getElementById('fQuilate').value.trim() || null,
+      banho: document.getElementById('fBanho').value,
+      // Divide em público (valor + preço de venda, o site mostra) e privado
+      // (valor + custo original — nunca sai do admin, é só sua referência).
+      quilates_disponiveis: quilatesFormAtual.map(q => ({ valor: q.valor, preco: q.preco })),
+      quilates_custos: quilatesFormAtual.map(q => ({ valor: q.valor, custo: q.custo })),
+      banhos_disponiveis: banhosDisp,
+      banhos_custos: banhosCustos,
       formato_pedra: document.getElementById('fFormato').value || null,
       cravacao: document.getElementById('fCravacao').value.trim() || null,
       grau_cor: document.getElementById('fGrauCor').value || null,
       grau_clareza: document.getElementById('fGrauClareza').value || null,
       grau_corte: document.getElementById('fGrauCorte').value || null,
       largura_mm: document.getElementById('fLargura').value ? parseFloat(document.getElementById('fLargura').value) : null,
-      tamanhos_disponiveis: [...tamanhosFormAtual],
+      tamanhos_disponiveis: [...tamanhosFormAtual].sort((a, b) => parseFloat(a) - parseFloat(b)),
       preco: parseFloat(document.getElementById('fPreco').value) || 0,
       estoque: parseInt(document.getElementById('fEstoque').value) || 0,
+      custo_peca: document.getElementById('fCustoPeca').value ? parseFloat(document.getElementById('fCustoPeca').value) : null,
+      custo_imposto: document.getElementById('fCustoImposto').value ? parseFloat(document.getElementById('fCustoImposto').value) : null,
+      cotacao_dolar: document.getElementById('fCotacaoDolar').value ? parseFloat(document.getElementById('fCotacaoDolar').value) : null,
+      icms_pct: document.getElementById('fIcmsPct').value ? parseFloat(document.getElementById('fIcmsPct').value) : null,
+      custo_frete: document.getElementById('fCustoFrete').value ? parseFloat(document.getElementById('fCustoFrete').value) : null,
+      margem_lucro: document.getElementById('fMargemLucro').value ? parseFloat(document.getElementById('fMargemLucro').value) : null,
+      link_fornecedor: document.getElementById('fLinkFornecedor').value.trim() || null,
       fotos: fotosUrls,
       destaque: document.getElementById('fDestaque').checked,
-      ativo: document.getElementById('fAtivo').checked
+      ativo: document.getElementById('fAtivo').checked,
+      colecoes: [
+        document.getElementById('fColecaoNoivado').checked ? 'noivado' : null,
+        document.getElementById('fColecaoMaisVendidos').checked ? 'mais-vendidos' : null,
+        document.getElementById('fColecaoNovidades').checked ? 'novidades' : null
+      ].filter(Boolean)
     };
 
     const idExistente = document.getElementById('fId').value;

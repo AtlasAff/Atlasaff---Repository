@@ -19,6 +19,67 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /* ============================================================
+   FRETE (Melhor Envio) — a chamada de verdade acontece numa Edge
+   Function no Supabase (calcular-frete), que esconde o token da
+   API. Aqui só formatamos o CEP e chamamos essa função.
+   ============================================================ */
+function formatarCep(valor){
+  const digitos = valor.replace(/\D/g, '').slice(0, 8);
+  return digitos.length > 5 ? `${digitos.slice(0, 5)}-${digitos.slice(5)}` : digitos;
+}
+
+// itensCarrinho (opcional): [{preco, qtd}] pra calcular o carrinho inteiro
+// (checkout). Sem isso, calcula só 1 peça (página de produto).
+async function calcularFrete(cepDestino, precoProduto, itensCarrinho){
+  const corpo = { cep_destino: cepDestino };
+  if (itensCarrinho && itensCarrinho.length) corpo.itens = itensCarrinho;
+  else corpo.preco = precoProduto;
+
+  const resp = await fetch(`${SUPABASE_URL}/functions/v1/calcular-frete`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      'apikey': SUPABASE_ANON_KEY
+    },
+    body: JSON.stringify(corpo)
+  });
+  return resp.json();
+}
+
+/* ============================================================
+   NEWSLETTER — usado pelo form no rodapé/faixa de index.html e
+   categoria.html. Salva na tabela newsletter_assinantes.
+   ============================================================ */
+async function assinarNewsletter(form){
+  const input = form.querySelector('input[type="email"]');
+  const botao = form.querySelector('button[type="submit"]');
+  const email = input.value.trim();
+  const textoOriginal = botao.textContent;
+
+  botao.disabled = true;
+  botao.textContent = '...';
+
+  const { error } = await sb.from('newsletter_assinantes').insert({ email });
+
+  botao.disabled = false;
+  botao.textContent = textoOriginal;
+
+  if (error){
+    if (error.code === '23505'){ // e-mail duplicado (unique constraint)
+      mostrarToast('Esse e-mail já tá cadastrado ✓');
+    } else {
+      mostrarToast('Não foi possível assinar agora — tenta de novo.');
+    }
+    return false;
+  }
+
+  mostrarToast('Inscrição confirmada ✓');
+  form.reset();
+  return false;
+}
+
+/* ============================================================
    ÍCONES DE CATEGORIA (por chave "icone" da tabela categorias)
    "padrao" é usado por qualquer categoria nova criada no admin,
    até você (opcionalmente) me pedir um ícone customizado pra ela.
@@ -46,18 +107,45 @@ const FOTOS_CATEGORIA = {
   padrao: "https://images.unsplash.com/photo-1599643477877-530eb83abc8e?q=80&w=500&auto=format&fit=crop"
 };
 
-/* Ícones de FORMATO DA PEDRA — estilo Versale (escolha por formato) */
-const ICONES_FORMATO = {
-  "Redondo": `<svg viewBox="0 0 40 40" fill="currentColor"><circle cx="20" cy="20" r="14"/></svg>`,
-  "Oval": `<svg viewBox="0 0 40 40" fill="currentColor"><ellipse cx="20" cy="20" rx="11" ry="15"/></svg>`,
-  "Princesa": `<svg viewBox="0 0 40 40" fill="currentColor"><rect x="8" y="8" width="24" height="24"/></svg>`,
-  "Coração": `<svg viewBox="0 0 40 40" fill="currentColor"><path d="M20 33 C6 24 5 14 12 10 C16 8 19 10 20 13 C21 10 24 8 28 10 C35 14 34 24 20 33 Z"/></svg>`,
-  "Marquise": `<svg viewBox="0 0 40 40" fill="currentColor"><path d="M20 5 C30 12 30 28 20 35 C10 28 10 12 20 5 Z"/></svg>`,
-  "Esmeralda": `<svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="22" height="22"/></svg>`
+/* FOTOS de FORMATO DA PEDRA — estilo Versale (escolha por formato).
+   IMG: coloque os arquivos com esses nomes exatos na raiz do site
+   (junto de index.html) — reconhece sozinho, sem precisar mexer em código. */
+const FOTOS_FORMATO = {
+  "Redondo": "formato-redondo.png",
+  "Oval": "formato-oval.png",
+  "Princesa": "formato-princesa.png",
+  "Coração": "formato-coracao.png",
+  "Marquise": "formato-marquise.png",
+  "Esmeralda": "formato-esmeralda.png"
 };
+function fotoFormatoHTML(nomeFormato){
+  const arquivo = FOTOS_FORMATO[nomeFormato] || FOTOS_FORMATO['Redondo'];
+  return `<img src="${arquivo}" alt="${nomeFormato}" loading="lazy">`;
+}
 
 function formatarPreco(valor){
-  return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const num = Number(valor);
+  // Acima de R$ 1.000, esconde os centavos (R$ 1.000 em vez de R$ 1.000,00)
+  const casas = num >= 1000 ? 0 : 2;
+  return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: casas, maximumFractionDigits: casas });
+}
+
+/* ============================================================
+   DESTAQUE PRINCIPAL (banner do topo da home) — editável no admin
+   ============================================================ */
+async function carregarHomeHero(){
+  const { data, error } = await sb.from('home_hero').select('*').limit(1).maybeSingle();
+  if (error || !data){ console.error('Erro ao carregar destaque principal:', error); return null; }
+  return data;
+}
+
+/* ============================================================
+   COLEÇÕES EM DESTAQUE (grade "vitrine") — até 3, editável no admin
+   ============================================================ */
+async function carregarHomeColecoes(){
+  const { data, error } = await sb.from('home_colecoes').select('*').order('ordem');
+  if (error){ console.error('Erro ao carregar coleções em destaque:', error); return []; }
+  return data;
 }
 
 let categoriasCache = null;
@@ -79,8 +167,15 @@ async function carregarCategorias(){
 /* ============================================================
    MAPEAMENTO DB → FRONT-END
    ============================================================ */
+// Colunas seguras pra expor no site público. IMPORTANTE: NÃO inclui
+// link_fornecedor (uso interno do admin/dropshipping) — se colocar '*' aqui,
+// esse link vaza no JSON da resposta (visível no Network do navegador)
+// mesmo que a tela não mostre ele em lugar nenhum.
+const COLUNAS_PRODUTO_PUBLICO = 'id, nome, categoria, descricao, material_aro, pedra_central, banho, banhos_disponiveis, quilate_pedra, quilates_disponiveis, pedra_lateral, formato_pedra, cravacao, grau_cor, grau_clareza, grau_corte, largura_mm, tamanhos_disponiveis, preco, estoque, fotos, destaque, ativo, criado_em';
+
 function mapProduto(row){
   const pedra = row.pedra_central || "Sem pedra";
+  const banho = row.banho || "Sem banho";
   return {
     id: row.id,
     nome: row.nome,
@@ -89,7 +184,11 @@ function mapProduto(row){
     material: row.material_aro || "",
     pedra: pedra,
     temPedra: pedra !== "Sem pedra",
+    banho: banho,
+    temBanho: banho !== "Sem banho",
     quilate: row.quilate_pedra || "",
+    quilates: row.quilates_disponiveis || [],
+    banhos: row.banhos_disponiveis || [],
     formato: row.formato_pedra || "",
     cravacao: row.cravacao || "",
     grauCor: row.grau_cor || "",
@@ -107,25 +206,44 @@ function mapProduto(row){
 }
 
 async function carregarProdutosPorCategoria(categoriaChave){
-  const { data, error } = await sb.from('produtos').select('*').eq('categoria', categoriaChave).eq('ativo', true);
+  const { data, error } = await sb.from('produtos').select(COLUNAS_PRODUTO_PUBLICO).eq('categoria', categoriaChave).eq('ativo', true);
   if (error){ console.error('Erro ao carregar produtos:', error); return []; }
   return data.map(mapProduto);
 }
 
+/* ============================================================
+   COLEÇÕES TEMÁTICAS (Noivado / Mais vendidos / Novidades) —
+   marcadas à mão no produto (aba Publicação do admin), guardadas em
+   produtos.colecoes (array de texto). Página genérica: colecao.html?tipo=...
+   ============================================================ */
+const LABELS_COLECAO = {
+  'noivado': { titulo: 'Coleção Noivado', eyebrow: 'Para sempre' },
+  'mais-vendidos': { titulo: 'Mais vendidos', eyebrow: 'Favoritos' },
+  'novidades': { titulo: 'Novidades', eyebrow: 'Recém-chegados' }
+};
+
+async function carregarProdutosPorColecao(tipo){
+  let query = sb.from('produtos').select(COLUNAS_PRODUTO_PUBLICO).eq('ativo', true).contains('colecoes', [tipo]);
+  if (tipo === 'novidades') query = query.order('criado_em', { ascending: false });
+  const { data, error } = await query;
+  if (error){ console.error('Erro ao carregar coleção:', error); return []; }
+  return data.map(mapProduto);
+}
+
 async function carregarProdutosDestaque(limite = 5){
-  const { data, error } = await sb.from('produtos').select('*').eq('destaque', true).eq('ativo', true).limit(limite);
+  const { data, error } = await sb.from('produtos').select(COLUNAS_PRODUTO_PUBLICO).eq('destaque', true).eq('ativo', true).limit(limite);
   if (error){ console.error('Erro ao carregar destaques:', error); return []; }
   return data.map(mapProduto);
 }
 
 async function carregarTodosProdutosAtivos(){
-  const { data, error } = await sb.from('produtos').select('*').eq('ativo', true);
+  const { data, error } = await sb.from('produtos').select(COLUNAS_PRODUTO_PUBLICO).eq('ativo', true);
   if (error){ console.error('Erro ao carregar produtos:', error); return []; }
   return data.map(mapProduto);
 }
 
 async function carregarProdutoPorId(id){
-  const { data, error } = await sb.from('produtos').select('*').eq('id', id).maybeSingle();
+  const { data, error } = await sb.from('produtos').select(COLUNAS_PRODUTO_PUBLICO).eq('id', id).maybeSingle();
   if (error || !data){ console.error('Erro ao carregar produto:', error); return null; }
   return mapProduto(data);
 }
@@ -250,25 +368,451 @@ function mostrarToast(mensagem){
   toast._timer = setTimeout(() => toast.classList.remove('show'), 2200);
 }
 
-function adicionarAoCarrinho(nomeProduto){
-  mostrarToast(`"${nomeProduto}" adicionado ao carrinho ✓`);
+/* ============================================================
+   COMPARTILHAR PRODUTO (botão na página do produto)
+   Tenta anexar a própria foto do produto (fica como "figurinha" com
+   legenda no WhatsApp, Instagram etc, não só um link) — se o navegador
+   não suportar, cai pra compartilhar título+link, e se nem isso tiver
+   suporte (ex: Firefox desktop), abre o WhatsApp Web com a mensagem
+   pronta.
+   ============================================================ */
+async function compartilharProduto(nome, preco, imagemUrl){
+  const url = window.location.href;
+  const texto = `Olha que lindo que eu achei! 😍\n${nome} — ${formatarPreco(preco)}\n${url}`;
+
+  try {
+    if (navigator.canShare && imagemUrl){
+      const resposta = await fetch(imagemUrl);
+      const blob = await resposta.blob();
+      const arquivo = new File([blob], 'produto.jpg', { type: blob.type || 'image/jpeg' });
+      if (navigator.canShare({ files: [arquivo] })){
+        await navigator.share({ files: [arquivo], title: nome, text: texto });
+        return;
+      }
+    }
+  } catch (err){
+    if (err.name === 'AbortError') return; // cancelou o compartilhamento, não é erro
+    // qualquer outro problema (CORS ao buscar a foto, etc.) cai pros fallbacks abaixo
+  }
+
+  try {
+    if (navigator.share){
+      await navigator.share({ title: nome, text: texto });
+      return;
+    }
+  } catch (err){
+    if (err.name === 'AbortError') return;
+  }
+
+  window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
+}
+
+/* ============================================================
+   CARRINHO PERSISTENTE (localStorage) + gaveta lateral
+   Ao adicionar um item, abre deslizando pela direita (estilo
+   Versale), sem sair da página. Funciona em TODAS as páginas
+   porque é montado aqui no shared.js.
+   ============================================================ */
+const CARRINHO_STORAGE_KEY = 'pavan_carrinho';
+const FRETE_GRATIS_MINIMO = 399;
+
+function obterCarrinho(){
+  try {
+    const bruto = localStorage.getItem(CARRINHO_STORAGE_KEY);
+    const itens = bruto ? JSON.parse(bruto) : [];
+    if (!Array.isArray(itens)) return [];
+    // Autocorrige itens salvos antes de normalizarmos tamanho/quilate pra
+    // sempre virar null (em vez de undefined) — carrinhos antigos no
+    // localStorage do cliente podiam ficar com essas chaves ausentes, o
+    // que travava os botões de +/-/remover silenciosamente (undefined
+    // nunca bate com null numa comparação ===).
+    return itens.map(i => ({ ...i, tamanho: i.tamanho || null, quilate: i.quilate || null, banho: i.banho || null }));
+  } catch {
+    return [];
+  }
+}
+
+function salvarCarrinho(itens){
+  try { localStorage.setItem(CARRINHO_STORAGE_KEY, JSON.stringify(itens)); } catch {}
+  atualizarContadorCarrinho();
+}
+
+function atualizarContadorCarrinho(){
+  const total = obterCarrinho().reduce((soma, item) => soma + item.qtd, 0);
+  document.querySelectorAll('#cartCount').forEach(el => { el.textContent = total; });
+}
+
+// produto: { id, nome, preco, imagem, tamanho, quilate, banho, qtd }
+function adicionarAoCarrinho(produto){
+  const itens = obterCarrinho();
+  const tamanho = produto.tamanho || null;
+  const quilate = produto.quilate || null;
+  const banho = produto.banho || null;
+  // (i.tamanho || null) e não i.tamanho: itens salvos no carrinho antes de
+  // normalizarmos esses campos podem ter vindo sem a chave (undefined), e
+  // "undefined === null" é false — o item viraria duplicado em vez de somar.
+  const existente = itens.find(i => i.id === produto.id && (i.tamanho || null) === tamanho && (i.quilate || null) === quilate && (i.banho || null) === banho);
+  if (existente){
+    existente.qtd += produto.qtd || 1;
+  } else {
+    itens.push({
+      id: produto.id,
+      nome: produto.nome,
+      preco: Number(produto.preco) || 0,
+      imagem: produto.imagem || '',
+      tamanho,
+      quilate,
+      banho,
+      qtd: produto.qtd || 1
+    });
+  }
+  salvarCarrinho(itens);
   pulsarCarrinho();
+  renderCartDrawer();
+  abrirCartDrawer();
+}
+
+function removerDoCarrinho(id, tamanho, quilate, banho){
+  // (i.tamanho || null): mesma proteção contra item antigo salvo sem a
+  // chave tamanho/quilate/banho (undefined), que nunca bateria com null e
+  // fazia o botão "Remover" clicar sem remover nada.
+  const itens = obterCarrinho().filter(i => !(i.id === id && (i.tamanho || null) === (tamanho || null) && (i.quilate || null) === (quilate || null) && (i.banho || null) === (banho || null)));
+  salvarCarrinho(itens);
+  renderCartDrawer();
+}
+
+function alterarQtdCarrinho(id, tamanho, quilate, banho, delta){
+  const itens = obterCarrinho();
+  const item = itens.find(i => i.id === id && (i.tamanho || null) === (tamanho || null) && (i.quilate || null) === (quilate || null) && (i.banho || null) === (banho || null));
+  if (!item) return;
+  item.qtd = Math.max(1, item.qtd + delta);
+  salvarCarrinho(itens);
+  renderCartDrawer();
+}
+
+function montarCartDrawer(){
+  if (document.getElementById('cartDrawer')) return;
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `
+    <div class="cart-drawer-overlay" id="cartDrawerOverlay"></div>
+    <aside class="cart-drawer" id="cartDrawer" aria-label="Carrinho de compras">
+      <div class="cart-drawer-head">
+        <span class="cart-drawer-titulo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h7.2a2 2 0 0 0 2-1.6L21 8H6"/><circle cx="9" cy="21" r="1"/><circle cx="18" cy="21" r="1"/></svg>
+          <span id="cartDrawerContagem">0 itens</span>
+        </span>
+        <button type="button" class="cart-drawer-fechar" id="cartDrawerFechar" aria-label="Fechar carrinho">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
+        </button>
+      </div>
+      <div class="cart-drawer-frete" id="cartDrawerFrete"></div>
+      <div class="cart-drawer-lista" id="cartDrawerLista"></div>
+      <div class="cart-drawer-rodape" id="cartDrawerRodape"></div>
+    </aside>
+  `;
+  document.body.appendChild(wrap);
+
+  document.getElementById('cartDrawerOverlay').addEventListener('click', fecharCartDrawer);
+  document.getElementById('cartDrawerFechar').addEventListener('click', fecharCartDrawer);
+
+  // O ícone de carrinho do header abre a gaveta em vez de navegar pra carrinho.html
+  document.querySelectorAll('a.icon-btn[href="carrinho.html"]').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      renderCartDrawer();
+      abrirCartDrawer();
+    });
+  });
+}
+
+function abrirCartDrawer(){
+  document.getElementById('cartDrawerOverlay').classList.add('show');
+  document.getElementById('cartDrawer').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+function fecharCartDrawer(){
+  document.getElementById('cartDrawerOverlay').classList.remove('show');
+  document.getElementById('cartDrawer').classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+function renderCartDrawer(){
+  const itens = obterCarrinho();
+  const totalItens = itens.reduce((s, i) => s + i.qtd, 0);
+  document.getElementById('cartDrawerContagem').textContent = `${totalItens} ${totalItens === 1 ? 'item' : 'itens'}`;
+
+  const subtotal = itens.reduce((s, i) => s + i.preco * i.qtd, 0);
+
+  // Barra de frete grátis — mesma regra usada no resto do site (acima de R$399)
+  const freteEl = document.getElementById('cartDrawerFrete');
+  if (itens.length === 0){
+    freteEl.innerHTML = '';
+  } else if (subtotal >= FRETE_GRATIS_MINIMO){
+    freteEl.innerHTML = `<div class="cart-drawer-frete-msg ganhou">🎉 Parabéns! Você ganhou <strong>frete grátis</strong></div>`;
+  } else {
+    const falta = FRETE_GRATIS_MINIMO - subtotal;
+    const pct = Math.min(100, (subtotal / FRETE_GRATIS_MINIMO) * 100);
+    freteEl.innerHTML = `
+      <div class="cart-drawer-frete-msg">Faltam <strong>${formatarPreco(falta)}</strong> pra ganhar frete grátis</div>
+      <div class="cart-drawer-frete-barra"><div class="cart-drawer-frete-progresso" style="width:${pct}%"></div></div>
+    `;
+  }
+
+  const lista = document.getElementById('cartDrawerLista');
+  const rodape = document.getElementById('cartDrawerRodape');
+
+  if (itens.length === 0){
+    lista.innerHTML = `<div class="carrinho-vazio"><p>Seu carrinho está vazio.</p></div>`;
+    rodape.innerHTML = `<a href="index.html" class="btn btn-primary" style="width:100%;justify-content:center;">Continuar comprando</a>`;
+    return;
+  }
+
+  lista.innerHTML = itens.map(item => `
+    <div class="carrinho-item">
+      <img src="${item.imagem}" alt="${item.nome}">
+      <div class="carrinho-info">
+        <div class="nome">${item.nome}</div>
+        ${item.quilate ? `<div class="tags">${item.quilate}</div>` : ''}
+        ${item.banho ? `<div class="tags">${item.banho}</div>` : ''}
+        ${item.tamanho ? `<div class="tags">Aro ${item.tamanho}</div>` : ''}
+        <div class="carrinho-qtd">
+          <button type="button" data-acao="menos" data-id="${item.id}" data-tamanho="${item.tamanho || ''}" data-quilate="${item.quilate || ''}" data-banho="${item.banho || ''}" aria-label="Diminuir quantidade">−</button>
+          <span>${item.qtd}</span>
+          <button type="button" data-acao="mais" data-id="${item.id}" data-tamanho="${item.tamanho || ''}" data-quilate="${item.quilate || ''}" data-banho="${item.banho || ''}" aria-label="Aumentar quantidade">+</button>
+        </div>
+        <button type="button" class="carrinho-remover" data-acao="remover" data-id="${item.id}" data-tamanho="${item.tamanho || ''}" data-quilate="${item.quilate || ''}" data-banho="${item.banho || ''}">Remover</button>
+      </div>
+      <div class="carrinho-preco">${formatarPreco(item.preco * item.qtd)}</div>
+    </div>
+  `).join('');
+
+  lista.querySelectorAll('button[data-acao]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-id');
+      const tamanho = btn.getAttribute('data-tamanho') || null;
+      const quilate = btn.getAttribute('data-quilate') || null;
+      const banho = btn.getAttribute('data-banho') || null;
+      const acao = btn.getAttribute('data-acao');
+      if (acao === 'mais') alterarQtdCarrinho(id, tamanho, quilate, banho, 1);
+      if (acao === 'menos') alterarQtdCarrinho(id, tamanho, quilate, banho, -1);
+      if (acao === 'remover') removerDoCarrinho(id, tamanho, quilate, banho);
+    });
+  });
+
+  rodape.innerHTML = `
+    <div class="carrinho-resumo" style="margin-top:0;padding-top:0;border-top:none;font-size:1rem;">
+      <span>Subtotal</span>
+      <span>${formatarPreco(subtotal)}</span>
+    </div>
+    <a href="checkout.html" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:14px;">Finalizar compra</a>
+    <button type="button" class="btn btn-outline" style="width:100%;justify-content:center;margin-top:8px;" id="cartDrawerContinuar">Continuar comprando</button>
+    <a href="carrinho.html" style="display:block;text-align:center;margin-top:10px;font-size:0.8rem;text-decoration:underline;color:var(--texto-suave);">Ver carrinho completo</a>
+  `;
+  document.getElementById('cartDrawerContinuar').addEventListener('click', fecharCartDrawer);
+}
+
+// Usado pelo botão "Adicionar ao carrinho" dos cards (index/categoria/busca) —
+// lê os dados do próprio botão (data-*) pra evitar problema de aspas no nome.
+function adicionarAoCarrinhoCard(btn){
+  const tamanhos = (btn.dataset.tamanhos || '').split(',').filter(Boolean);
+  let quilates = [];
+  try { quilates = JSON.parse(decodeURIComponent(btn.dataset.quilates || '[]')); } catch { quilates = []; }
+  let banhos = [];
+  try { banhos = JSON.parse(decodeURIComponent(btn.dataset.banhos || '[]')); } catch { banhos = []; }
+  const produto = {
+    id: btn.dataset.id,
+    nome: btn.dataset.nome,
+    preco: parseFloat(btn.dataset.preco),
+    imagem: btn.dataset.imagem
+  };
+
+  // Peça com aro, quilate e/ou banho cadastrado: não dá pra adicionar sem
+  // saber qual variante — abre um popup pedindo, em vez de mandar direto
+  // (bug que o cliente caía comprando sem a variante definida).
+  if (tamanhos.length || quilates.length || banhos.length){
+    abrirVarianteModal(produto, { tamanhos, quilates, banhos });
+    return;
+  }
+
+  btn.classList.add('clicado');
+  setTimeout(() => btn.classList.remove('clicado'), 300);
+  adicionarAoCarrinho({ ...produto, tamanho: null, quilate: null, banho: null, qtd: 1 });
+}
+
+/* ============================================================
+   POPUP "ESCOLHA A VARIANTE" — aparece quando o cliente tenta
+   adicionar ao carrinho direto do card (categoria/home/busca)
+   numa peça que precisa de quilate e/ou aro. Mostra só os
+   seletores que a peça realmente tem.
+   ============================================================ */
+let produtoAguardandoVariante = null;
+
+function montarVarianteModal(){
+  if (document.getElementById('tamanhoModalOverlay')) return;
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `
+    <div class="tamanho-modal-overlay" id="tamanhoModalOverlay">
+      <div class="tamanho-modal">
+        <button type="button" class="tamanho-modal-fechar" id="tamanhoModalFechar" aria-label="Fechar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
+        </button>
+        <p id="tamanhoModalNome"></p>
+
+        <div id="varianteModalQuilateSecao" style="display:none;">
+          <h3>Escolha o quilate</h3>
+          <div class="tamanho-pills" id="varianteModalQuilatePills"></div>
+        </div>
+
+        <div id="varianteModalBanhoSecao" style="display:none;margin-top:16px;">
+          <h3>Escolha o banho</h3>
+          <div class="banho-swatches" id="varianteModalBanhoSwatches"></div>
+        </div>
+
+        <div id="varianteModalTamanhoSecao" style="display:none;margin-top:16px;">
+          <h3>Escolha o tamanho</h3>
+          <div class="tamanho-pills" id="varianteModalTamanhoPills"></div>
+          <a href="guia-tamanho.html" target="_blank" class="link-guia-tamanho" style="display:inline-block;margin-top:12px;">Não sabe seu tamanho?</a>
+        </div>
+
+        <button type="button" class="btn btn-primary" id="tamanhoModalConfirmar" style="width:100%;justify-content:center;margin-top:18px;" disabled>Adicionar ao carrinho</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(wrap);
+  document.getElementById('tamanhoModalOverlay').addEventListener('click', (e) => {
+    if (e.target.id === 'tamanhoModalOverlay') fecharTamanhoModal();
+  });
+  document.getElementById('tamanhoModalFechar').addEventListener('click', fecharTamanhoModal);
+}
+
+function abrirVarianteModal(produto, { tamanhos, quilates, banhos = [] }){
+  montarVarianteModal();
+  produtoAguardandoVariante = { ...produto, tamanho: null, quilate: null, banho: null };
+
+  document.getElementById('tamanhoModalNome').textContent = produto.nome;
+
+  const confirmar = document.getElementById('tamanhoModalConfirmar');
+  confirmar.disabled = true;
+
+  function verificarCompleto(){
+    const faltaQuilate = quilates.length && !produtoAguardandoVariante.quilate;
+    const faltaBanho = banhos.length && !produtoAguardandoVariante.banho;
+    const faltaTamanho = tamanhos.length && !produtoAguardandoVariante.tamanho;
+    confirmar.disabled = faltaQuilate || faltaBanho || faltaTamanho;
+  }
+
+  const quilateSecao = document.getElementById('varianteModalQuilateSecao');
+  quilateSecao.style.display = quilates.length ? 'block' : 'none';
+  if (quilates.length){
+    document.getElementById('varianteModalQuilatePills').innerHTML = quilates.map(q => `
+      <button type="button" class="tamanho-pill" data-quilate="${q.valor}" data-preco="${q.preco}">${q.valor} — ${formatarPreco(q.preco)}</button>
+    `).join('');
+    document.querySelectorAll('#varianteModalQuilatePills .tamanho-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        document.querySelectorAll('#varianteModalQuilatePills .tamanho-pill').forEach(b => b.classList.remove('active'));
+        pill.classList.add('active');
+        produtoAguardandoVariante.quilate = pill.getAttribute('data-quilate');
+        produtoAguardandoVariante.preco = parseFloat(pill.getAttribute('data-preco'));
+        verificarCompleto();
+      });
+    });
+  }
+
+  const banhoSecao = document.getElementById('varianteModalBanhoSecao');
+  banhoSecao.style.display = banhos.length ? 'block' : 'none';
+  if (banhos.length){
+    document.getElementById('varianteModalBanhoSwatches').innerHTML = banhos.map(b => `
+      <button type="button" class="banho-swatch" data-banho="${b.nome}" data-preco="${b.preco}" title="${b.nome}" style="background-image:url('${b.foto_url}')"></button>
+    `).join('');
+    document.querySelectorAll('#varianteModalBanhoSwatches .banho-swatch').forEach(swatch => {
+      swatch.addEventListener('click', () => {
+        document.querySelectorAll('#varianteModalBanhoSwatches .banho-swatch').forEach(b => b.classList.remove('active'));
+        swatch.classList.add('active');
+        produtoAguardandoVariante.banho = swatch.getAttribute('data-banho');
+        produtoAguardandoVariante.preco = parseFloat(swatch.getAttribute('data-preco'));
+        verificarCompleto();
+      });
+    });
+  }
+
+  const tamanhoSecao = document.getElementById('varianteModalTamanhoSecao');
+  tamanhoSecao.style.display = tamanhos.length ? 'block' : 'none';
+  if (tamanhos.length){
+    document.getElementById('varianteModalTamanhoPills').innerHTML = [...tamanhos].sort((a, b) => parseFloat(a) - parseFloat(b)).map(t => `
+      <button type="button" class="tamanho-pill" data-tamanho="${t}">${t}</button>
+    `).join('');
+    document.querySelectorAll('#varianteModalTamanhoPills .tamanho-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        document.querySelectorAll('#varianteModalTamanhoPills .tamanho-pill').forEach(b => b.classList.remove('active'));
+        pill.classList.add('active');
+        produtoAguardandoVariante.tamanho = pill.getAttribute('data-tamanho');
+        verificarCompleto();
+      });
+    });
+  }
+
+  confirmar.onclick = () => {
+    adicionarAoCarrinho({ ...produtoAguardandoVariante, qtd: 1 });
+    fecharTamanhoModal();
+  };
+
+  document.getElementById('tamanhoModalOverlay').classList.add('show');
+}
+
+function fecharTamanhoModal(){
+  const overlay = document.getElementById('tamanhoModalOverlay');
+  if (overlay) overlay.classList.remove('show');
+}
+
+// Monta a gaveta e sincroniza o contador do ícone assim que a página carrega
+// — só nas páginas da loja (o admin.html não usa style.css nem tem
+// carrinho, então nunca deve receber esse HTML).
+if (!document.getElementById('painelAdmin')){
+  montarCartDrawer();
+  atualizarContadorCarrinho();
 }
 
 /* ============================================================
    CARD DE PRODUTO
+   Ordem: imagem → título (centralizado) → box 2x2 [preço | banho]
+   / [material | pedra] → Comprar → Adicionar ao carrinho.
    ============================================================ */
 function cardProdutoHTML(p){
+  const esgotado = (p.estoque ?? 0) <= 0;
   return `
-    <div class="prod-card reveal">
-      <a href="produto.html?id=${p.id}" class="prod-img" style="background-image:url('${p.image}')" aria-label="Ver ${p.nome}"></a>
-      <div class="prod-tags">
-        <span>${p.material}</span>
-        ${p.temPedra ? `<span>${p.pedra}</span>` : ``}
+    <div class="prod-card reveal ${esgotado ? 'esgotado' : ''}">
+      ${esgotado ? '<span class="badge-esgotado-card">Esgotado</span>' : ''}
+      <a href="produto.html?id=${p.id}" class="prod-card-link" aria-label="Ver ${p.nome}">
+        <div class="prod-img" style="background-image:url('${p.image}')"></div>
+        <div class="prod-name">${p.nome}</div>
+        <div class="prod-info-box">
+          <div class="prod-info-cell">
+            <span class="prod-price">${formatarPreco(p.preco)}</span>
+          </div>
+          <div class="prod-info-cell">
+            <span class="prod-spec-label">Banho</span>
+            <span class="prod-spec-valor">${p.temBanho ? p.banho : '—'}</span>
+          </div>
+          <div class="prod-info-cell">
+            <span class="prod-spec-label">Material</span>
+            <span class="prod-spec-valor">${p.material}</span>
+          </div>
+          <div class="prod-info-cell">
+            <span class="prod-spec-label">Pedra</span>
+            <span class="prod-spec-valor">${p.temPedra ? p.pedra : '—'}</span>
+          </div>
+        </div>
+      </a>
+      <div class="prod-actions">
+        ${esgotado
+          ? `<button type="button" class="btn btn-outline" disabled>Esgotado</button>`
+          : `<button type="button" class="btn btn-primary btn-add"
+              data-id="${p.id}" data-nome="${p.nome.replace(/"/g, '&quot;')}" data-preco="${p.preco}" data-imagem="${p.image}"
+              data-tamanhos="${(p.tamanhos || []).join(',')}"
+              data-quilates="${encodeURIComponent(JSON.stringify(p.quilates || []))}"
+              data-banhos="${encodeURIComponent(JSON.stringify(p.banhos || []))}"
+              onclick="adicionarAoCarrinhoCard(this)">Adicionar ao carrinho</button>`}
       </div>
-      <a href="produto.html?id=${p.id}" class="prod-name-link"><div class="prod-name">${p.nome}</div></a>
-      <div class="prod-price">${formatarPreco(p.preco)}</div>
-      <button type="button" class="btn btn-outline btn-add" onclick="adicionarAoCarrinho('${p.nome.replace(/'/g, "\\'")}')">Adicionar ao carrinho</button>
     </div>
   `;
 }
@@ -324,7 +868,7 @@ async function renderCategoryPage(){
     formatoWrap.style.display = 'block';
     formatoWrap.querySelector('.formato-pills').innerHTML = formatosDisponiveis.map(f => `
       <button type="button" class="formato-pill" data-formato="${f}">
-        <span class="formato-icone">${ICONES_FORMATO[f] || ICONES_FORMATO['Redondo']}</span>
+        <span class="formato-icone">${fotoFormatoHTML(f)}</span>
         <span>${f}</span>
       </button>
     `).join('');
@@ -485,7 +1029,7 @@ async function renderBuscaPage(){
 
   const { data, error } = await sb
     .from('produtos')
-    .select('*')
+    .select(COLUNAS_PRODUTO_PUBLICO)
     .eq('ativo', true)
     .or(`nome.ilike.%${termo}%,material_aro.ilike.%${termo}%,pedra_central.ilike.%${termo}%,categoria.ilike.%${termo}%`);
 
@@ -496,6 +1040,45 @@ async function renderBuscaPage(){
   grid.innerHTML = resultados.length
     ? resultados.map(cardProdutoHTML).join('')
     : `<p class="sem-resultados">Nenhum produto encontrado para "${termo}". Tente outro termo.</p>`;
+  revelarNovosElementos();
+}
+
+/* ============================================================
+   PÁGINA DE COLEÇÃO (genérica — colecao.html?tipo=noivado|mais-vendidos|novidades)
+   Mesmo "naipe" visual da categoria (título + grade), sem o painel de
+   filtros — a curadoria aqui é manual (produto marcado no admin), não
+   por material/pedra.
+   ============================================================ */
+async function renderColecaoPage(){
+  const params = new URLSearchParams(window.location.search);
+  const tipo = params.get('tipo');
+  const grid = document.getElementById('prodGrid');
+  const label = LABELS_COLECAO[tipo];
+
+  if (!label){
+    document.querySelector('.page-title h1').textContent = 'Coleção não encontrada';
+    grid.innerHTML = `<p class="sem-resultados">Essa coleção não existe. <a href="index.html" style="text-decoration:underline;">Voltar à loja</a>.</p>`;
+    return;
+  }
+
+  // O texto exibido pode ter sido personalizado no admin (home_colecoes);
+  // se não achar, cai no rótulo padrão do tipo.
+  const colecoes = await carregarHomeColecoes();
+  const card = colecoes.find(c => c.tipo === tipo);
+  const titulo = (card && card.titulo) || label.titulo;
+  const eyebrow = (card && card.subtexto) || label.eyebrow;
+
+  document.title = `${titulo} | Pavan & Co.`;
+  document.getElementById('breadcrumbAtual').textContent = titulo;
+  document.querySelector('.page-title .eyebrow').textContent = eyebrow;
+  document.querySelector('.page-title h1').textContent = titulo;
+
+  grid.innerHTML = skeletonGridHTML();
+  const produtos = await carregarProdutosPorColecao(tipo);
+  document.getElementById('resultCount').textContent = `${produtos.length} produto${produtos.length === 1 ? '' : 's'}`;
+  grid.innerHTML = produtos.length
+    ? produtos.map(cardProdutoHTML).join('')
+    : `<p class="sem-resultados">Nenhum produto nessa coleção ainda — volte em breve.</p>`;
   revelarNovosElementos();
 }
 
@@ -527,6 +1110,8 @@ async function renderProdutoPage(){
   }
 
   let tamanhoSelecionado = null;
+  let quilateSelecionado = null;
+  let banhoSelecionado = null;
   let qtd = 1;
 
   const categorias = await carregarCategorias();
@@ -542,26 +1127,107 @@ async function renderProdutoPage(){
   galeriaThumbs.innerHTML = p.fotos.map((foto, i) => `
     <button type="button" class="galeria-thumb ${i === 0 ? 'active' : ''}" style="background-image:url('${foto}')" data-foto="${foto}" aria-label="Ver foto ${i + 1}"></button>
   `).join('');
+  function trocarFotoPrincipal(thumb){
+    galeriaPrincipal.style.backgroundImage = `url('${thumb.getAttribute('data-foto')}')`;
+    galeriaThumbs.querySelectorAll('.galeria-thumb').forEach(t => t.classList.remove('active'));
+    thumb.classList.add('active');
+  }
   galeriaThumbs.querySelectorAll('.galeria-thumb').forEach(thumb => {
-    thumb.addEventListener('click', () => {
-      galeriaPrincipal.style.backgroundImage = `url('${thumb.getAttribute('data-foto')}')`;
-      galeriaThumbs.querySelectorAll('.galeria-thumb').forEach(t => t.classList.remove('active'));
-      thumb.classList.add('active');
-    });
+    thumb.addEventListener('click', () => trocarFotoPrincipal(thumb));
+    // No desktop, só passar o mouse já troca a foto (sem precisar clicar)
+    thumb.addEventListener('mouseenter', () => trocarFotoPrincipal(thumb));
   });
+
+  // Zoom ao passar o mouse na foto principal (só em telas com mouse de verdade)
+  if (window.matchMedia('(hover: hover)').matches){
+    galeriaPrincipal.addEventListener('mousemove', (e) => {
+      const rect = galeriaPrincipal.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+      galeriaPrincipal.style.backgroundSize = '200%';
+      galeriaPrincipal.style.backgroundPosition = `${x}% ${y}%`;
+    });
+    galeriaPrincipal.addEventListener('mouseleave', () => {
+      galeriaPrincipal.style.backgroundSize = '';
+      galeriaPrincipal.style.backgroundPosition = '';
+    });
+  }
 
   document.getElementById('produtoCategoria').textContent = catInfo ? catInfo.nome : '';
   document.getElementById('produtoNome').textContent = p.nome;
-  document.getElementById('produtoPreco').textContent = formatarPreco(p.preco);
-  document.getElementById('produtoParcelas').textContent = `12x de ${formatarPreco(p.preco / 12)} sem juros`;
   document.getElementById('produtoTags').innerHTML = `
     <span>${p.material}</span>${p.temPedra ? `<span>${p.pedra}</span>` : ''}${p.formato ? `<span>${p.formato}</span>` : ''}
   `;
 
+  // Sem estoque: mostra o selo e trava a compra (sem isso, dava pra comprar
+  // peça esgotada normalmente)
+  const esgotado = (p.estoque ?? 0) <= 0;
+  document.getElementById('produtoEsgotado').style.display = esgotado ? 'inline-block' : 'none';
+  if (esgotado){
+    const btnAdd = document.getElementById('btnAddCarrinho');
+    btnAdd.disabled = true;
+    btnAdd.textContent = 'Esgotado';
+    document.getElementById('qtdMenos').disabled = true;
+    document.getElementById('qtdMais').disabled = true;
+  }
+
+  // Preço muda conforme o quilate escolhido (cada opção tem o próprio preço)
+  let precoAtual = p.preco;
+  function atualizarPrecoExibido(){
+    document.getElementById('produtoPreco').textContent = formatarPreco(precoAtual);
+    document.getElementById('produtoParcelas').textContent = `12x de ${formatarPreco(precoAtual / 12)} sem juros`;
+  }
+  atualizarPrecoExibido();
+
+  const quilateWrap = document.getElementById('quilateWrap');
+  if (p.quilates.length){
+    quilateWrap.style.display = 'block';
+    quilateWrap.querySelector('.tamanho-pills').innerHTML = p.quilates.map(q => `
+      <button type="button" class="tamanho-pill" data-quilate="${q.valor}" data-preco="${q.preco}">${q.valor}</button>
+    `).join('');
+    quilateWrap.querySelectorAll('.tamanho-pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        quilateWrap.querySelectorAll('.tamanho-pill').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        quilateSelecionado = btn.getAttribute('data-quilate');
+        precoAtual = parseFloat(btn.getAttribute('data-preco'));
+        atualizarPrecoExibido();
+      });
+    });
+  } else {
+    quilateWrap.style.display = 'none';
+  }
+
+  // Banho com foto própria e preço próprio (cada cor pode custar diferente,
+  // igual quilate) — só aparece se o admin cadastrou pelo menos uma opção;
+  // trocar a cor também troca a foto principal, pra mostrar a peça de verdade
+  // naquela cor.
+  const banhoWrap = document.getElementById('banhoWrap');
+  if (p.banhos.length){
+    banhoWrap.style.display = 'block';
+    document.getElementById('banhoSelecionadoNome').textContent = 'escolha abaixo';
+    banhoWrap.querySelector('.banho-swatches').innerHTML = p.banhos.map(b => `
+      <button type="button" class="banho-swatch" data-banho="${b.nome}" data-preco="${b.preco}" data-foto="${b.foto_url}" title="${b.nome}" style="background-image:url('${b.foto_url}')"></button>
+    `).join('');
+    banhoWrap.querySelectorAll('.banho-swatch').forEach(btn => {
+      btn.addEventListener('click', () => {
+        banhoWrap.querySelectorAll('.banho-swatch').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        banhoSelecionado = btn.getAttribute('data-banho');
+        document.getElementById('banhoSelecionadoNome').textContent = banhoSelecionado;
+        precoAtual = parseFloat(btn.getAttribute('data-preco'));
+        atualizarPrecoExibido();
+        galeriaPrincipal.style.backgroundImage = `url('${btn.getAttribute('data-foto')}')`;
+      });
+    });
+  } else {
+    banhoWrap.style.display = 'none';
+  }
+
   const tamanhoWrap = document.getElementById('tamanhoWrap');
   if (p.tamanhos.length){
     tamanhoWrap.style.display = 'block';
-    tamanhoWrap.querySelector('.tamanho-pills').innerHTML = p.tamanhos.map(t => `
+    tamanhoWrap.querySelector('.tamanho-pills').innerHTML = [...p.tamanhos].sort((a, b) => parseFloat(a) - parseFloat(b)).map(t => `
       <button type="button" class="tamanho-pill" data-tamanho="${t}">${t}</button>
     `).join('');
     tamanhoWrap.querySelectorAll('.tamanho-pill').forEach(btn => {
@@ -580,18 +1246,76 @@ async function renderProdutoPage(){
   document.getElementById('qtdMais').addEventListener('click', () => { qtd++; qtdDisplay.textContent = qtd; });
 
   document.getElementById('btnAddCarrinho').addEventListener('click', (e) => {
+    if (p.quilates.length && !quilateSelecionado){
+      mostrarToast('Selecione o quilate da pedra antes de continuar');
+      return;
+    }
+    if (p.banhos.length && !banhoSelecionado){
+      mostrarToast('Selecione o banho antes de continuar');
+      return;
+    }
     if (p.tamanhos.length && !tamanhoSelecionado){
       mostrarToast('Selecione um tamanho antes de continuar');
       return;
     }
     e.target.classList.add('clicado');
     setTimeout(() => e.target.classList.remove('clicado'), 300);
-    adicionarAoCarrinho(`${p.nome}${tamanhoSelecionado ? ' (aro ' + tamanhoSelecionado + ')' : ''} x${qtd}`);
+    adicionarAoCarrinho({
+      id: p.id,
+      nome: p.nome,
+      preco: precoAtual,
+      imagem: p.image,
+      tamanho: tamanhoSelecionado || null,
+      quilate: quilateSelecionado || null,
+      banho: banhoSelecionado || null,
+      qtd
+    });
+  });
+
+  document.getElementById('btnCompartilharProduto').addEventListener('click', () => {
+    compartilharProduto(p.nome, precoAtual, p.image);
+  });
+
+  const freteCepInput = document.getElementById('freteCep');
+  const freteResultado = document.getElementById('freteResultado');
+  freteCepInput.addEventListener('input', (e) => { e.target.value = formatarCep(e.target.value); });
+  document.getElementById('btnCalcularFrete').addEventListener('click', async () => {
+    const cep = freteCepInput.value.replace(/\D/g, '');
+    if (cep.length !== 8){
+      freteResultado.innerHTML = `<p class="frete-msg erro">Digite um CEP válido (8 dígitos).</p>`;
+      return;
+    }
+    freteResultado.innerHTML = `<p class="frete-msg">Calculando...</p>`;
+    try {
+      const resultado = await calcularFrete(cep, precoAtual);
+      if (resultado.error){
+        freteResultado.innerHTML = `<p class="frete-msg erro">Não foi possível calcular o frete agora. Tente de novo em instantes.</p>`;
+        return;
+      }
+      if (!resultado.opcoes || !resultado.opcoes.length){
+        freteResultado.innerHTML = `<p class="frete-msg">Nenhuma transportadora disponível pra esse CEP.</p>`;
+        return;
+      }
+      const gratis = precoAtual >= 399;
+      freteResultado.innerHTML = resultado.opcoes.map(o => `
+        <div class="frete-opcao">
+          <div>
+            <span class="transportadora">${o.transportadora}${o.servico ? ' — ' + o.servico : ''}</span>
+            <span class="prazo">${o.prazoConfeccaoDias} dia${o.prazoConfeccaoDias == 1 ? '' : 's'} de confecção + ${o.prazoEntregaDiasMin} a ${o.prazoEntregaDias} dias úteis de entrega</span>
+          </div>
+          <span class="preco">${gratis ? 'Grátis' : formatarPreco(o.preco)}</span>
+        </div>
+      `).join('')
+        + (gratis ? `<div class="frete-gratis" style="margin-top:10px;">🎉 Essa peça tem frete grátis (compras acima de R$399)</div>` : '');
+    } catch (err){
+      freteResultado.innerHTML = `<p class="frete-msg erro">Não foi possível calcular o frete agora. Tente de novo em instantes.</p>`;
+    }
   });
 
   document.getElementById('produtoDescricao').innerHTML = `<p>${p.descricao || 'Sem descrição cadastrada ainda.'}</p>`;
   const detalhes = [
     ["Material", p.material],
+    p.temBanho ? ["Banho", p.banho] : null,
     p.temPedra ? ["Pedra central", p.pedra] : null,
     p.temPedra && p.quilate ? ["Quilate / tamanho da pedra", p.quilate] : null,
     p.temPedra && p.formato ? ["Formato da pedra", p.formato] : null,
@@ -607,7 +1331,9 @@ async function renderProdutoPage(){
   // Blocos educativos sobre Moissanite + certificado + FAQ — só aparecem nas peças com essa pedra
   if (p.pedra === 'Moissanite'){
     document.getElementById('secaoMoissanite').style.display = 'block';
-    document.getElementById('faixaMoissaniteImg').style.backgroundImage = `url('${p.fotos[0]}')`;
+    // Foto fixa (não muda por produto) — troque o arquivo moissanite.jpg na
+    // raiz do site pra atualizar a imagem em todas as páginas de produto.
+    document.getElementById('faixaMoissaniteImg').style.backgroundImage = `url('moissanite.jpg')`;
     document.getElementById('faixaMoissaniteTexto').textContent =
       'Pedra criada em laboratório com brilho e dispersão de luz ainda mais intensos que os do diamante, e dureza que fica atrás apenas dele — resistente ao uso diário. Uma alternativa mais acessível, sem abrir mão de brilho ou durabilidade.';
 
@@ -662,23 +1388,59 @@ async function renderProdutoPage(){
     : `<p class="sem-resultados" style="padding:20px 0;">Nenhuma avaliação ainda.</p>`;
 
   document.getElementById('faqAvaliacoesTitulo').textContent = `Avaliações (${avaliacoes.length})`;
-  document.getElementById('btnEscreverAvaliacao').addEventListener('click', () => {
-    mostrarToast('Em breve — quando lançarmos contas de cliente, você poderá avaliar por aqui.');
-  });
+  // Botão "Escrever avaliação" foi removido — não fazia sentido aparecer
+  // pra qualquer visitante, já que quem ainda não comprou não devia poder
+  // avaliar a peça.
 
-  const { data: relacionadosData } = await sb
+  // Prioriza a mesma categoria, mas completa com qualquer outro produto
+  // ativo se faltar (catálogo pequeno/categoria com só essa peça não pode
+  // deixar a seção vazia sem necessidade).
+  const { data: mesmaCategoriaData } = await sb
     .from('produtos')
-    .select('*')
+    .select(COLUNAS_PRODUTO_PUBLICO)
     .eq('categoria', p.categoria)
     .eq('ativo', true)
     .neq('id', p.id)
     .limit(4);
-  const relacionados = (relacionadosData || []).map(mapProduto);
+  let relacionadosData = mesmaCategoriaData || [];
+  if (relacionadosData.length < 4){
+    const idsJaListados = [p.id, ...relacionadosData.map(r => r.id)];
+    const { data: outrosData } = await sb
+      .from('produtos')
+      .select(COLUNAS_PRODUTO_PUBLICO)
+      .eq('ativo', true)
+      .not('id', 'in', `(${idsJaListados.join(',')})`)
+      .limit(4 - relacionadosData.length);
+    relacionadosData = [...relacionadosData, ...(outrosData || [])];
+  }
+  const relacionados = relacionadosData.map(mapProduto);
   document.getElementById('relacionadosGrid').innerHTML = relacionados.length
     ? relacionados.map(cardProdutoHTML).join('')
-    : `<p class="sem-resultados">Nenhum outro produto nessa categoria ainda.</p>`;
+    : `<p class="sem-resultados">Nenhum outro produto cadastrado ainda.</p>`;
 
   revelarNovosElementos();
+  alinharTitulosDescricaoDetalhes();
+  window.addEventListener('resize', alinharTitulosDescricaoDetalhes);
+}
+
+// Alinha o título "Detalhes técnicos" (coluna da imagem) com o título
+// "Descrição" (coluna de compra) na mesma altura — como o conteúdo acima
+// de cada um varia de produto pra produto (quilate/banho/tamanho mudam a
+// altura da coluna de compra), calcula a diferença de verdade em vez de
+// usar uma margem fixa. Só faz sentido nas 2 colunas lado a lado (900px+);
+// no celular elas empilham, então volta pra margem simples.
+function alinharTitulosDescricaoDetalhes(){
+  const detalhesItem = document.getElementById('produtoDetalhes')?.closest('.faq-item');
+  const descricaoItem = document.getElementById('produtoDescricao')?.closest('.faq-item');
+  if (!detalhesItem || !descricaoItem) return;
+
+  if (window.innerWidth < 900){
+    detalhesItem.style.marginTop = '24px';
+    return;
+  }
+  detalhesItem.style.marginTop = '24px';
+  const diferenca = descricaoItem.getBoundingClientRect().top - detalhesItem.getBoundingClientRect().top;
+  if (diferenca > 0) detalhesItem.style.marginTop = `${24 + diferenca}px`;
 }
 
 document.addEventListener('DOMContentLoaded', initHeaderShared);

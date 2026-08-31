@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  IMPORTANTE: troque SEU-DOMINIO-AQUI pelo domínio real depois que o site
+  estiver no ar (find & replace no arquivo inteiro). Sitemap só funciona
+  com URL completa (com https://dominio), não com caminho relativo.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://SEU-DOMINIO-AQUI/index.html</loc><priority>1.0</priority></url>
+  <url><loc>https://SEU-DOMINIO-AQUI/categoria.html?c=aneis</loc><priority>0.8</priority></url>
+  <url><loc>https://SEU-DOMINIO-AQUI/categoria.html?c=colares</loc><priority>0.8</priority></url>
+  <url><loc>https://SEU-DOMINIO-AQUI/categoria.html?c=brincos</loc><priority>0.8</priority></url>
+  <url><loc>https://SEU-DOMINIO-AQUI/categoria.html?c=pulseiras</loc><priority>0.8</priority></url>
+  <url><loc>https://SEU-DOMINIO-AQUI/categoria.html?c=aliancas</loc><priority>0.8</priority></url>
+  <url><loc>https://SEU-DOMINIO-AQUI/sobre.html</loc><priority>0.5</priority></url>
+  <url><loc>https://SEU-DOMINIO-AQUI/faq.html</loc><priority>0.4</priority></url>
+  <url><loc>https://SEU-DOMINIO-AQUI/contato.html</loc><priority>0.4</priority></url>
+  <url><loc>https://SEU-DOMINIO-AQUI/trocas-devolucoes.html</loc><priority>0.3</priority></url>
+  <url><loc>https://SEU-DOMINIO-AQUI/privacidade.html</loc><priority>0.3</priority></url>
+  <url><loc>https://SEU-DOMINIO-AQUI/guia-tamanho.html</loc><priority>0.3</priority></url>
+</urlset>
