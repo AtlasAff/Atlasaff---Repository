@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/png" href="favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -315,17 +316,65 @@ async function mostrarConta(){
     pedidosWrap.innerHTML = `<p class="suave" style="color:var(--texto-suave);font-size:0.85rem;">Você ainda não fez nenhum pedido por aqui logada(o). Pedidos feitos sem estar logada(o) não aparecem nessa lista.</p>`;
     return;
   }
-  pedidosWrap.innerHTML = pedidos.map(p => `
-    <div class="conta-pedido-item">
-      <div>
-        <strong>#${p.id.slice(0, 8).toUpperCase()}</strong>
-        <span class="conta-pedido-data">${new Date(p.criado_em).toLocaleDateString('pt-BR')}</span>
-      </div>
-      <span class="status-pedido status-${p.status}">${p.status}</span>
-      <span class="conta-pedido-total">${formatarPreco(p.total)}</span>
-    </div>
-  `).join('');
+  pedidosWrap.innerHTML = pedidos.map(pedidoParaHtml).join('');
 }
+
+const STATUS_PEDIDO_LABEL = { novo: 'Novo', confirmado: 'Confirmado', enviado: 'Enviado', entregue: 'Entregue', cancelado: 'Cancelado' };
+const STATUS_PEDIDO_COR = { novo: 'amarelo', confirmado: 'verde', enviado: 'verde', entregue: 'verde', cancelado: 'vermelho' };
+const STATUS_PAGAMENTO_LABEL = { pendente: 'Aguardando pagamento', em_analise: 'Pagamento em análise', aprovado: 'Pago', recusado: 'Pagamento recusado', estornado: 'Estornado' };
+const STATUS_PAGAMENTO_COR = { pendente: 'amarelo', em_analise: 'amarelo', aprovado: 'verde', recusado: 'vermelho', estornado: 'vermelho' };
+const FORMA_PAGAMENTO_LABEL = { pix: 'Pix', credit_card: 'Cartão de crédito', debit_card: 'Cartão de débito', ticket: 'Boleto', account_money: 'Saldo Mercado Pago' };
+
+function pedidoParaHtml(p){
+  const numero = p.id.slice(0, 8).toUpperCase();
+  const dataFormatada = new Date(p.criado_em).toLocaleDateString('pt-BR');
+  const corPedido = STATUS_PEDIDO_COR[p.status] || 'amarelo';
+  const corPagamento = STATUS_PAGAMENTO_COR[p.status_pagamento] || 'amarelo';
+  const formaPagamento = FORMA_PAGAMENTO_LABEL[p.forma_pagamento] || p.forma_pagamento;
+
+  return `
+    <div class="faq-item">
+      <button type="button" class="faq-pergunta conta-pedido-toggle">
+        <span style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-family:var(--sans);font-size:0.85rem;font-weight:600;">
+          <strong style="font-family:var(--serif);font-size:1rem;font-weight:500;">#${numero}</strong>
+          <span class="conta-pedido-data" style="margin:0;">${dataFormatada}</span>
+          <span class="badge-status badge-status--${corPedido}">${STATUS_PEDIDO_LABEL[p.status] || p.status}</span>
+          <span class="badge-status badge-status--${corPagamento}">${STATUS_PAGAMENTO_LABEL[p.status_pagamento] || p.status_pagamento}</span>
+        </span>
+        <span style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+          <span class="conta-pedido-total">${formatarPreco(p.total)}</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </span>
+      </button>
+      <div class="faq-resposta conta-pedido-detalhes">
+        <div style="margin-bottom:14px;">
+          ${(p.itens || []).map(item => `
+            <div style="display:flex;justify-content:space-between;gap:10px;font-size:0.85rem;margin-bottom:8px;">
+              <span>${item.nome}${item.quilate ? ' — ' + item.quilate : ''}${item.banho ? ' — ' + item.banho : ''}${item.tamanho ? ' (aro ' + item.tamanho + ')' : ''} × ${item.qtd}</span>
+              <span style="flex-shrink:0;">${formatarPreco(item.preco * item.qtd)}</span>
+            </div>
+          `).join('')}
+          <div style="display:flex;justify-content:space-between;font-size:0.82rem;color:var(--texto-suave);margin-top:10px;padding-top:10px;border-top:1px solid var(--borda);">
+            <span>Frete${p.frete_servico ? ' (' + p.frete_servico + ')' : ''}</span>
+            <span>${p.frete === 0 ? 'Grátis' : formatarPreco(p.frete)}</span>
+          </div>
+        </div>
+        <div style="font-size:0.82rem;color:var(--texto-suave);line-height:1.7;">
+          ${formaPagamento ? `Pago com <strong style="color:var(--texto);">${formaPagamento}</strong><br>` : ''}
+          Entrega: ${p.endereco}, ${p.numero}${p.complemento ? ' - ' + p.complemento : ''} — ${p.bairro}, ${p.cidade}/${p.estado}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// Expande/recolhe os detalhes de um pedido ao clicar (delegado, porque a
+// lista é recriada toda vez que os pedidos recarregam).
+document.getElementById('contaPedidos').addEventListener('click', (e) => {
+  const btn = e.target.closest('.conta-pedido-toggle');
+  if (!btn) return;
+  btn.closest('.faq-item').classList.toggle('open');
+});
 
 // ---------- Busca endereço automático pelo CEP (igual ao checkout) ----------
 const pfCep = document.getElementById('pfCep');

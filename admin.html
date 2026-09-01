@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/png" href="favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -44,6 +45,9 @@
     --petroleo-bg: #E9F0EF;
     --bordo-bg: #F3E6E3;
     --verde: #2C6E37;
+    --verde-bg: #E8F3E9;
+    --amarelo: #8A6116;
+    --amarelo-bg: #FBF1DE;
     --vermelho: #A8281D;
     --vermelho-bg: #FBEAE9;
     --radius: 3px;
@@ -243,6 +247,10 @@
   .status-ativo{ background:#E8F3E9; color: var(--verde); }
   .status-rascunho{ background:#F1EFE0; color:#8A6D1D; }
   .status-destaque{ background: var(--petroleo-bg); color: var(--petroleo); margin-left:4px; white-space:nowrap; }
+  /* Status de pagamento (Mercado Pago) na tabela de pedidos */
+  .status-pill.cor-verde{ background: var(--verde-bg); color: var(--verde); }
+  .status-pill.cor-amarelo{ background: var(--amarelo-bg); color: var(--amarelo); }
+  .status-pill.cor-vermelho{ background: var(--vermelho-bg); color: var(--vermelho); }
   #badgeMensagensNaoLidas{
     display:inline-flex; align-items:center; justify-content:center;
     min-width:18px; height:18px; padding:0 5px;
@@ -725,6 +733,7 @@
             <th>Itens</th>
             <th>Total</th>
             <th>Status</th>
+            <th>Pagamento</th>
             <th>Frete</th>
             <th></th>
           </tr>
@@ -1531,6 +1540,21 @@ const STATUS_PEDIDO_LABEL = {
   entregue: 'Entregue',
   cancelado: 'Cancelado'
 };
+const STATUS_PAGAMENTO_LABEL = {
+  pendente: 'Pendente',
+  em_analise: 'Em análise',
+  aprovado: 'Aprovado',
+  recusado: 'Recusado',
+  estornado: 'Estornado'
+};
+const STATUS_PAGAMENTO_COR = {
+  pendente: 'amarelo',
+  em_analise: 'amarelo',
+  aprovado: 'verde',
+  recusado: 'vermelho',
+  estornado: 'vermelho'
+};
+const FORMA_PAGAMENTO_LABEL = { pix: 'Pix', credit_card: 'Cartão de crédito', debit_card: 'Cartão de débito', ticket: 'Boleto', account_money: 'Saldo Mercado Pago' };
 
 async function carregarPedidosAdmin(){
   const { data, error } = await sb.from('pedidos').select('*').order('criado_em', { ascending: false });
@@ -1557,11 +1581,14 @@ async function renderTabelaPedidos(){
             ${Object.entries(STATUS_PEDIDO_LABEL).map(([valor, label]) => `<option value="${valor}" ${p.status === valor ? 'selected' : ''}>${label}</option>`).join('')}
           </select>
         </td>
+        <td>
+          <span class="status-pill cor-${STATUS_PAGAMENTO_COR[p.status_pagamento] || 'amarelo'}" title="${p.mp_payment_id ? 'Mercado Pago #' + p.mp_payment_id : ''}">${STATUS_PAGAMENTO_LABEL[p.status_pagamento] || p.status_pagamento}</span>
+        </td>
         <td>${p.frete === 0 ? 'Grátis' : formatarPreco(p.frete)}</td>
         <td><button type="button" data-acao="detalhes" data-id="${p.id}" style="color:var(--bordo);text-decoration:underline;font-size:0.8rem;white-space:nowrap;">Detalhes</button></td>
       </tr>
     `;
-  }).join('') || `<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--texto-suave);">Nenhum pedido ainda.</td></tr>`;
+  }).join('') || `<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--texto-suave);">Nenhum pedido ainda.</td></tr>`;
 
   document.querySelectorAll('#corpoTabelaPedidos select[data-acao="status"]').forEach(sel => {
     sel.addEventListener('change', async () => {
@@ -1579,6 +1606,11 @@ function abrirDetalhesPedido(pedido){
   const numero = pedido.id.slice(0, 8).toUpperCase();
   document.getElementById('detalhesPedidoNumero').textContent = `#${numero}`;
   document.getElementById('detalhesPedidoConteudo').innerHTML = `
+    <div style="margin-bottom:14px;">
+      <span class="status-pill cor-${STATUS_PAGAMENTO_COR[pedido.status_pagamento] || 'amarelo'}">${STATUS_PAGAMENTO_LABEL[pedido.status_pagamento] || pedido.status_pagamento}</span>
+      ${pedido.forma_pagamento ? `<span style="font-size:0.82rem;color:var(--texto-suave);margin-left:8px;">via ${FORMA_PAGAMENTO_LABEL[pedido.forma_pagamento] || pedido.forma_pagamento}</span>` : ''}
+      ${pedido.mp_payment_id ? `<span style="font-size:0.76rem;color:var(--texto-suave);display:block;margin-top:4px;">Pagamento Mercado Pago #${pedido.mp_payment_id}</span>` : ''}
+    </div>
     <div style="font-size:0.88rem;line-height:1.7;margin-bottom:18px;">
       <strong>${pedido.nome_cliente}</strong><br>
       ${pedido.email_cliente} · ${pedido.telefone_cliente}<br><br>

@@ -3,18 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/png" href="favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>Finalizar compra | Pavan & Co.</title>
 
 <!--
-  Checkout sem pagamento integrado ainda: grava um pedido de verdade
-  na tabela `pedidos` do Supabase (status "novo"), some com o CEP
-  de origem que já configuramos e o token do Melhor Envio pra
-  cobrar o frete do carrinho inteiro. A cobrança em si (Pix/cartão)
-  é a próxima etapa — por enquanto o time entra em contato pelo
-  WhatsApp pra combinar o pagamento.
+  Checkout com pagamento de verdade via Mercado Pago (Checkout Pro):
+  grava o pedido na tabela `pedidos` (status "novo", status_pagamento
+  "pendente"), calcula o frete real com o Melhor Envio e manda o
+  cliente pro checkout hospedado do Mercado Pago (Pix, cartão, boleto).
+  Quando ele volta pra cá (?pedido=ID na URL), a página consulta o
+  status via a função pública `status_pedido_publico` e mostra o
+  resultado. A confirmação definitiva vem da Edge Function `mp-webhook`,
+  que o Mercado Pago chama direto no servidor quando o pagamento muda
+  de status — por isso essa página faz um pequeno "polling" caso o
+  webhook ainda não tenha chegado no exato instante do retorno.
 -->
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -150,20 +155,24 @@
     <h2>Seu pedido</h2>
     <div id="checkoutItens"></div>
     <div class="checkout-totais" id="checkoutTotais"></div>
-    <button type="submit" form="formCheckout" class="btn btn-primary" id="btnConfirmarPedido" style="width:100%;justify-content:center;margin-top:16px;">Confirmar pedido</button>
-    <p class="checkout-aviso-pagamento">Ainda não cobramos pagamento aqui — depois de confirmar, nossa equipe entra em contato pelo WhatsApp pra combinar Pix ou cartão.</p>
+    <button type="submit" form="formCheckout" class="btn btn-primary" id="btnConfirmarPedido" style="width:100%;justify-content:center;margin-top:16px;">Ir para o pagamento</button>
+    <div class="pagamento-mp-box" style="margin-top:14px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M7 15h4"/></svg>
+      <div>
+        <strong>Pagamento seguro via Mercado Pago</strong>
+        Pix, cartão de crédito ou boleto — você escolhe na próxima tela.
+      </div>
+    </div>
   </aside>
 </div>
 
-<!-- ============ CONFIRMAÇÃO ============ -->
-<div class="container" id="checkoutConfirmado" style="display:none; max-width:560px; text-align:center; padding:40px 20px 100px;">
-  <div class="checkout-confirmado-icone">✓</div>
-  <h2 style="font-family:var(--serif);font-style:italic;font-size:1.6rem;margin-bottom:10px;">Pedido recebido!</h2>
-  <p style="color:var(--texto-suave);margin-bottom:6px;">Número do pedido: <strong id="confirmadoNumero" style="color:var(--bordo);"></strong></p>
-  <p style="color:var(--texto-suave);">Nossa equipe vai te chamar no WhatsApp em breve pra combinar o pagamento e confirmar os detalhes da entrega.</p>
-  <a id="confirmadoWhatsapp" href="#" target="_blank" rel="noopener" class="btn btn-primary" style="margin-top:22px;display:inline-flex;">Falar no WhatsApp agora</a>
-  <br>
-  <a href="index.html" style="display:inline-block;margin-top:16px;font-size:0.85rem;text-decoration:underline;color:var(--texto-suave);">Voltar pra loja</a>
+<!-- ============ RESULTADO (confirmação / retorno do Mercado Pago) ============ -->
+<div class="container" id="checkoutResultado" style="display:none; max-width:560px; text-align:center; padding:40px 20px 100px;">
+  <div class="checkout-confirmado-icone" id="resultadoIcone">✓</div>
+  <h2 style="font-family:var(--serif);font-style:italic;font-size:1.6rem;margin-bottom:10px;" id="resultadoTitulo"></h2>
+  <p style="color:var(--texto-suave);margin-bottom:6px;" id="resultadoNumeroLinha">Número do pedido: <strong id="resultadoNumero" style="color:var(--bordo);"></strong></p>
+  <p style="color:var(--texto-suave);" id="resultadoTexto"></p>
+  <div id="resultadoAcoes" style="margin-top:22px;"></div>
 </div>
 
 <footer>
@@ -200,15 +209,182 @@
 <script>
 initBuscaForm('searchFormHeader', true);
 
-const WHATSAPP_NUMERO = '5511900000000';
-
-const itensCarrinho = obterCarrinho();
+const WHATSAPP_NUMERO = '5511941104553';
+let itensCarrinho = [];
 let freteEscolhido = null; // { transportadora, servico, preco, prazoDias }
 
-if (itensCarrinho.length === 0){
-  document.getElementById('checkoutVazio').style.display = 'block';
+// Se a URL tem ?pedido=ID, o cliente tá voltando do Mercado Pago (aprovado,
+// recusado ou pendente) — nesse caso a tela é só de resultado, nem olha
+// pro carrinho local (ele já foi limpo quando o pedido foi criado).
+const pedidoRetorno = new URLSearchParams(location.search).get('pedido');
+
+if (pedidoRetorno){
   document.getElementById('checkoutConteudo').style.display = 'none';
+  tratarRetornoMercadoPago(pedidoRetorno);
 } else {
+  const carrinhoInicial = obterCarrinho();
+  if (carrinhoInicial.length === 0){
+    document.getElementById('checkoutVazio').style.display = 'block';
+    document.getElementById('checkoutConteudo').style.display = 'none';
+  } else {
+    iniciarFormularioCheckout(carrinhoInicial);
+  }
+}
+
+// Quando a Edge Function responde com erro (status != 2xx), o supabase-js
+// não devolve o corpo JSON direto em `data` — precisa ler de dentro do
+// próprio erro. Sem isso, a gente perde a mensagem específica (ex: "esse
+// pedido já está pago") e mostra só um erro genérico.
+async function extrairErroFuncao(fnError, data){
+  if (data?.error) return data.error;
+  if (fnError?.context && typeof fnError.context.json === 'function'){
+    try {
+      const corpo = await fnError.context.json();
+      if (corpo?.error) return corpo.error;
+    } catch {}
+  }
+  return fnError?.message || 'Erro inesperado ao iniciar o pagamento.';
+}
+
+// ---------- Retorno do Mercado Pago: mostra o resultado do pagamento ----------
+async function tratarRetornoMercadoPago(pedidoId){
+  const resultado = document.getElementById('checkoutResultado');
+  resultado.style.display = 'block';
+  mostrarCarregandoResultado();
+
+  const dicaUrl = new URLSearchParams(location.search).get('status'); // dica rápida que o Mercado Pago manda na volta
+
+  let pedido = await buscarStatusPedido(pedidoId);
+  if (!pedido){
+    mostrarResultado({
+      tipo: 'vermelho', icone: '!', titulo: 'Não encontramos esse pedido',
+      texto: 'O link parece inválido ou o pedido não existe mais. Se você já pagou, guarde o comprovante e fale com a gente.',
+      numero: null
+    });
+    return;
+  }
+
+  // Estado ainda não é final (webhook pode não ter chegado ainda) — espera
+  // um pouco e confere de novo, algumas vezes, antes de desistir.
+  const finalizados = ['aprovado', 'recusado', 'estornado'];
+  let tentativas = 0;
+  while (!finalizados.includes(pedido.status_pagamento) && tentativas < 6){
+    await new Promise(r => setTimeout(r, 2000));
+    pedido = await buscarStatusPedido(pedidoId) || pedido;
+    tentativas++;
+  }
+
+  renderResultadoPedido(pedido, dicaUrl);
+}
+
+async function buscarStatusPedido(pedidoId){
+  const { data, error } = await sb.rpc('status_pedido_publico', { p_id: pedidoId }).maybeSingle();
+  if (error || !data) return null;
+  return data;
+}
+
+function mostrarCarregandoResultado(){
+  document.getElementById('resultadoIcone').outerHTML = '<div class="pagamento-spinner" id="resultadoIcone"></div>';
+  document.getElementById('resultadoTitulo').textContent = 'Confirmando seu pagamento...';
+  document.getElementById('resultadoNumeroLinha').style.display = 'none';
+  document.getElementById('resultadoTexto').textContent = 'Isso leva só alguns segundos.';
+  document.getElementById('resultadoAcoes').innerHTML = '';
+}
+
+function renderResultadoPedido(pedido, dicaUrl){
+  const numero = `#${String(pedido.id).slice(0, 8).toUpperCase()}`;
+
+  if (pedido.status_pagamento === 'aprovado'){
+    mostrarResultado({
+      tipo: 'verde', icone: '✓', titulo: 'Pagamento aprovado!',
+      texto: 'Seu pedido já está confirmado — nossa equipe começa a preparar sua peça com todo cuidado. Você também recebe a confirmação por e-mail.',
+      numero
+    });
+  } else if (pedido.status_pagamento === 'recusado'){
+    mostrarResultado({
+      tipo: 'vermelho', icone: '✕', titulo: 'Pagamento não aprovado',
+      texto: 'O Mercado Pago recusou esse pagamento. Nenhum valor foi cobrado — você pode tentar de novo com outro cartão ou forma de pagamento.',
+      numero,
+      acaoPrincipal: { texto: 'Tentar pagar de novo', onClick: () => tentarPagarNovamente(pedido.id) }
+    });
+  } else {
+    // Pendente / em análise — normal em Pix recém-gerado, boleto, ou cartão em análise
+    mostrarResultado({
+      tipo: 'amarelo', icone: '⏳', titulo: 'Pagamento em análise',
+      texto: dicaUrl === 'pending'
+        ? 'Recebemos seu pedido e estamos aguardando a confirmação do pagamento (comum em boleto ou Pix). Assim que confirmar, te avisamos por e-mail.'
+        : 'Ainda estamos confirmando seu pagamento com o Mercado Pago. Pode levar alguns minutos — atualize esta página daqui a pouco pra ver a confirmação.',
+      numero,
+      acaoPrincipal: { texto: 'Atualizar status', onClick: () => location.reload() }
+    });
+  }
+}
+
+function mostrarResultado({ tipo, icone, titulo, texto, numero, acaoPrincipal }){
+  const iconeAtual = document.getElementById('resultadoIcone');
+  iconeAtual.className = `checkout-confirmado-icone icone-${tipo}`;
+  iconeAtual.textContent = icone;
+
+  document.getElementById('resultadoTitulo').textContent = titulo;
+  document.getElementById('resultadoTexto').textContent = texto;
+
+  const linhaNumero = document.getElementById('resultadoNumeroLinha');
+  if (numero){
+    linhaNumero.style.display = 'block';
+    document.getElementById('resultadoNumero').textContent = numero;
+  } else {
+    linhaNumero.style.display = 'none';
+  }
+
+  const acoes = document.getElementById('resultadoAcoes');
+  acoes.innerHTML = '';
+  if (acaoPrincipal){
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-primary';
+    btn.textContent = acaoPrincipal.texto;
+    btn.style.marginRight = '10px';
+    btn.addEventListener('click', acaoPrincipal.onClick);
+    acoes.appendChild(btn);
+  }
+  if (tipo === 'vermelho' && numero){
+    const msgWhats = encodeURIComponent(`Oi! Preciso de ajuda com o pagamento do meu pedido ${numero} na Pavan & Co.`);
+    const linkAjuda = document.createElement('a');
+    linkAjuda.href = `https://wa.me/${WHATSAPP_NUMERO}?text=${msgWhats}`;
+    linkAjuda.target = '_blank';
+    linkAjuda.rel = 'noopener';
+    linkAjuda.className = 'btn btn-outline';
+    linkAjuda.textContent = 'Preciso de ajuda';
+    acoes.appendChild(linkAjuda);
+  }
+  const linkVoltar = document.createElement('a');
+  linkVoltar.href = 'index.html';
+  linkVoltar.style.cssText = 'display:inline-block;margin-top:16px;font-size:0.85rem;text-decoration:underline;color:var(--texto-suave);';
+  linkVoltar.textContent = 'Voltar pra loja';
+  acoes.appendChild(document.createElement('br'));
+  acoes.appendChild(linkVoltar);
+}
+
+async function tentarPagarNovamente(pedidoId){
+  mostrarCarregandoResultado();
+  document.getElementById('resultadoTitulo').textContent = 'Preparando novo link de pagamento...';
+  try {
+    const { data, error } = await sb.functions.invoke('criar-pagamento-mp', { body: { pedido_id: pedidoId } });
+    if (error || data?.error) throw new Error(await extrairErroFuncao(error, data));
+    window.location.href = data.init_point;
+  } catch (err){
+    mostrarResultado({
+      tipo: 'vermelho', icone: '!', titulo: 'Não foi possível gerar um novo pagamento',
+      texto: err.message || 'Tenta de novo em instantes, ou fala com a gente pelo WhatsApp.',
+      numero: `#${String(pedidoId).slice(0, 8).toUpperCase()}`,
+      acaoPrincipal: { texto: 'Tentar de novo', onClick: () => tentarPagarNovamente(pedidoId) }
+    });
+  }
+}
+
+// ---------- Fluxo normal: formulário de checkout ----------
+function iniciarFormularioCheckout(itens){
+  itensCarrinho = itens;
   renderResumo();
   preencherComPerfilSalvo();
 }
@@ -340,6 +516,7 @@ document.getElementById('formCheckout').addEventListener('submit', async (e) => 
   const botao = document.getElementById('btnConfirmarPedido');
   botao.disabled = true;
   botao.textContent = 'Enviando...';
+  const restaurarBotao = () => { botao.disabled = false; botao.textContent = 'Ir para o pagamento'; };
 
   const subtotal = subtotalCarrinho();
   const gratis = subtotal >= 399;
@@ -369,21 +546,22 @@ document.getElementById('formCheckout').addEventListener('submit', async (e) => 
     const { data, error } = await sb.rpc('criar_pedido', { payload: pedido }).single();
     if (error) throw new Error(error.message);
 
+    // Carrinho já foi convertido em pedido (os itens ficam salvos no
+    // próprio pedido) — some com ele mesmo que o pagamento ainda não
+    // tenha sido confirmado, igual qualquer loja de verdade faz.
     localStorage.removeItem(CARRINHO_STORAGE_KEY);
     atualizarContadorCarrinho();
 
-    const numero = data.id.slice(0, 8).toUpperCase();
-    document.getElementById('confirmadoNumero').textContent = `#${numero}`;
-    const msgWhats = encodeURIComponent(`Oi! Acabei de fazer o pedido #${numero} na Pavan & Co. (${pedido.nome_cliente}) e quero combinar o pagamento.`);
-    document.getElementById('confirmadoWhatsapp').href = `https://wa.me/${WHATSAPP_NUMERO}?text=${msgWhats}`;
+    botao.textContent = 'Abrindo pagamento...';
+    const { data: pagamento, error: erroPagamento } = await sb.functions.invoke('criar-pagamento-mp', { body: { pedido_id: data.id } });
+    if (erroPagamento || pagamento?.error){
+      throw new Error(await extrairErroFuncao(erroPagamento, pagamento));
+    }
 
-    document.getElementById('checkoutConteudo').style.display = 'none';
-    document.getElementById('checkoutConfirmado').style.display = 'block';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.location.href = pagamento.init_point;
   } catch (err){
-    alert('Não foi possível registrar o pedido: ' + err.message);
-    botao.disabled = false;
-    botao.textContent = 'Confirmar pedido';
+    alert('Não foi possível prosseguir pro pagamento: ' + err.message + '\n\nSeu pedido pode já ter sido registrado — se precisar, fale com a gente pelo WhatsApp.');
+    restaurarBotao();
   }
 });
 </script>

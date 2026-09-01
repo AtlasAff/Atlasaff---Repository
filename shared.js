@@ -1127,16 +1127,39 @@ async function renderProdutoPage(){
   galeriaThumbs.innerHTML = p.fotos.map((foto, i) => `
     <button type="button" class="galeria-thumb ${i === 0 ? 'active' : ''}" style="background-image:url('${foto}')" data-foto="${foto}" aria-label="Ver foto ${i + 1}"></button>
   `).join('');
+  let fotoIndexAtual = 0;
   function trocarFotoPrincipal(thumb){
     galeriaPrincipal.style.backgroundImage = `url('${thumb.getAttribute('data-foto')}')`;
     galeriaThumbs.querySelectorAll('.galeria-thumb').forEach(t => t.classList.remove('active'));
     thumb.classList.add('active');
+    fotoIndexAtual = [...galeriaThumbs.children].indexOf(thumb);
   }
   galeriaThumbs.querySelectorAll('.galeria-thumb').forEach(thumb => {
     thumb.addEventListener('click', () => trocarFotoPrincipal(thumb));
     // No desktop, só passar o mouse já troca a foto (sem precisar clicar)
     thumb.addEventListener('mouseenter', () => trocarFotoPrincipal(thumb));
   });
+
+  // Arrastar o dedo pro lado na foto principal troca de imagem (celular) —
+  // só conta o gesto se for majoritariamente horizontal, senão o usuário
+  // nem consegue rolar a página normalmente com o dedo em cima da foto.
+  if (p.fotos.length > 1){
+    let toqueInicioX = 0, toqueInicioY = 0;
+    galeriaPrincipal.addEventListener('touchstart', (e) => {
+      toqueInicioX = e.touches[0].clientX;
+      toqueInicioY = e.touches[0].clientY;
+    }, { passive: true });
+    galeriaPrincipal.addEventListener('touchend', (e) => {
+      const deltaX = e.changedTouches[0].clientX - toqueInicioX;
+      const deltaY = e.changedTouches[0].clientY - toqueInicioY;
+      if (Math.abs(deltaX) < 40 || Math.abs(deltaX) < Math.abs(deltaY)) return;
+      const thumbs = [...galeriaThumbs.querySelectorAll('.galeria-thumb')];
+      if (!thumbs.length) return;
+      const novoIndice = ((fotoIndexAtual + (deltaX < 0 ? 1 : -1)) % thumbs.length + thumbs.length) % thumbs.length;
+      trocarFotoPrincipal(thumbs[novoIndice]);
+      thumbs[novoIndice].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }, { passive: true });
+  }
 
   // Zoom ao passar o mouse na foto principal (só em telas com mouse de verdade)
   if (window.matchMedia('(hover: hover)').matches){

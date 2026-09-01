@@ -5,4 +5,4 @@ Disallow: /checkout.html
 Disallow: /conta.html
 Disallow: /carrinho.html
 
-Sitemap: /sitemap.xml
+Sitemap: https://pavanoficial.com.br/sitemap.xml

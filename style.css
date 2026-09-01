@@ -14,6 +14,13 @@
     --branco: #FFFFFF;
     --borda: rgba(107,15,26,0.14);
     --sombra: 0 8px 30px rgba(43,33,31,0.08);
+    /* Cores de status (pedido/pagamento) — usadas em conta.html */
+    --verde: #2C6E37;
+    --verde-bg: #E8F3E9;
+    --amarelo: #8A6116;
+    --amarelo-bg: #FBF1DE;
+    --vermelho: #A8281D;
+    --vermelho-bg: #FBEAE9;
     --radius: 2px;
     --serif: 'Playfair Display', Georgia, serif;
     --sans: 'Lato', -apple-system, sans-serif;
@@ -826,6 +833,8 @@
 }
 .faq-item.open .faq-resposta{ max-height: 260px; padding-bottom: 18px; }
 .produto-info .faq-item.open .faq-resposta{ max-height: 500px; }
+#contaPedidos .faq-item.open .faq-resposta{ max-height: 700px; padding-top: 4px; }
+#contaPedidos .faq-pergunta{ flex-wrap: wrap; gap: 10px; }
 
 /* ============================================================
    CONTA (login / cadastro)
@@ -909,7 +918,7 @@
 .conta-pedido-item > *{ min-width: 0; }
 .conta-pedido-data{ display:block; color: var(--texto-suave); font-size:0.76rem; margin-top:2px; }
 .conta-pedido-total{ font-family: var(--serif); color: var(--bordo); font-variant-numeric: lining-nums tabular-nums; }
-.status-pedido{
+.status-pedido, .badge-status{
   display:inline-block;
   padding: 3px 10px;
   border-radius: 20px;
@@ -918,7 +927,11 @@
   text-transform:capitalize;
   background: var(--creme-escuro);
   color: var(--bordo);
+  white-space: nowrap;
 }
+.badge-status--verde{ background: var(--verde-bg); color: var(--verde); }
+.badge-status--amarelo{ background: var(--amarelo-bg); color: var(--amarelo); }
+.badge-status--vermelho{ background: var(--vermelho-bg); color: var(--vermelho); }
 
 /* ============================================================
    CARRINHO
@@ -1117,6 +1130,33 @@
   font-size:1.8rem;
   margin: 0 auto 20px;
 }
+.checkout-confirmado-icone.icone-verde{ background: var(--verde); }
+.checkout-confirmado-icone.icone-vermelho{ background: var(--vermelho); }
+.checkout-confirmado-icone.icone-amarelo{ background: var(--amarelo); }
+
+/* ---------------- PAGAMENTO (checkout, Mercado Pago) ---------------- */
+.pagamento-mp-box{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  background: var(--creme-escuro);
+  border: 1px solid var(--borda);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  font-size: 0.86rem;
+  color: var(--texto-suave);
+}
+.pagamento-mp-box svg{ width:28px; height:28px; color: var(--bordo); flex-shrink:0; }
+.pagamento-mp-box strong{ color: var(--texto); display:block; margin-bottom:2px; }
+.pagamento-spinner{
+  width:34px; height:34px;
+  border-radius:50%;
+  border: 3px solid var(--creme-escuro);
+  border-top-color: var(--bordo);
+  margin: 0 auto 18px;
+  animation: girarSpinner .8s linear infinite;
+}
+@keyframes girarSpinner{ to{ transform: rotate(360deg); } }
 
 /* ============================================================
    CONTATO
