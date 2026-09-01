@@ -32,6 +32,25 @@
     width: 100%;
     max-width: 100vw;
     position: relative;
+    overflow-wrap: break-word;
+  }
+
+  /* ------------------------------------------------------------
+     REDE DE SEGURANÇA MOBILE — evita que um texto longo sem espaço
+     (nome de produto, banho personalizado digitado no admin, etc.)
+     force uma coluna do grid/flex a "estourar" e empurre a página
+     inteira pro lado no celular. Sem isso, cada item de grid/flex
+     tem largura mínima automática baseada no próprio conteúdo, o
+     que pode ultrapassar a tela mesmo com overflow-x:hidden no body.
+     ------------------------------------------------------------ */
+  .produto-grid > *,
+  .checkout-grid > *,
+  .contato-grid > *,
+  .footer-grid > *,
+  .cat-grid > *,
+  .prod-grid > *,
+  .vitrine-grid > *{
+    min-width: 0;
   }
 
   img{ max-width:100%; display:block; }
@@ -882,7 +901,9 @@
   padding: 14px 0;
   border-bottom: 1px solid var(--borda);
   font-size: 0.85rem;
+  flex-wrap: wrap;
 }
+.conta-pedido-item > *{ min-width: 0; }
 .conta-pedido-data{ display:block; color: var(--texto-suave); font-size:0.76rem; margin-top:2px; }
 .conta-pedido-total{ font-family: var(--serif); color: var(--bordo); font-variant-numeric: lining-nums tabular-nums; }
 .status-pedido{
@@ -1210,8 +1231,9 @@
 }
 
 .tamanho-wrap{ margin: 18px 0; }
-.tamanho-topo{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom: 10px; }
-.tamanho-wrap h4{ font-size: 0.86rem; font-weight:600; margin-bottom: 10px; }
+.tamanho-topo{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom: 10px; flex-wrap: wrap; }
+.tamanho-topo > *{ min-width: 0; }
+.tamanho-wrap h4{ font-size: 0.86rem; font-weight:600; margin-bottom: 10px; overflow-wrap: anywhere; }
 .link-guia-tamanho{ font-size: 0.78rem; color: var(--bordo); text-decoration:underline; white-space:nowrap; }
 .tamanho-pills{ display:flex; flex-wrap:wrap; gap: 8px; }
 .tamanho-pill{
@@ -1336,7 +1358,9 @@
   padding: 10px 0;
   border-bottom: 1px solid var(--borda);
   font-size: 0.86rem;
+  flex-wrap: wrap;
 }
+#freteResultado .frete-opcao > div{ min-width: 0; }
 #freteResultado .frete-opcao:last-child{ border-bottom:none; }
 #freteResultado .frete-opcao .transportadora{ font-weight:600; }
 #freteResultado .frete-opcao .prazo{ color: var(--texto-suave); font-size:0.78rem; display:block; }
@@ -1352,10 +1376,25 @@
   border-radius: var(--radius);
 }
 
-.tabela-detalhes{ width:100%; border-collapse: collapse; }
-.tabela-detalhes td{ padding: 9px 0; font-size: 0.88rem; border-bottom: 1px solid var(--borda); }
+.tabela-detalhes{ width:100%; border-collapse: collapse; table-layout: fixed; }
+.tabela-detalhes td{ padding: 9px 0; font-size: 0.88rem; border-bottom: 1px solid var(--borda); overflow-wrap: anywhere; }
 .tabela-detalhes td:first-child{ color: var(--texto-suave); width: 45%; }
 .tabela-detalhes td:last-child{ font-weight:600; }
+
+/* No celular, nome/preço/compra vêm ANTES de "Detalhes técnicos" — no
+   desktop o HTML não muda (Detalhes técnicos continua dentro da coluna
+   da imagem, junto com a galeria); aqui só reordenamos visualmente pro
+   celular sem duplicar nada: a .produto-galeria "desaparece" como caixa
+   (display:contents) e seus filhos entram direto no fluxo com a ordem
+   que queremos. */
+@media (max-width: 899px){
+  .produto-grid{ display:flex; flex-direction:column; }
+  .produto-galeria{ display:contents; }
+  #galeriaPrincipal{ order:1; }
+  .galeria-thumbs{ order:2; }
+  .produto-info{ order:3; }
+  .produto-galeria > .faq-item{ order:4; margin-top:24px; }
+}
 
 @media (min-width: 900px){
   .produto-grid{ grid-template-columns: 1fr 1fr; gap: 60px; padding: 50px 0 30px; }
@@ -1482,8 +1521,8 @@ body.pronto{ opacity: 1; transition: opacity .45s ease; }
   padding: 18px 0;
   border-bottom: 1px solid var(--borda);
 }
-.avaliacao-topo{ display:flex; align-items:center; gap:10px; margin-bottom:6px; }
-.avaliacao-nome{ font-size:0.85rem; font-weight:600; color: var(--texto-suave); }
+.avaliacao-topo{ display:flex; align-items:center; gap:10px; margin-bottom:6px; flex-wrap:wrap; }
+.avaliacao-nome{ font-size:0.85rem; font-weight:600; color: var(--texto-suave); min-width:0; overflow-wrap:anywhere; }
 .avaliacao-item p{ font-size:0.92rem; }
 
 /* Elementos que animam já na carga da página (ex: hero, acima da dobra) */
