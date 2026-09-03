@@ -2098,3 +2098,13 @@ body.pronto .entra-com-pagina{ opacity: 1; transform: translateY(0); }
 @media (max-width: 480px){
   .popup-cupom{ left: 14px; right: 14px; max-width: none; bottom: 14px; }
 }
+
+/* Popup pessoal de "preço de fábrica" — mesmo visual do de boas-vindas,
+   só que empilhado mais acima (caso os dois apareçam juntos, não se
+   sobrepõem) e sem o card de código pra copiar (o desconto já vem
+   aplicado sozinho, não precisa digitar nada). */
+.popup-cupom--fabrica{ bottom: 132px; }
+.popup-cupom--fabrica .popup-cupom-eyebrow{ color: var(--bordo); font-weight: 700; }
+@media (max-width: 480px){
+  .popup-cupom--fabrica{ bottom: 124px; }
+}

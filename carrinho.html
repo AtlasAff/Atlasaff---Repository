@@ -81,6 +81,7 @@
           <li><a href="termos.html">Termos de uso</a></li>
           <li><a href="privacidade.html">Política de privacidade</a></li>
           <li><a href="contato.html">Fale conosco</a></li>
+          <li><a href="rastreio.html">Rastrear pedido</a></li>
         </ul>
       </div>
       <div class="footer-col">
@@ -255,7 +256,7 @@ async function aplicarCupomCarrinho(codigo, silencioso){
   const itens = obterCarrinho();
   const subtotal = itens.reduce((s, i) => s + i.preco * i.qtd, 0);
   resultadoEl.innerHTML = `<p class="frete-msg">Verificando cupom...</p>`;
-  const resp = await validarCupom(codigo, subtotal);
+  const resp = await validarCupom(codigo, subtotal, itens);
   if (!resp.valido){
     cupomAtualCarrinho = null;
     removerCupomAplicado();

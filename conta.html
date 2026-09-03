@@ -316,6 +316,7 @@
           <li><a href="termos.html">Termos de uso</a></li>
           <li><a href="privacidade.html">Política de privacidade</a></li>
           <li><a href="contato.html">Fale conosco</a></li>
+          <li><a href="rastreio.html">Rastrear pedido</a></li>
         </ul>
       </div>
       <div class="footer-col">
@@ -561,7 +562,11 @@ async function mostrarConta(){
 
   const pedidosWrap = document.getElementById('contaPedidos');
   pedidosWrap.innerHTML = `<p class="suave" style="color:var(--texto-suave);font-size:0.85rem;">Carregando pedidos...</p>`;
-  const { data: pedidos, error } = await sb.from('pedidos').select('*').order('criado_em', { ascending: false });
+  // Filtra por user_id explicitamente (não só confiar na regra do banco):
+  // pra conta admin, a regra libera TODOS os pedidos da loja (é assim que o
+  // admin.html precisa); aqui em "Minha conta" isso mostraria as compras de
+  // qualquer cliente junto com as da própria pessoa — sempre só as dela.
+  const { data: pedidos, error } = await sb.from('pedidos').select('*').eq('user_id', sessao.user.id).order('criado_em', { ascending: false });
 
   renderFavoritos();
 
@@ -595,77 +600,13 @@ async function mostrarConta(){
   pedidosWrap.innerHTML = pedidos.map(p => pedidoParaHtml(p, solicitacoesPorPedido[p.id] || [], avaliadosSet)).join('');
 }
 
-const STATUS_PEDIDO_LABEL = { novo: 'Novo', confirmado: 'Confirmado', enviado: 'Enviado', entregue: 'Entregue', cancelado: 'Cancelado' };
-const STATUS_PEDIDO_COR = { novo: 'amarelo', confirmado: 'verde', enviado: 'verde', entregue: 'verde', cancelado: 'vermelho' };
-const STATUS_PAGAMENTO_LABEL = { pendente: 'Aguardando pagamento', em_analise: 'Pagamento em análise', aprovado: 'Pago', recusado: 'Pagamento recusado', estornado: 'Estornado' };
-const STATUS_PAGAMENTO_COR = { pendente: 'amarelo', em_analise: 'amarelo', aprovado: 'verde', recusado: 'vermelho', estornado: 'vermelho' };
-const FORMA_PAGAMENTO_LABEL = { pix: 'Pix', credit_card: 'Cartão de crédito', debit_card: 'Cartão de débito', ticket: 'Boleto', account_money: 'Saldo Mercado Pago' };
+// STATUS_PEDIDO_LABEL, STATUS_PEDIDO_COR, STATUS_PAGAMENTO_LABEL,
+// STATUS_PAGAMENTO_COR, FORMA_PAGAMENTO_LABEL, linkRastreio,
+// timelinePedidoHtml, previsaoEntregaHtml e resumoItensPedido agora vêm
+// de shared.js (reaproveitados também por rastreio.html).
 const SOLICITACAO_TIPO_LABEL = { troca: 'Troca', devolucao: 'Devolução', problema: 'Problema relatado' };
 const SOLICITACAO_STATUS_LABEL = { aberta: 'Aberta', em_analise: 'Em análise', aprovada: 'Aprovada', recusada: 'Recusada', concluida: 'Concluída' };
 const SOLICITACAO_STATUS_COR = { aberta: 'amarelo', em_analise: 'amarelo', aprovada: 'verde', recusada: 'vermelho', concluida: 'verde' };
-
-// Link de rastreio — Correios tem URL pública de consulta; outras
-// transportadoras (Melhor Envio parceiras) não têm um padrão único, então
-// cai numa busca que já leva a pessoa a rastrear pelo código.
-function linkRastreio(codigo, transportadora){
-  const t = (transportadora || '').toLowerCase();
-  if (t.includes('correios')) return `https://rastreamento.correios.com.br/app/index.php?objetos=${codigo}`;
-  return `https://www.google.com/search?q=rastrear+encomenda+${encodeURIComponent(codigo)}`;
-}
-
-/* ============================================================
-   LINHA DO TEMPO DO PEDIDO (pedido feito → confirmado → enviado → entregue)
-   ============================================================ */
-const ETAPAS_PEDIDO = [
-  { chave: 'novo', rotulo: 'Pedido feito', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8h12l-1 12H7L6 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>' },
-  { chave: 'confirmado', rotulo: 'Confirmado', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M8 12.3l2.6 2.6L16 9.5"/></svg>' },
-  { chave: 'enviado', rotulo: 'Enviado', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2.5 7h11v9h-11z"/><path d="M13.5 11h4l3 3v2h-7z"/><circle cx="6.5" cy="18" r="1.6"/><circle cx="17.5" cy="18" r="1.6"/></svg>' },
-  { chave: 'entregue', rotulo: 'Entregue', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9h12v-9"/><path d="M10 19v-5h4v5"/></svg>' }
-];
-const ICONE_CANCELADO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
-
-function timelinePedidoHtml(status){
-  if (status === 'cancelado'){
-    return `<div class="pedido-cancelado-aviso">${ICONE_CANCELADO}<span>Este pedido foi cancelado.</span></div>`;
-  }
-  const ordem = ETAPAS_PEDIDO.map(e => e.chave);
-  const indiceAtual = Math.max(ordem.indexOf(status), 0);
-  const progresso = (indiceAtual / (ordem.length - 1)) * 100;
-
-  return `
-    <div class="pedido-timeline" style="--progresso:${progresso}%;">
-      <div class="pedido-timeline-linha"><div class="pedido-timeline-linha-fill"></div></div>
-      ${ETAPAS_PEDIDO.map((etapa, i) => `
-        <div class="pedido-etapa ${i < indiceAtual ? 'concluida' : i === indiceAtual ? 'atual' : ''}">
-          <div class="pedido-etapa-icone">${etapa.icone}</div>
-          <span class="pedido-etapa-rotulo">${etapa.rotulo}</span>
-        </div>
-      `).join('')}
-    </div>
-  `;
-}
-
-// Previsão simples: data do pedido + prazo (confecção + entrega) escolhido
-// no checkout. Só faz sentido mostrar enquanto o pedido ainda não chegou.
-function previsaoEntregaHtml(p){
-  if (!p.frete_prazo_dias || ['entregue', 'cancelado'].includes(p.status)) return '';
-  const previsao = new Date(p.criado_em);
-  previsao.setDate(previsao.getDate() + Number(p.frete_prazo_dias));
-  return `<span class="pedido-meta-item">📅 Previsão de entrega: <strong>${previsao.toLocaleDateString('pt-BR')}</strong></span>`;
-}
-
-// Card de pedido é "produto em primeiro lugar": mostra a foto e o nome do
-// que a cliente comprou, não o código do pedido (isso vira um detalhe
-// pequeno no canto — ninguém decora "#1E37DC51", mas lembra "o anel que eu comprei").
-function resumoItensPedido(itens){
-  const lista = itens || [];
-  const primeiro = lista[0];
-  if (!primeiro) return { foto: '', titulo: 'Pedido', subtitulo: '' };
-  const extras = lista.length - 1;
-  const titulo = primeiro.nome + (extras > 0 ? ` + ${extras} ${extras === 1 ? 'item' : 'itens'}` : '');
-  const subtitulo = [primeiro.quilate, primeiro.banho, primeiro.tamanho ? `aro ${primeiro.tamanho}` : null].filter(Boolean).join(' · ');
-  return { foto: primeiro.imagem || '', titulo, subtitulo };
-}
 
 function pedidoParaHtml(p, solicitacoes, avaliadosSet){
   const numero = p.id.slice(0, 8).toUpperCase();
@@ -735,9 +676,9 @@ function pedidoParaHtml(p, solicitacoes, avaliadosSet){
         ${solicitacoes.map(s => `
           <div class="conta-solicitacao-linha">
             <span class="badge-status badge-status--${SOLICITACAO_STATUS_COR[s.status]}">${SOLICITACAO_STATUS_LABEL[s.status]}</span>
-            <span>${SOLICITACAO_TIPO_LABEL[s.tipo]}: ${s.motivo}</span>
+            <span>${SOLICITACAO_TIPO_LABEL[s.tipo]}: ${escaparHtml(s.motivo)}</span>
           </div>
-          ${s.resposta_admin ? `<div class="conta-solicitacao-linha" style="padding-left:2px;"><em>Resposta: ${s.resposta_admin}</em></div>` : ''}
+          ${s.resposta_admin ? `<div class="conta-solicitacao-linha" style="padding-left:2px;"><em>Resposta: ${escaparHtml(s.resposta_admin)}</em></div>` : ''}
         `).join('')}
 
         ${podeAvaliar ? `
@@ -757,6 +698,7 @@ function pedidoParaHtml(p, solicitacoes, avaliadosSet){
         </div>` : ''}
 
         <div class="conta-pedido-acoes">
+          ${p.nota_fiscal_path ? `<button type="button" data-acao="baixar-nf" data-pedido-id="${p.id}">📄 Baixar nota fiscal</button>` : ''}
           <button type="button" data-acao="repetir" data-pedido-id="${p.id}">Comprar novamente</button>
           <button type="button" data-acao="problema" data-pedido-id="${p.id}">Tenho um problema com esse pedido</button>
           ${podeCancelar ? `<button type="button" class="acao-cancelar" data-acao="cancelar" data-pedido-id="${p.id}">Cancelar pedido</button>` : ''}
@@ -777,6 +719,21 @@ document.getElementById('contaPedidos').addEventListener('click', async (e) => {
   if (!btn) return;
   const acao = btn.getAttribute('data-acao');
   const pedidoId = btn.getAttribute('data-pedido-id');
+
+  if (acao === 'baixar-nf'){
+    btn.disabled = true;
+    const textoOriginal = btn.textContent;
+    btn.textContent = 'Abrindo...';
+    const { data: pedidoNf } = await sb.from('pedidos').select('nota_fiscal_path').eq('id', pedidoId).maybeSingle();
+    if (pedidoNf?.nota_fiscal_path){
+      const { data: assinada, error } = await sb.storage.from('notas-fiscais').createSignedUrl(pedidoNf.nota_fiscal_path, 60);
+      if (assinada?.signedUrl) window.open(assinada.signedUrl, '_blank');
+      else mostrarToast(error?.message || 'Não foi possível abrir a nota fiscal agora.');
+    }
+    btn.disabled = false;
+    btn.textContent = textoOriginal;
+    return;
+  }
 
   if (acao === 'cancelar'){
     if (!confirm('Cancelar esse pedido? Essa ação não pode ser desfeita.')) return;

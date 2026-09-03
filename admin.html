@@ -779,6 +779,14 @@
       <button type="button" class="btn-admin btn-admin-primary" id="btnSalvarRastreio" style="margin-top:6px;">Salvar rastreio</button>
     </div>
 
+    <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--cinza-borda);">
+      <h3 style="font-size:0.82rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--texto-suave);margin-bottom:10px;">Nota fiscal</h3>
+      <p id="detalhesNotaFiscalStatus" style="font-size:0.82rem;color:var(--texto-suave);margin-bottom:10px;">Nenhuma nota fiscal anexada ainda.</p>
+      <input type="file" id="detalhesNotaFiscalArquivo" accept="application/pdf" style="margin-bottom:10px;">
+      <button type="button" class="btn-admin btn-admin-primary" id="btnEnviarNotaFiscal">Anexar e enviar por e-mail</button>
+      <p style="font-size:0.76rem;color:var(--texto-suave);margin-top:6px;">Só PDF. Assim que anexar, o cliente já recebe um e-mail com o link pra baixar.</p>
+    </div>
+
     <div class="modal-footer">
       <button type="button" class="btn-admin btn-admin-outline" id="btnFecharDetalhesPedido">Fechar</button>
     </div>
@@ -808,15 +816,19 @@
           <select id="cupomTipo">
             <option value="percentual">Percentual (%)</option>
             <option value="fixo">Valor fixo (R$)</option>
+            <option value="preco_fabrica">Preço de fábrica</option>
           </select>
         </div>
       </div>
+      <p id="cupomFabricaAviso" style="display:none;font-size:0.78rem;color:var(--texto-suave);background:var(--creme);padding:10px 12px;border-radius:4px;margin-bottom:16px;">
+        🏭 Esse tipo aplica, em <strong>qualquer produto</strong>, o preço de custo real da peça (sem margem de lucro) — calculado automaticamente por produto, não usa o campo "Valor" nem "Compra mínima". Não aparece no popup público de boas-vindas: é pra quem já tem o código (ex: família), e some sozinho.
+      </p>
       <div class="form-linha cols-3">
-        <div class="form-campo">
+        <div class="form-campo" id="cupomValorCampo">
           <label for="cupomValor">Valor *</label>
           <input type="number" id="cupomValor" step="0.01" required placeholder="Ex: 10">
         </div>
-        <div class="form-campo">
+        <div class="form-campo" id="cupomMinimoCampo">
           <label for="cupomMinimo">Compra mínima (R$)</label>
           <input type="number" id="cupomMinimo" step="0.01" placeholder="0">
         </div>
@@ -829,7 +841,7 @@
         <label for="cupomValidade">Validade (opcional)</label>
         <input type="date" id="cupomValidade">
       </div>
-      <label class="checkbox-linha">
+      <label class="checkbox-linha" id="cupomExibirPopupLinha">
         <input type="checkbox" id="cupomExibirPopup">
         Mostrar num popup de boas-vindas pra quem visita o site <span style="font-weight:400;color:var(--texto-suave);">(só 1 cupom por vez — marcar este desmarca outro que já esteja em destaque)</span>
       </label>
@@ -1693,7 +1705,7 @@ async function renderTabelaPedidos(){
       <tr>
         <td>#${numero}</td>
         <td>${dataFormatada}</td>
-        <td>${p.nome_cliente}</td>
+        <td>${escaparHtml(p.nome_cliente)}</td>
         <td>${qtdItens}</td>
         <td>${formatarPreco(p.total)}</td>
         <td>
@@ -1735,6 +1747,10 @@ function abrirDetalhesPedido(pedido){
   document.getElementById('detalhesPedidoNumero').textContent = `#${numero}`;
   document.getElementById('detalhesTransportadora').value = pedido.transportadora_rastreio || '';
   document.getElementById('detalhesCodigoRastreio').value = pedido.codigo_rastreio || '';
+  document.getElementById('detalhesNotaFiscalStatus').textContent = pedido.nota_fiscal_path
+    ? '✓ Nota fiscal anexada — subir outro PDF substitui a atual e reenvia o e-mail.'
+    : 'Nenhuma nota fiscal anexada ainda.';
+  document.getElementById('detalhesNotaFiscalArquivo').value = '';
   document.getElementById('detalhesPedidoConteudo').innerHTML = `
     <div style="margin-bottom:14px;">
       <span class="status-pill cor-${STATUS_PAGAMENTO_COR[pedido.status_pagamento] || 'amarelo'}">${STATUS_PAGAMENTO_LABEL[pedido.status_pagamento] || pedido.status_pagamento}</span>
@@ -1742,12 +1758,12 @@ function abrirDetalhesPedido(pedido){
       ${pedido.mp_payment_id ? `<span style="font-size:0.76rem;color:var(--texto-suave);display:block;margin-top:4px;">Pagamento Mercado Pago #${pedido.mp_payment_id}</span>` : ''}
     </div>
     <div style="font-size:0.88rem;line-height:1.7;margin-bottom:18px;">
-      <strong>${pedido.nome_cliente}</strong><br>
-      ${pedido.email_cliente} · ${pedido.telefone_cliente}<br><br>
-      ${pedido.endereco}, ${pedido.numero}${pedido.complemento ? ' - ' + pedido.complemento : ''}<br>
-      ${pedido.bairro} — ${pedido.cidade}/${pedido.estado}<br>
-      CEP: ${pedido.cep}
-      ${pedido.observacoes ? `<br><br><em>Obs: ${pedido.observacoes}</em>` : ''}
+      <strong>${escaparHtml(pedido.nome_cliente)}</strong><br>
+      ${escaparHtml(pedido.email_cliente)} · ${escaparHtml(pedido.telefone_cliente)}<br><br>
+      ${escaparHtml(pedido.endereco)}, ${escaparHtml(pedido.numero)}${pedido.complemento ? ' - ' + escaparHtml(pedido.complemento) : ''}<br>
+      ${escaparHtml(pedido.bairro)} — ${escaparHtml(pedido.cidade)}/${escaparHtml(pedido.estado)}<br>
+      CEP: ${escaparHtml(pedido.cep)}
+      ${pedido.observacoes ? `<br><br><em>Obs: ${escaparHtml(pedido.observacoes)}</em>` : ''}
     </div>
     <div style="border-top:1px solid var(--cinza-borda);padding-top:14px;">
       ${(pedido.itens || []).map(item => `
@@ -1789,17 +1805,70 @@ document.getElementById('btnSalvarRastreio').addEventListener('click', async () 
   const transportadora = document.getElementById('detalhesTransportadora').value.trim() || null;
   const codigo = document.getElementById('detalhesCodigoRastreio').value.trim() || null;
 
-  const { error } = await sb.from('pedidos').update({
-    transportadora_rastreio: transportadora,
-    codigo_rastreio: codigo
-  }).eq('id', pedidoDetalhesAtual.id);
+  // Colocar um código de rastreio, na prática, é avisar que o pedido foi
+  // enviado — promove o status pra "enviado" sozinho (só quando ainda faz
+  // sentido: não mexe se o pedido já foi entregue ou cancelado, pra não
+  // "regredir" o status por engano numa edição posterior do rastreio).
+  const promoverParaEnviado = !!codigo && ['novo', 'confirmado'].includes(pedidoDetalhesAtual.status);
+  const atualizacao = { transportadora_rastreio: transportadora, codigo_rastreio: codigo };
+  if (promoverParaEnviado) atualizacao.status = 'enviado';
+
+  const { error } = await sb.from('pedidos').update(atualizacao).eq('id', pedidoDetalhesAtual.id);
 
   botao.disabled = false;
   botao.textContent = 'Salvar rastreio';
 
   if (error){ alert('Erro ao salvar rastreio: ' + error.message); return; }
   mostrarToastAdmin('Rastreio salvo ✓');
-  if (codigo) sb.functions.invoke('notificar-status-pedido', { body: { pedido_id: pedidoDetalhesAtual.id, novo_status: 'rastreio_atualizado' } }).catch(() => {});
+
+  if (promoverParaEnviado){
+    // E-mail de "pedido enviado" já inclui o código de rastreio sozinho
+    // (o template olha pedido.codigo_rastreio independente do status).
+    pedidoDetalhesAtual.status = 'enviado';
+    sb.functions.invoke('notificar-status-pedido', { body: { pedido_id: pedidoDetalhesAtual.id, novo_status: 'enviado' } }).catch(() => {});
+  } else if (codigo) {
+    // Só corrigindo/editando o rastreio de um pedido que já tinha outro
+    // status (ex: já entregue) — avisa sem fingir que "acabou de enviar".
+    sb.functions.invoke('notificar-status-pedido', { body: { pedido_id: pedidoDetalhesAtual.id, novo_status: 'rastreio_atualizado' } }).catch(() => {});
+  }
+  renderTabelaPedidos();
+});
+
+document.getElementById('btnEnviarNotaFiscal').addEventListener('click', async () => {
+  if (!pedidoDetalhesAtual) return;
+  const arquivo = document.getElementById('detalhesNotaFiscalArquivo').files[0];
+  if (!arquivo){ alert('Escolhe o PDF da nota fiscal primeiro.'); return; }
+  if (arquivo.type !== 'application/pdf'){ alert('Só é aceito arquivo PDF.'); return; }
+
+  const botao = document.getElementById('btnEnviarNotaFiscal');
+  botao.disabled = true;
+  botao.textContent = 'Enviando...';
+
+  // Mesmo caminho sempre (com upsert) — subir de novo substitui a nota
+  // fiscal anterior desse pedido, não acumula arquivo velho no storage.
+  const caminho = `${pedidoDetalhesAtual.id}/nota-fiscal.pdf`;
+  const { error: erroUpload } = await sb.storage.from('notas-fiscais').upload(caminho, arquivo, { upsert: true, contentType: 'application/pdf' });
+
+  if (erroUpload){
+    botao.disabled = false;
+    botao.textContent = 'Anexar e enviar por e-mail';
+    alert('Erro ao subir o PDF: ' + erroUpload.message);
+    return;
+  }
+
+  const { error: erroSalvar } = await sb.from('pedidos').update({ nota_fiscal_path: caminho }).eq('id', pedidoDetalhesAtual.id);
+
+  botao.disabled = false;
+  botao.textContent = 'Anexar e enviar por e-mail';
+
+  if (erroSalvar){ alert('PDF subiu, mas não salvou no pedido: ' + erroSalvar.message); return; }
+
+  pedidoDetalhesAtual.nota_fiscal_path = caminho;
+  document.getElementById('detalhesNotaFiscalStatus').textContent = '✓ Nota fiscal anexada — subir outro PDF substitui a atual e reenvia o e-mail.';
+  document.getElementById('detalhesNotaFiscalArquivo').value = '';
+  mostrarToastAdmin('Nota fiscal anexada ✓');
+
+  sb.functions.invoke('notificar-status-pedido', { body: { pedido_id: pedidoDetalhesAtual.id, novo_status: 'nota_fiscal_disponivel' } }).catch(() => {});
 });
 
 // Toast simples pro admin (o site público tem mostrarToast() no shared.js,
@@ -1841,13 +1910,13 @@ async function renderMensagensContato(){
   document.getElementById('listaMensagensContato').innerHTML = data.map(m => `
     <div class="mensagem-linha ${m.lida ? 'lida' : ''}">
       <div class="mensagem-cabecalho">
-        <span class="mensagem-remetente">${m.nome} <span style="font-weight:400;color:var(--texto-suave);">(${m.email})</span></span>
+        <span class="mensagem-remetente">${escaparHtml(m.nome)} <span style="font-weight:400;color:var(--texto-suave);">(${escaparHtml(m.email)})</span></span>
         <span class="mensagem-data">${new Date(m.criado_em).toLocaleString('pt-BR')}</span>
       </div>
-      <div class="mensagem-assunto">${m.assunto}</div>
-      <div class="mensagem-corpo">${m.mensagem}</div>
+      <div class="mensagem-assunto">${escaparHtml(m.assunto)}</div>
+      <div class="mensagem-corpo">${escaparHtml(m.mensagem)}</div>
       <div class="mensagem-acoes">
-        <a href="mailto:${m.email}?subject=Re: ${encodeURIComponent(m.assunto)}">Responder por e-mail</a>
+        <a href="mailto:${encodeURIComponent(m.email)}?subject=Re: ${encodeURIComponent(m.assunto)}">Responder por e-mail</a>
         ${!m.lida ? `<button type="button" data-acao="marcar-lida" data-id="${m.id}">Marcar como lida</button>` : ''}
         <button type="button" data-acao="excluir-mensagem" data-id="${m.id}">Excluir</button>
       </div>
@@ -1904,15 +1973,17 @@ document.getElementById('btnFecharMensagens').addEventListener('click', () => {
 /* ============================================================
    CUPONS DE DESCONTO
    ============================================================ */
+const TIPO_CUPOM_LABEL = { percentual: 'Percentual', fixo: 'Valor fixo', preco_fabrica: 'Preço de fábrica' };
+
 async function renderTabelaCupons(){
   const { data, error } = await sb.from('cupons').select('*').order('criado_em', { ascending: false });
   if (error){ console.error('Erro ao carregar cupons:', error); return; }
 
   document.getElementById('corpoTabelaCupons').innerHTML = data.map(c => `
     <tr>
-      <td><strong>${c.codigo}</strong>${c.exibir_popup ? ' <span class="status-pill status-destaque" title="Aparece no popup de boas-vindas do site">🎁 Popup</span>' : ''}</td>
-      <td>${c.tipo === 'percentual' ? c.valor + '%' : formatarPreco(c.valor)}</td>
-      <td>${c.valor_minimo > 0 ? formatarPreco(c.valor_minimo) : '—'}</td>
+      <td><strong>${c.codigo}</strong>${c.exibir_popup ? ' <span class="status-pill status-destaque" title="Aparece no popup de boas-vindas do site">🎁 Popup</span>' : ''}${c.tipo === 'preco_fabrica' ? ' <span class="status-pill status-destaque" title="Popup pessoal só pra quem tem o código salvo">🏭 Fábrica</span>' : ''}</td>
+      <td>${c.tipo === 'preco_fabrica' ? TIPO_CUPOM_LABEL[c.tipo] : (c.tipo === 'percentual' ? c.valor + '%' : formatarPreco(c.valor))}</td>
+      <td>${c.tipo === 'preco_fabrica' ? '—' : (c.valor_minimo > 0 ? formatarPreco(c.valor_minimo) : '—')}</td>
       <td>${c.uso_atual}${c.uso_maximo ? ' / ' + c.uso_maximo : ''}</td>
       <td><span class="status-pill ${c.ativo ? 'status-ativo' : 'status-rascunho'}">${c.ativo ? 'Ativo' : 'Inativo'}</span></td>
       <td>
@@ -1950,8 +2021,23 @@ async function renderTabelaCupons(){
   });
 }
 
+// Preço de fábrica não usa valor/mínimo (o desconto vem do custo real de
+// cada produto) nem o popup público (é um benefício pessoal, não uma
+// campanha pra todo mundo que visita o site) — esconde esses campos.
+function atualizarCamposCupomPorTipo(){
+  const ehFabrica = document.getElementById('cupomTipo').value === 'preco_fabrica';
+  document.getElementById('cupomFabricaAviso').style.display = ehFabrica ? 'block' : 'none';
+  document.getElementById('cupomValorCampo').style.display = ehFabrica ? 'none' : '';
+  document.getElementById('cupomMinimoCampo').style.display = ehFabrica ? 'none' : '';
+  document.getElementById('cupomValor').required = !ehFabrica;
+  document.getElementById('cupomExibirPopupLinha').style.display = ehFabrica ? 'none' : '';
+  if (ehFabrica) document.getElementById('cupomExibirPopup').checked = false;
+}
+document.getElementById('cupomTipo').addEventListener('change', atualizarCamposCupomPorTipo);
+
 function abrirModalCupons(){
   renderTabelaCupons();
+  atualizarCamposCupomPorTipo();
   document.getElementById('modalCupons').classList.add('show');
 }
 document.getElementById('btnFecharCupons').addEventListener('click', () => {
@@ -1963,7 +2049,11 @@ document.getElementById('formNovoCupom').addEventListener('submit', async (e) =>
   botao.disabled = true;
   botao.textContent = 'Criando...';
 
-  const marcarComoPopup = document.getElementById('cupomExibirPopup').checked;
+  const tipo = document.getElementById('cupomTipo').value;
+  const ehFabrica = tipo === 'preco_fabrica';
+  // Preço de fábrica nunca vai no popup público — é benefício pessoal (ver
+  // atualizarCamposCupomPorTipo, que já desmarca isso na tela).
+  const marcarComoPopup = !ehFabrica && document.getElementById('cupomExibirPopup').checked;
   if (marcarComoPopup){
     // Só 1 cupom por vez no popup — desmarca qualquer outro antes de criar este já marcado
     await sb.from('cupons').update({ exibir_popup: false }).eq('exibir_popup', true);
@@ -1971,9 +2061,12 @@ document.getElementById('formNovoCupom').addEventListener('submit', async (e) =>
 
   const { error } = await sb.from('cupons').insert({
     codigo: document.getElementById('cupomCodigo').value.trim().toUpperCase(),
-    tipo: document.getElementById('cupomTipo').value,
-    valor: parseFloat(document.getElementById('cupomValor').value),
-    valor_minimo: parseFloat(document.getElementById('cupomMinimo').value) || 0,
+    tipo,
+    // "Valor" não tem sentido pra preço de fábrica (o desconto é calculado
+    // por produto, a partir do custo real) — manda 0, o banco aceita esse
+    // tipo com valor 0 especificamente.
+    valor: ehFabrica ? 0 : parseFloat(document.getElementById('cupomValor').value),
+    valor_minimo: ehFabrica ? 0 : (parseFloat(document.getElementById('cupomMinimo').value) || 0),
     uso_maximo: document.getElementById('cupomUsoMaximo').value ? parseInt(document.getElementById('cupomUsoMaximo').value) : null,
     validade: document.getElementById('cupomValidade').value || null,
     exibir_popup: marcarComoPopup
@@ -1988,6 +2081,7 @@ document.getElementById('formNovoCupom').addEventListener('submit', async (e) =>
   }
   e.target.reset();
   document.getElementById('cupomTipo').value = 'percentual';
+  atualizarCamposCupomPorTipo();
   renderTabelaCupons();
 });
 
@@ -2006,8 +2100,8 @@ async function renderAvaliacoesPendentes(){
   wrap.innerHTML = data.length ? data.map(a => `
     <div class="avaliacao-admin-linha">
       <div class="conteudo">
-        <strong>${'★'.repeat(a.nota)}${'☆'.repeat(5 - a.nota)}</strong> ${a.nome_cliente} — <em>${a.produtos?.nome || 'Produto removido'}</em>
-        ${a.comentario ? `<div style="color:var(--texto-suave);">${a.comentario}</div>` : ''}
+        <strong>${'★'.repeat(a.nota)}${'☆'.repeat(5 - a.nota)}</strong> ${escaparHtml(a.nome_cliente)} — <em>${escaparHtml(a.produtos?.nome) || 'Produto removido'}</em>
+        ${a.comentario ? `<div style="color:var(--texto-suave);">${escaparHtml(a.comentario)}</div>` : ''}
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
         <button type="button" data-acao="aprovar-avaliacao" data-id="${a.id}" style="color:var(--verde);text-decoration:underline;font-size:0.78rem;">Aprovar</button>
@@ -2066,11 +2160,11 @@ async function renderTrocas(){
   wrap.innerHTML = data.length ? data.map(s => `
     <div class="mensagem-linha">
       <div class="mensagem-cabecalho">
-        <span class="mensagem-remetente">#${(s.pedidos?.id || '').slice(0,8).toUpperCase()} — ${s.pedidos?.nome_cliente || 'Cliente'} <span style="font-weight:400;color:var(--texto-suave);">(${SOLICITACAO_TIPO_LABEL_ADMIN[s.tipo]})</span></span>
+        <span class="mensagem-remetente">#${(s.pedidos?.id || '').slice(0,8).toUpperCase()} — ${escaparHtml(s.pedidos?.nome_cliente) || 'Cliente'} <span style="font-weight:400;color:var(--texto-suave);">(${SOLICITACAO_TIPO_LABEL_ADMIN[s.tipo]})</span></span>
         <span class="mensagem-data">${new Date(s.criado_em).toLocaleString('pt-BR')}</span>
       </div>
-      <div class="mensagem-assunto">${s.motivo}</div>
-      ${s.mensagem ? `<div class="mensagem-corpo">${s.mensagem}</div>` : ''}
+      <div class="mensagem-assunto">${escaparHtml(s.motivo)}</div>
+      ${s.mensagem ? `<div class="mensagem-corpo">${escaparHtml(s.mensagem)}</div>` : ''}
       <div class="form-linha cols-2" style="margin-top:8px;">
         <div class="form-campo">
           <label>Status</label>
@@ -2123,7 +2217,7 @@ async function atualizarBadgeTrocas(){
    ESTOQUE BAIXO
    ============================================================ */
 async function atualizarBadgeEstoqueBaixo(){
-  const { data, error } = await sb.from('produtos').select('estoque, estoque_minimo').eq('ativo', true);
+  const { data, error } = await sb.rpc('produtos_admin').select('estoque, estoque_minimo').eq('ativo', true);
   const badge = document.getElementById('tileBadgeEstoqueBaixo');
   if (error){ badge.style.display = 'none'; return; }
   const qtd = data.filter(p => (p.estoque ?? 0) <= (p.estoque_minimo ?? 5)).length;
@@ -2174,8 +2268,12 @@ document.getElementById('btnPedidos').addEventListener('click', () => {
 const CATEGORIA_LABEL = { aliancas: "Alianças", aneis: "Anéis", brincos: "Brincos", colares: "Colares", pulseiras: "Pulseiras", joias: "Joias" };
 
 async function carregarProdutosAdmin(){
-  // Autenticado vê TODOS os produtos (inclusive rascunhos) — a política de RLS já garante isso
-  const { data, error } = await sb.from('produtos').select('*').order('criado_em', { ascending: false });
+  // Admin vê TODOS os produtos (inclusive inativos) e todas as colunas
+  // (inclusive custo/margem) — via produtos_admin(), não a tabela direto.
+  // A tabela em si só libera colunas públicas pra anon/authenticated (ver
+  // migração "restringe_colunas_sensiveis_produtos"); essa função roda com
+  // privilégio elevado e só devolve linha quando quem pergunta é admin.
+  const { data, error } = await sb.rpc('produtos_admin').select('*').order('criado_em', { ascending: false });
   if (error){
     console.error('Erro ao carregar produtos do admin:', error);
     return [];
@@ -2855,8 +2953,8 @@ async function renderListaAvaliacoesAdmin(){
     ? lista.map(a => `
         <div class="avaliacao-admin-linha">
           <div class="conteudo">
-            <strong>${'★'.repeat(a.nota)}${'☆'.repeat(5 - a.nota)}</strong> ${a.nome_cliente} — ${formatarDataBR(a.data_avaliacao)}
-            ${a.comentario ? `<div style="color:var(--texto-suave);">${a.comentario}</div>` : ''}
+            <strong>${'★'.repeat(a.nota)}${'☆'.repeat(5 - a.nota)}</strong> ${escaparHtml(a.nome_cliente)} — ${formatarDataBR(a.data_avaliacao)}
+            ${a.comentario ? `<div style="color:var(--texto-suave);">${escaparHtml(a.comentario)}</div>` : ''}
           </div>
           <button type="button" class="excluir-av" data-id="${a.id}">Excluir</button>
         </div>

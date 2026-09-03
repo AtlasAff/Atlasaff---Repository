@@ -18,6 +18,92 @@ const SUPABASE_URL = "https://pqhdtteeukfcjstfsnkn.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxaGR0dGVldWtmY2pzdGZzbmtuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzNzc0MTAsImV4cCI6MjEwMTk1MzQxMH0.VwOKgaNEmKaT-xGqF-S0Cr2mY9i4O_4eIFkqpdv0KiY";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// Escapa texto que veio de alguém DIGITANDO (nome, endereço, mensagem de
+// contato, comentário de avaliação...) antes de jogar num innerHTML.
+// Sem isso, um campo de texto vira uma forma de rodar código na tela de
+// quem for ler — inclusive na tela do admin, logado. Usar em TODO texto
+// de origem externa que for inserido via innerHTML/template literal.
+function escaparHtml(texto){
+  if (texto === null || texto === undefined) return '';
+  return String(texto)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/* ============================================================
+   STATUS DE PEDIDO — labels, cor do badge e linha do tempo.
+   Compartilhado entre conta.html (pedidos de quem tá logado) e
+   rastreio.html (consulta pública por número do pedido).
+   ============================================================ */
+const STATUS_PEDIDO_LABEL = { novo: 'Novo', confirmado: 'Confirmado', enviado: 'Enviado', entregue: 'Entregue', cancelado: 'Cancelado' };
+const STATUS_PEDIDO_COR = { novo: 'amarelo', confirmado: 'verde', enviado: 'verde', entregue: 'verde', cancelado: 'vermelho' };
+const STATUS_PAGAMENTO_LABEL = { pendente: 'Aguardando pagamento', em_analise: 'Pagamento em análise', aprovado: 'Pago', recusado: 'Pagamento recusado', estornado: 'Estornado' };
+const STATUS_PAGAMENTO_COR = { pendente: 'amarelo', em_analise: 'amarelo', aprovado: 'verde', recusado: 'vermelho', estornado: 'vermelho' };
+const FORMA_PAGAMENTO_LABEL = { pix: 'Pix', credit_card: 'Cartão de crédito', debit_card: 'Cartão de débito', ticket: 'Boleto', account_money: 'Saldo Mercado Pago' };
+
+// Link de rastreio — Correios tem URL pública de consulta; outras
+// transportadoras (Melhor Envio parceiras) não têm um padrão único, então
+// cai numa busca que já leva a pessoa a rastrear pelo código.
+function linkRastreio(codigo, transportadora){
+  const t = (transportadora || '').toLowerCase();
+  if (t.includes('correios')) return `https://rastreamento.correios.com.br/app/index.php?objetos=${codigo}`;
+  return `https://www.google.com/search?q=rastrear+encomenda+${encodeURIComponent(codigo)}`;
+}
+
+const ETAPAS_PEDIDO = [
+  { chave: 'novo', rotulo: 'Pedido feito', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8h12l-1 12H7L6 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>' },
+  { chave: 'confirmado', rotulo: 'Confirmado', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M8 12.3l2.6 2.6L16 9.5"/></svg>' },
+  { chave: 'enviado', rotulo: 'Enviado', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2.5 7h11v9h-11z"/><path d="M13.5 11h4l3 3v2h-7z"/><circle cx="6.5" cy="18" r="1.6"/><circle cx="17.5" cy="18" r="1.6"/></svg>' },
+  { chave: 'entregue', rotulo: 'Entregue', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9h12v-9"/><path d="M10 19v-5h4v5"/></svg>' }
+];
+const ICONE_CANCELADO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
+
+function timelinePedidoHtml(status){
+  if (status === 'cancelado'){
+    return `<div class="pedido-cancelado-aviso">${ICONE_CANCELADO}<span>Este pedido foi cancelado.</span></div>`;
+  }
+  const ordem = ETAPAS_PEDIDO.map(e => e.chave);
+  const indiceAtual = Math.max(ordem.indexOf(status), 0);
+  const progresso = (indiceAtual / (ordem.length - 1)) * 100;
+
+  return `
+    <div class="pedido-timeline" style="--progresso:${progresso}%;">
+      <div class="pedido-timeline-linha"><div class="pedido-timeline-linha-fill"></div></div>
+      ${ETAPAS_PEDIDO.map((etapa, i) => `
+        <div class="pedido-etapa ${i < indiceAtual ? 'concluida' : i === indiceAtual ? 'atual' : ''}">
+          <div class="pedido-etapa-icone">${etapa.icone}</div>
+          <span class="pedido-etapa-rotulo">${etapa.rotulo}</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// Previsão simples: data do pedido + prazo (confecção + entrega) escolhido
+// no checkout. Só faz sentido mostrar enquanto o pedido ainda não chegou.
+function previsaoEntregaHtml(p){
+  if (!p.frete_prazo_dias || ['entregue', 'cancelado'].includes(p.status)) return '';
+  const previsao = new Date(p.criado_em);
+  previsao.setDate(previsao.getDate() + Number(p.frete_prazo_dias));
+  return `<span class="pedido-meta-item">📅 Previsão de entrega: <strong>${previsao.toLocaleDateString('pt-BR')}</strong></span>`;
+}
+
+// Card de pedido é "produto em primeiro lugar": mostra a foto e o nome do
+// que a cliente comprou, não o código do pedido (isso vira um detalhe
+// pequeno no canto — ninguém decora "#1E37DC51", mas lembra "o anel que eu comprei").
+function resumoItensPedido(itens){
+  const lista = itens || [];
+  const primeiro = lista[0];
+  if (!primeiro) return { foto: '', titulo: 'Pedido', subtitulo: '' };
+  const extras = lista.length - 1;
+  const titulo = primeiro.nome + (extras > 0 ? ` + ${extras} ${extras === 1 ? 'item' : 'itens'}` : '');
+  const subtitulo = [primeiro.quilate, primeiro.banho, primeiro.tamanho ? `aro ${primeiro.tamanho}` : null].filter(Boolean).join(' · ');
+  return { foto: primeiro.imagem || '', titulo, subtitulo };
+}
+
 /* ============================================================
    FRETE (Melhor Envio) — a chamada de verdade acontece numa Edge
    Function no Supabase (calcular-frete), que esconde o token da
@@ -60,17 +146,19 @@ async function assinarNewsletter(form){
   botao.disabled = true;
   botao.textContent = '...';
 
-  const { error } = await sb.from('newsletter_assinantes').insert({ email });
+  const { data, error } = await sb.rpc('assinar_newsletter', { p_email: email });
 
   botao.disabled = false;
   botao.textContent = textoOriginal;
 
   if (error){
-    if (error.code === '23505'){ // e-mail duplicado (unique constraint)
-      mostrarToast('Esse e-mail já tá cadastrado ✓');
-    } else {
-      mostrarToast('Não foi possível assinar agora — tenta de novo.');
-    }
+    mostrarToast(error.message || 'Não foi possível assinar agora — tenta de novo.');
+    return false;
+  }
+
+  if (data === 'duplicado'){
+    mostrarToast('Esse e-mail já tá cadastrado ✓');
+    form.reset();
     return false;
   }
 
@@ -320,6 +408,8 @@ async function initHeaderShared(){
   injetarSelosSeguranca();
   ativarRevealAoRolar();
   setTimeout(mostrarPopupCupomBoasVindas, 1800); // espera a página assentar antes de mostrar
+  setTimeout(mostrarPopupPrecoFabrica, 2200); // levemente depois, pra não colidir com o de boas-vindas
+  iniciarObservadorPrecoFabrica();
   document.body.classList.add('pronto'); // dispara o fade-in inicial da página
 }
 
@@ -490,8 +580,11 @@ async function carregarProdutosFavoritos(){
    também é recalculado de novo no criar_pedido — o valor mostrado
    aqui é só uma prévia.
    ============================================================ */
-async function validarCupom(codigo, subtotal){
-  const { data, error } = await sb.rpc('validar_cupom', { p_codigo: codigo, p_subtotal: subtotal }).maybeSingle();
+// itens (opcional): só é usado de verdade pelo tipo "preco_fabrica" — pra
+// ele o desconto é calculado item a item (preço de custo de cada produto),
+// não dá pra saber só com o subtotal.
+async function validarCupom(codigo, subtotal, itens){
+  const { data, error } = await sb.rpc('validar_cupom', { p_codigo: codigo, p_subtotal: subtotal, p_itens: itens || null }).maybeSingle();
   if (error || !data) return { valido: false, mensagem: 'Não foi possível validar o cupom agora.' };
   return data;
 }
@@ -597,6 +690,112 @@ async function mostrarPopupCupomBoasVindas(){
     mostrarToast(`Cupom ${codigo} copiado — cole no carrinho!`);
     setTimeout(fechar, 1400);
   });
+}
+
+/* ============================================================
+   CUPOM "PREÇO DE FÁBRICA" — diferente do popup de boas-vindas acima
+   (que é público, pra QUALQUER visitante do site): esse é pessoal.
+   Só existe pra quem já tem o código salvo no navegador — recebeu de
+   você e digitou uma vez no carrinho, ou abriu um link do tipo
+   pavanoficial.com.br/?cupom=CODIGO. A partir daí, todo produto que
+   essa pessoa vir no site já mostra o preço de fábrica sozinho, e ela
+   recebe um aviso discreto toda vez que entra (não só na primeira).
+   ============================================================ */
+
+// Link com cupom embutido — salva sem sobrescrever um cupom que a pessoa
+// já esteja usando.
+(function capturarCupomDaUrl(){
+  try {
+    const codigoUrl = new URLSearchParams(location.search).get('cupom');
+    if (codigoUrl && !obterCupomAplicado()) salvarCupomAplicado(codigoUrl.trim().toUpperCase());
+  } catch {}
+})();
+
+// Descobre se o cupom salvo no navegador é válido e qual o tipo dele — sem
+// exigir compra mínima (preço de fábrica não é campanha de "gaste X",
+// validar_cupom já pula essa checagem pra esse tipo).
+let promessaInfoCupomAplicado = null;
+function obterInfoCupomAplicado(){
+  const codigo = obterCupomAplicado();
+  if (!codigo) return Promise.resolve(null);
+  if (!promessaInfoCupomAplicado){
+    promessaInfoCupomAplicado = sb.rpc('validar_cupom', { p_codigo: codigo, p_subtotal: 0 }).maybeSingle()
+      .then(({ data, error }) => (error || !data || !data.valido) ? null : { codigo, tipo: data.tipo, valor: data.valor });
+  }
+  return promessaInfoCupomAplicado;
+}
+
+// Fração de desconto por produto (preço de fábrica ÷ preço de venda) —
+// nunca os valores de custo em si, só essa fração final. Multiplica pelo
+// preço mostrado (base ou de um quilate/banho específico) pra saber o
+// preço de fábrica daquele item.
+let promessaPrecosFabrica = null;
+function obterPrecosFabrica(codigo){
+  if (!promessaPrecosFabrica){
+    promessaPrecosFabrica = sb.rpc('precos_fabrica_ativos', { p_codigo: codigo }).then(({ data, error }) => {
+      const mapa = {};
+      (error ? [] : (data || [])).forEach(r => { mapa[r.produto_id] = Number(r.fator_desconto); });
+      return mapa;
+    });
+  }
+  return promessaPrecosFabrica;
+}
+
+// Risca o preço original e mostra o de fábrica em qualquer card de
+// produto (index, categoria, busca, favoritos...). Usa um
+// MutationObserver porque os cards são renderizados de forma assíncrona,
+// em momentos diferentes em cada página — assim funciona não importa a
+// ordem de chegada.
+async function aplicarPrecoFabricaNoDOM(){
+  const info = await obterInfoCupomAplicado();
+  if (!info || info.tipo !== 'preco_fabrica') return;
+  const mapa = await obterPrecosFabrica(info.codigo);
+  document.querySelectorAll('.prod-price[data-produto-id]').forEach(el => {
+    if (el.dataset.fabricaAplicado) return;
+    const fator = mapa[el.dataset.produtoId];
+    if (fator === undefined) return;
+    const precoOriginal = parseFloat(el.dataset.precoOriginal);
+    if (!precoOriginal) return;
+    el.dataset.fabricaAplicado = '1';
+    el.innerHTML = `<s class="preco-riscado">${formatarPreco(precoOriginal)}</s> ${formatarPreco(precoOriginal * fator)}`;
+  });
+}
+let observadorPrecoFabricaIniciado = false;
+function iniciarObservadorPrecoFabrica(){
+  if (observadorPrecoFabricaIniciado) return;
+  observadorPrecoFabricaIniciado = true;
+  aplicarPrecoFabricaNoDOM();
+  new MutationObserver(() => aplicarPrecoFabricaNoDOM()).observe(document.body, { childList: true, subtree: true });
+}
+
+// Aviso pessoal — ao contrário do popup de boas-vindas (uma vez por
+// sessão, pra qualquer um), esse é "toda vez que ESSA pessoa entra no
+// site" — sessionStorage já cobre isso (reaparece em cada sessão nova,
+// não fica repetindo em toda página clicada dentro da mesma visita).
+async function mostrarPopupPrecoFabrica(){
+  const info = await obterInfoCupomAplicado();
+  if (!info || info.tipo !== 'preco_fabrica') return;
+  try {
+    if (sessionStorage.getItem('pavan_popup_fabrica_visto')) return;
+  } catch {}
+  if (document.getElementById('painelAdmin')) return; // nunca no admin
+  if (['checkout.html', 'carrinho.html'].some(p => location.pathname.endsWith(p))) return;
+  try { sessionStorage.setItem('pavan_popup_fabrica_visto', '1'); } catch {}
+
+  const popup = document.createElement('div');
+  popup.className = 'popup-cupom popup-cupom--fabrica';
+  popup.innerHTML = `
+    <button type="button" class="popup-cupom-fechar" aria-label="Fechar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
+    </button>
+    <span class="popup-cupom-eyebrow">Preço de fábrica 🏭</span>
+    <strong class="popup-cupom-desconto">Ativado pra você</strong>
+    <p>Todo produto do site já está com o seu preço especial — não precisa fazer nada, já vem aplicado sozinho.</p>
+  `;
+  document.body.appendChild(popup);
+  requestAnimationFrame(() => popup.classList.add('show'));
+  const fechar = () => { popup.classList.remove('show'); setTimeout(() => popup.remove(), 300); };
+  popup.querySelector('.popup-cupom-fechar').addEventListener('click', fechar);
 }
 
 /* ============================================================
@@ -1003,7 +1202,7 @@ function cardProdutoHTML(p){
         <div class="prod-name">${p.nome}</div>
         <div class="prod-info-box">
           <div class="prod-info-cell">
-            <span class="prod-price">${formatarPreco(p.preco)}</span>
+            <span class="prod-price" data-produto-id="${p.id}" data-preco-original="${p.preco}">${formatarPreco(p.preco)}</span>
           </div>
           <div class="prod-info-cell">
             <span class="prod-spec-label">Banho</span>
@@ -1418,10 +1617,27 @@ async function renderProdutoPage(){
   // Preço muda conforme o quilate escolhido (cada opção tem o próprio preço)
   let precoAtual = p.preco;
   const cupomDestaque = await autoAplicarCupomDestaque(); // já aplica sozinho pro carrinho/checkout baterem com o preço mostrado aqui
+  // Cupom realmente salvo agora — pode ser o de boas-vindas acima ou um
+  // pessoal de preço de fábrica (esse tem prioridade quando os dois existem).
+  const infoCupomAplicado = await obterInfoCupomAplicado();
+  const fatorFabrica = infoCupomAplicado?.tipo === 'preco_fabrica'
+    ? (await obterPrecosFabrica(infoCupomAplicado.codigo))[p.id]
+    : undefined;
+
   function atualizarPrecoExibido(){
-    const precoComCupom = calcularPrecoComCupom(precoAtual, cupomDestaque);
     const precoEl = document.getElementById('produtoPreco');
     const cupomEl = document.getElementById('produtoPrecoCupom');
+
+    if (fatorFabrica !== undefined){
+      const precoFabrica = precoAtual * fatorFabrica;
+      precoEl.innerHTML = `<s class="preco-riscado">${formatarPreco(precoAtual)}</s> ${formatarPreco(precoFabrica)}`;
+      cupomEl.style.display = 'block';
+      cupomEl.innerHTML = `🏭 Preço de fábrica aplicado com o cupom <strong>${infoCupomAplicado.codigo}</strong>`;
+      document.getElementById('produtoParcelas').textContent = `12x de ${formatarPreco(precoFabrica / 12)} sem juros`;
+      return;
+    }
+
+    const precoComCupom = calcularPrecoComCupom(precoAtual, cupomDestaque);
     if (precoComCupom !== null){
       precoEl.innerHTML = `<s class="preco-riscado">${formatarPreco(precoAtual)}</s> ${formatarPreco(precoComCupom)}`;
       cupomEl.style.display = 'block';
@@ -1660,10 +1876,10 @@ async function renderProdutoPage(){
         <div class="avaliacao-item">
           <div class="avaliacao-topo">
             ${estrelasHTML(a.nota, 14)}
-            <span class="avaliacao-nome">${a.nome_cliente}</span>
+            <span class="avaliacao-nome">${escaparHtml(a.nome_cliente)}</span>
             <span class="avaliacao-data">${formatarDataBR(a.data_avaliacao)}</span>
           </div>
-          ${a.comentario ? `<p>${a.comentario}</p>` : ''}
+          ${a.comentario ? `<p>${escaparHtml(a.comentario)}</p>` : ''}
           ${(a.fotos && a.fotos.length) ? `
             <div class="avaliacao-fotos">
               ${a.fotos.map(f => `<img src="${f}" alt="Foto enviada na avaliação">`).join('')}

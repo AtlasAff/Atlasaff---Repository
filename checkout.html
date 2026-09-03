@@ -203,6 +203,7 @@
           <li><a href="termos.html">Termos de uso</a></li>
           <li><a href="privacidade.html">Política de privacidade</a></li>
           <li><a href="contato.html">Fale conosco</a></li>
+          <li><a href="rastreio.html">Rastrear pedido</a></li>
         </ul>
       </div>
       <div class="footer-col">
@@ -444,7 +445,7 @@ async function aplicarCupomCheckout(codigo, silencioso){
     return;
   }
   resultadoEl.innerHTML = `<p class="frete-msg">Verificando cupom...</p>`;
-  const resp = await validarCupom(codigo, subtotalCarrinho());
+  const resp = await validarCupom(codigo, subtotalCarrinho(), itensCarrinho);
   if (!resp.valido){
     cupomAtualCheckout = null;
     removerCupomAplicado();
@@ -641,11 +642,19 @@ document.getElementById('formCheckout').addEventListener('submit', async (e) => 
     const { data, error } = await sb.rpc('criar_pedido', { payload: pedido }).single();
     if (error) throw new Error(error.message);
 
+    // Confirmação de compra pro cliente + aviso de pedido novo pra loja —
+    // best-effort (.catch vazio: se e-mail falhar, o pedido já tá gravado
+    // e o checkout não pode travar por causa disso).
+    sb.functions.invoke('notificar-status-pedido', { body: { pedido_id: data.id, novo_status: 'novo' } }).catch(() => {});
+
     // Carrinho já foi convertido em pedido (os itens ficam salvos no
     // próprio pedido) — some com ele mesmo que o pagamento ainda não
     // tenha sido confirmado, igual qualquer loja de verdade faz.
     localStorage.removeItem(CARRINHO_STORAGE_KEY);
-    removerCupomAplicado();
+    // Preço de fábrica é um benefício permanente da pessoa, não um cupom de
+    // uso único — não apaga depois do pedido, continua valendo pros
+    // próximos também.
+    if (cupomAtualCheckout?.tipo !== 'preco_fabrica') removerCupomAplicado();
     atualizarContadorCarrinho();
 
     botao.textContent = 'Abrindo pagamento...';
