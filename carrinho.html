@@ -255,7 +255,7 @@ async function aplicarCupomCarrinho(codigo, silencioso){
   const itens = obterCarrinho();
   const subtotal = itens.reduce((s, i) => s + i.preco * i.qtd, 0);
   resultadoEl.innerHTML = `<p class="frete-msg">Verificando cupom...</p>`;
-  const resp = await validarCupom(codigo, subtotal);
+  const resp = await validarCupom(codigo, subtotal, itens);
   if (!resp.valido){
     cupomAtualCarrinho = null;
     removerCupomAplicado();

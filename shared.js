@@ -320,6 +320,8 @@ async function initHeaderShared(){
   injetarSelosSeguranca();
   ativarRevealAoRolar();
   setTimeout(mostrarPopupCupomBoasVindas, 1800); // espera a página assentar antes de mostrar
+  setTimeout(mostrarPopupPrecoFabrica, 2200); // levemente depois, pra não colidir com o de boas-vindas
+  iniciarObservadorPrecoFabrica();
   document.body.classList.add('pronto'); // dispara o fade-in inicial da página
 }
 
@@ -490,8 +492,11 @@ async function carregarProdutosFavoritos(){
    também é recalculado de novo no criar_pedido — o valor mostrado
    aqui é só uma prévia.
    ============================================================ */
-async function validarCupom(codigo, subtotal){
-  const { data, error } = await sb.rpc('validar_cupom', { p_codigo: codigo, p_subtotal: subtotal }).maybeSingle();
+// itens (opcional): só é usado de verdade pelo tipo "preco_fabrica" — pra
+// ele o desconto é calculado item a item (preço de custo de cada produto),
+// não dá pra saber só com o subtotal.
+async function validarCupom(codigo, subtotal, itens){
+  const { data, error } = await sb.rpc('validar_cupom', { p_codigo: codigo, p_subtotal: subtotal, p_itens: itens || null }).maybeSingle();
   if (error || !data) return { valido: false, mensagem: 'Não foi possível validar o cupom agora.' };
   return data;
 }
@@ -597,6 +602,112 @@ async function mostrarPopupCupomBoasVindas(){
     mostrarToast(`Cupom ${codigo} copiado — cole no carrinho!`);
     setTimeout(fechar, 1400);
   });
+}
+
+/* ============================================================
+   CUPOM "PREÇO DE FÁBRICA" — diferente do popup de boas-vindas acima
+   (que é público, pra QUALQUER visitante do site): esse é pessoal.
+   Só existe pra quem já tem o código salvo no navegador — recebeu de
+   você e digitou uma vez no carrinho, ou abriu um link do tipo
+   pavanoficial.com.br/?cupom=CODIGO. A partir daí, todo produto que
+   essa pessoa vir no site já mostra o preço de fábrica sozinho, e ela
+   recebe um aviso discreto toda vez que entra (não só na primeira).
+   ============================================================ */
+
+// Link com cupom embutido — salva sem sobrescrever um cupom que a pessoa
+// já esteja usando.
+(function capturarCupomDaUrl(){
+  try {
+    const codigoUrl = new URLSearchParams(location.search).get('cupom');
+    if (codigoUrl && !obterCupomAplicado()) salvarCupomAplicado(codigoUrl.trim().toUpperCase());
+  } catch {}
+})();
+
+// Descobre se o cupom salvo no navegador é válido e qual o tipo dele — sem
+// exigir compra mínima (preço de fábrica não é campanha de "gaste X",
+// validar_cupom já pula essa checagem pra esse tipo).
+let promessaInfoCupomAplicado = null;
+function obterInfoCupomAplicado(){
+  const codigo = obterCupomAplicado();
+  if (!codigo) return Promise.resolve(null);
+  if (!promessaInfoCupomAplicado){
+    promessaInfoCupomAplicado = sb.rpc('validar_cupom', { p_codigo: codigo, p_subtotal: 0 }).maybeSingle()
+      .then(({ data, error }) => (error || !data || !data.valido) ? null : { codigo, tipo: data.tipo, valor: data.valor });
+  }
+  return promessaInfoCupomAplicado;
+}
+
+// Fração de desconto por produto (preço de fábrica ÷ preço de venda) —
+// nunca os valores de custo em si, só essa fração final. Multiplica pelo
+// preço mostrado (base ou de um quilate/banho específico) pra saber o
+// preço de fábrica daquele item.
+let promessaPrecosFabrica = null;
+function obterPrecosFabrica(codigo){
+  if (!promessaPrecosFabrica){
+    promessaPrecosFabrica = sb.rpc('precos_fabrica_ativos', { p_codigo: codigo }).then(({ data, error }) => {
+      const mapa = {};
+      (error ? [] : (data || [])).forEach(r => { mapa[r.produto_id] = Number(r.fator_desconto); });
+      return mapa;
+    });
+  }
+  return promessaPrecosFabrica;
+}
+
+// Risca o preço original e mostra o de fábrica em qualquer card de
+// produto (index, categoria, busca, favoritos...). Usa um
+// MutationObserver porque os cards são renderizados de forma assíncrona,
+// em momentos diferentes em cada página — assim funciona não importa a
+// ordem de chegada.
+async function aplicarPrecoFabricaNoDOM(){
+  const info = await obterInfoCupomAplicado();
+  if (!info || info.tipo !== 'preco_fabrica') return;
+  const mapa = await obterPrecosFabrica(info.codigo);
+  document.querySelectorAll('.prod-price[data-produto-id]').forEach(el => {
+    if (el.dataset.fabricaAplicado) return;
+    const fator = mapa[el.dataset.produtoId];
+    if (fator === undefined) return;
+    const precoOriginal = parseFloat(el.dataset.precoOriginal);
+    if (!precoOriginal) return;
+    el.dataset.fabricaAplicado = '1';
+    el.innerHTML = `<s class="preco-riscado">${formatarPreco(precoOriginal)}</s> ${formatarPreco(precoOriginal * fator)}`;
+  });
+}
+let observadorPrecoFabricaIniciado = false;
+function iniciarObservadorPrecoFabrica(){
+  if (observadorPrecoFabricaIniciado) return;
+  observadorPrecoFabricaIniciado = true;
+  aplicarPrecoFabricaNoDOM();
+  new MutationObserver(() => aplicarPrecoFabricaNoDOM()).observe(document.body, { childList: true, subtree: true });
+}
+
+// Aviso pessoal — ao contrário do popup de boas-vindas (uma vez por
+// sessão, pra qualquer um), esse é "toda vez que ESSA pessoa entra no
+// site" — sessionStorage já cobre isso (reaparece em cada sessão nova,
+// não fica repetindo em toda página clicada dentro da mesma visita).
+async function mostrarPopupPrecoFabrica(){
+  const info = await obterInfoCupomAplicado();
+  if (!info || info.tipo !== 'preco_fabrica') return;
+  try {
+    if (sessionStorage.getItem('pavan_popup_fabrica_visto')) return;
+  } catch {}
+  if (document.getElementById('painelAdmin')) return; // nunca no admin
+  if (['checkout.html', 'carrinho.html'].some(p => location.pathname.endsWith(p))) return;
+  try { sessionStorage.setItem('pavan_popup_fabrica_visto', '1'); } catch {}
+
+  const popup = document.createElement('div');
+  popup.className = 'popup-cupom popup-cupom--fabrica';
+  popup.innerHTML = `
+    <button type="button" class="popup-cupom-fechar" aria-label="Fechar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
+    </button>
+    <span class="popup-cupom-eyebrow">Preço de fábrica 🏭</span>
+    <strong class="popup-cupom-desconto">Ativado pra você</strong>
+    <p>Todo produto do site já está com o seu preço especial — não precisa fazer nada, já vem aplicado sozinho.</p>
+  `;
+  document.body.appendChild(popup);
+  requestAnimationFrame(() => popup.classList.add('show'));
+  const fechar = () => { popup.classList.remove('show'); setTimeout(() => popup.remove(), 300); };
+  popup.querySelector('.popup-cupom-fechar').addEventListener('click', fechar);
 }
 
 /* ============================================================
@@ -1003,7 +1114,7 @@ function cardProdutoHTML(p){
         <div class="prod-name">${p.nome}</div>
         <div class="prod-info-box">
           <div class="prod-info-cell">
-            <span class="prod-price">${formatarPreco(p.preco)}</span>
+            <span class="prod-price" data-produto-id="${p.id}" data-preco-original="${p.preco}">${formatarPreco(p.preco)}</span>
           </div>
           <div class="prod-info-cell">
             <span class="prod-spec-label">Banho</span>
@@ -1418,10 +1529,27 @@ async function renderProdutoPage(){
   // Preço muda conforme o quilate escolhido (cada opção tem o próprio preço)
   let precoAtual = p.preco;
   const cupomDestaque = await autoAplicarCupomDestaque(); // já aplica sozinho pro carrinho/checkout baterem com o preço mostrado aqui
+  // Cupom realmente salvo agora — pode ser o de boas-vindas acima ou um
+  // pessoal de preço de fábrica (esse tem prioridade quando os dois existem).
+  const infoCupomAplicado = await obterInfoCupomAplicado();
+  const fatorFabrica = infoCupomAplicado?.tipo === 'preco_fabrica'
+    ? (await obterPrecosFabrica(infoCupomAplicado.codigo))[p.id]
+    : undefined;
+
   function atualizarPrecoExibido(){
-    const precoComCupom = calcularPrecoComCupom(precoAtual, cupomDestaque);
     const precoEl = document.getElementById('produtoPreco');
     const cupomEl = document.getElementById('produtoPrecoCupom');
+
+    if (fatorFabrica !== undefined){
+      const precoFabrica = precoAtual * fatorFabrica;
+      precoEl.innerHTML = `<s class="preco-riscado">${formatarPreco(precoAtual)}</s> ${formatarPreco(precoFabrica)}`;
+      cupomEl.style.display = 'block';
+      cupomEl.innerHTML = `🏭 Preço de fábrica aplicado com o cupom <strong>${infoCupomAplicado.codigo}</strong>`;
+      document.getElementById('produtoParcelas').textContent = `12x de ${formatarPreco(precoFabrica / 12)} sem juros`;
+      return;
+    }
+
+    const precoComCupom = calcularPrecoComCupom(precoAtual, cupomDestaque);
     if (precoComCupom !== null){
       precoEl.innerHTML = `<s class="preco-riscado">${formatarPreco(precoAtual)}</s> ${formatarPreco(precoComCupom)}`;
       cupomEl.style.display = 'block';

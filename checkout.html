@@ -444,7 +444,7 @@ async function aplicarCupomCheckout(codigo, silencioso){
     return;
   }
   resultadoEl.innerHTML = `<p class="frete-msg">Verificando cupom...</p>`;
-  const resp = await validarCupom(codigo, subtotalCarrinho());
+  const resp = await validarCupom(codigo, subtotalCarrinho(), itensCarrinho);
   if (!resp.valido){
     cupomAtualCheckout = null;
     removerCupomAplicado();
@@ -645,7 +645,10 @@ document.getElementById('formCheckout').addEventListener('submit', async (e) => 
     // próprio pedido) — some com ele mesmo que o pagamento ainda não
     // tenha sido confirmado, igual qualquer loja de verdade faz.
     localStorage.removeItem(CARRINHO_STORAGE_KEY);
-    removerCupomAplicado();
+    // Preço de fábrica é um benefício permanente da pessoa, não um cupom de
+    // uso único — não apaga depois do pedido, continua valendo pros
+    // próximos também.
+    if (cupomAtualCheckout?.tipo !== 'preco_fabrica') removerCupomAplicado();
     atualizarContadorCarrinho();
 
     botao.textContent = 'Abrindo pagamento...';

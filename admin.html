@@ -808,15 +808,19 @@
           <select id="cupomTipo">
             <option value="percentual">Percentual (%)</option>
             <option value="fixo">Valor fixo (R$)</option>
+            <option value="preco_fabrica">Preço de fábrica</option>
           </select>
         </div>
       </div>
+      <p id="cupomFabricaAviso" style="display:none;font-size:0.78rem;color:var(--texto-suave);background:var(--creme);padding:10px 12px;border-radius:4px;margin-bottom:16px;">
+        🏭 Esse tipo aplica, em <strong>qualquer produto</strong>, o preço de custo real da peça (sem margem de lucro) — calculado automaticamente por produto, não usa o campo "Valor" nem "Compra mínima". Não aparece no popup público de boas-vindas: é pra quem já tem o código (ex: família), e some sozinho.
+      </p>
       <div class="form-linha cols-3">
-        <div class="form-campo">
+        <div class="form-campo" id="cupomValorCampo">
           <label for="cupomValor">Valor *</label>
           <input type="number" id="cupomValor" step="0.01" required placeholder="Ex: 10">
         </div>
-        <div class="form-campo">
+        <div class="form-campo" id="cupomMinimoCampo">
           <label for="cupomMinimo">Compra mínima (R$)</label>
           <input type="number" id="cupomMinimo" step="0.01" placeholder="0">
         </div>
@@ -829,7 +833,7 @@
         <label for="cupomValidade">Validade (opcional)</label>
         <input type="date" id="cupomValidade">
       </div>
-      <label class="checkbox-linha">
+      <label class="checkbox-linha" id="cupomExibirPopupLinha">
         <input type="checkbox" id="cupomExibirPopup">
         Mostrar num popup de boas-vindas pra quem visita o site <span style="font-weight:400;color:var(--texto-suave);">(só 1 cupom por vez — marcar este desmarca outro que já esteja em destaque)</span>
       </label>
@@ -1904,15 +1908,17 @@ document.getElementById('btnFecharMensagens').addEventListener('click', () => {
 /* ============================================================
    CUPONS DE DESCONTO
    ============================================================ */
+const TIPO_CUPOM_LABEL = { percentual: 'Percentual', fixo: 'Valor fixo', preco_fabrica: 'Preço de fábrica' };
+
 async function renderTabelaCupons(){
   const { data, error } = await sb.from('cupons').select('*').order('criado_em', { ascending: false });
   if (error){ console.error('Erro ao carregar cupons:', error); return; }
 
   document.getElementById('corpoTabelaCupons').innerHTML = data.map(c => `
     <tr>
-      <td><strong>${c.codigo}</strong>${c.exibir_popup ? ' <span class="status-pill status-destaque" title="Aparece no popup de boas-vindas do site">🎁 Popup</span>' : ''}</td>
-      <td>${c.tipo === 'percentual' ? c.valor + '%' : formatarPreco(c.valor)}</td>
-      <td>${c.valor_minimo > 0 ? formatarPreco(c.valor_minimo) : '—'}</td>
+      <td><strong>${c.codigo}</strong>${c.exibir_popup ? ' <span class="status-pill status-destaque" title="Aparece no popup de boas-vindas do site">🎁 Popup</span>' : ''}${c.tipo === 'preco_fabrica' ? ' <span class="status-pill status-destaque" title="Popup pessoal só pra quem tem o código salvo">🏭 Fábrica</span>' : ''}</td>
+      <td>${c.tipo === 'preco_fabrica' ? TIPO_CUPOM_LABEL[c.tipo] : (c.tipo === 'percentual' ? c.valor + '%' : formatarPreco(c.valor))}</td>
+      <td>${c.tipo === 'preco_fabrica' ? '—' : (c.valor_minimo > 0 ? formatarPreco(c.valor_minimo) : '—')}</td>
       <td>${c.uso_atual}${c.uso_maximo ? ' / ' + c.uso_maximo : ''}</td>
       <td><span class="status-pill ${c.ativo ? 'status-ativo' : 'status-rascunho'}">${c.ativo ? 'Ativo' : 'Inativo'}</span></td>
       <td>
@@ -1950,8 +1956,23 @@ async function renderTabelaCupons(){
   });
 }
 
+// Preço de fábrica não usa valor/mínimo (o desconto vem do custo real de
+// cada produto) nem o popup público (é um benefício pessoal, não uma
+// campanha pra todo mundo que visita o site) — esconde esses campos.
+function atualizarCamposCupomPorTipo(){
+  const ehFabrica = document.getElementById('cupomTipo').value === 'preco_fabrica';
+  document.getElementById('cupomFabricaAviso').style.display = ehFabrica ? 'block' : 'none';
+  document.getElementById('cupomValorCampo').style.display = ehFabrica ? 'none' : '';
+  document.getElementById('cupomMinimoCampo').style.display = ehFabrica ? 'none' : '';
+  document.getElementById('cupomValor').required = !ehFabrica;
+  document.getElementById('cupomExibirPopupLinha').style.display = ehFabrica ? 'none' : '';
+  if (ehFabrica) document.getElementById('cupomExibirPopup').checked = false;
+}
+document.getElementById('cupomTipo').addEventListener('change', atualizarCamposCupomPorTipo);
+
 function abrirModalCupons(){
   renderTabelaCupons();
+  atualizarCamposCupomPorTipo();
   document.getElementById('modalCupons').classList.add('show');
 }
 document.getElementById('btnFecharCupons').addEventListener('click', () => {
@@ -1963,7 +1984,11 @@ document.getElementById('formNovoCupom').addEventListener('submit', async (e) =>
   botao.disabled = true;
   botao.textContent = 'Criando...';
 
-  const marcarComoPopup = document.getElementById('cupomExibirPopup').checked;
+  const tipo = document.getElementById('cupomTipo').value;
+  const ehFabrica = tipo === 'preco_fabrica';
+  // Preço de fábrica nunca vai no popup público — é benefício pessoal (ver
+  // atualizarCamposCupomPorTipo, que já desmarca isso na tela).
+  const marcarComoPopup = !ehFabrica && document.getElementById('cupomExibirPopup').checked;
   if (marcarComoPopup){
     // Só 1 cupom por vez no popup — desmarca qualquer outro antes de criar este já marcado
     await sb.from('cupons').update({ exibir_popup: false }).eq('exibir_popup', true);
@@ -1971,9 +1996,12 @@ document.getElementById('formNovoCupom').addEventListener('submit', async (e) =>
 
   const { error } = await sb.from('cupons').insert({
     codigo: document.getElementById('cupomCodigo').value.trim().toUpperCase(),
-    tipo: document.getElementById('cupomTipo').value,
-    valor: parseFloat(document.getElementById('cupomValor').value),
-    valor_minimo: parseFloat(document.getElementById('cupomMinimo').value) || 0,
+    tipo,
+    // "Valor" não tem sentido pra preço de fábrica (o desconto é calculado
+    // por produto, a partir do custo real) — manda 0, o banco aceita esse
+    // tipo com valor 0 especificamente.
+    valor: ehFabrica ? 0 : parseFloat(document.getElementById('cupomValor').value),
+    valor_minimo: ehFabrica ? 0 : (parseFloat(document.getElementById('cupomMinimo').value) || 0),
     uso_maximo: document.getElementById('cupomUsoMaximo').value ? parseInt(document.getElementById('cupomUsoMaximo').value) : null,
     validade: document.getElementById('cupomValidade').value || null,
     exibir_popup: marcarComoPopup
@@ -1988,6 +2016,7 @@ document.getElementById('formNovoCupom').addEventListener('submit', async (e) =>
   }
   e.target.reset();
   document.getElementById('cupomTipo').value = 'percentual';
+  atualizarCamposCupomPorTipo();
   renderTabelaCupons();
 });
 
