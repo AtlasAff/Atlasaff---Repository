@@ -851,8 +851,7 @@
 }
 .faq-item.open .faq-resposta{ max-height: 260px; padding-bottom: 18px; }
 .produto-info .faq-item.open .faq-resposta{ max-height: 500px; }
-#contaPedidos .faq-item.open .faq-resposta{ max-height: 700px; padding-top: 4px; }
-#contaPedidos .faq-pergunta{ flex-wrap: wrap; gap: 10px; }
+#contaPedidos .faq-item.open .faq-resposta{ max-height: 820px; padding-top: 14px; }
 
 /* ============================================================
    CONTA (login / cadastro)
@@ -997,55 +996,83 @@
 /* ============================================================
    PAINEL DA CONTA (logada) — cabeçalho, estatísticas, abas
    ============================================================ */
-.conta-wrap--logado{ max-width: 900px; }
+.conta-wrap--logado{ max-width: 1080px; }
 
-.perfil-header{
-  display:flex;
-  flex-wrap:wrap;
-  align-items:center;
-  gap: 18px;
+/* ---------------- LAYOUT EM DUAS COLUNAS: pedidos | cartão da conta ---------------- */
+.conta-dashboard{
+  display:grid;
+  grid-template-columns: 1fr 300px;
+  gap: 28px;
+  align-items:start;
+}
+.conta-coluna-principal{ min-width:0; }
+
+.conta-coluna-lateral{ position: sticky; top: 24px; }
+.conta-cartao-lateral{
   border: 1px solid var(--borda);
   border-radius: var(--radius);
-  padding: 26px;
-  margin-bottom: 22px;
+  padding: 26px 22px;
   background: var(--branco);
+  text-align:center;
 }
+
+.perfil-avatar-wrap{ position:relative; width:78px; margin:0 auto 14px; }
 .perfil-avatar{
-  flex-shrink:0;
-  width: 62px; height: 62px;
+  width: 78px; height: 78px;
   border-radius: 50%;
-  background: var(--bordo);
+  background: var(--bordo) center/cover no-repeat;
   color: var(--creme);
   font-family: var(--serif);
-  font-size: 1.3rem;
+  font-size: 1.5rem;
   display:flex; align-items:center; justify-content:center;
   letter-spacing: 0.02em;
 }
-.perfil-header-info{ flex:1; min-width: 180px; }
-.perfil-desde{ font-size:0.74rem; color: var(--texto-suave); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:4px; }
-.perfil-header-info h2{ font-family: var(--serif); font-weight:500; font-size:1.4rem; line-height:1.2; }
-.perfil-header-info span{ font-size:0.85rem; color: var(--texto-suave); }
-.perfil-header-acoes{ display:flex; flex-wrap:wrap; gap:10px; }
-.perfil-header-acoes .btn{ font-size:0.78rem; padding:10px 16px; }
+.perfil-avatar-editar{
+  position:absolute;
+  right:-2px; bottom:-2px;
+  width: 28px; height: 28px;
+  border-radius:50%;
+  background: var(--branco);
+  border: 1px solid var(--borda);
+  color: var(--bordo);
+  display:flex; align-items:center; justify-content:center;
+  box-shadow: var(--sombra);
+  transition: background .2s;
+}
+.perfil-avatar-editar:hover{ background: var(--creme); }
+.perfil-avatar-editar svg{ width:14px; height:14px; }
+
+.conta-cartao-lateral h2{ font-family: var(--serif); font-weight:500; font-size:1.2rem; line-height:1.25; }
+.conta-cartao-lateral > span{ display:block; font-size:0.82rem; color: var(--texto-suave); margin-top:2px; word-break:break-word; }
+.perfil-desde{ font-size:0.7rem; color: var(--texto-suave); text-transform:uppercase; letter-spacing:0.05em; margin-top:8px; }
 
 .perfil-stats{
   display:grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-bottom: 26px;
+  gap: 6px;
+  margin: 18px 0;
+  padding: 14px 0;
+  border-top: 1px solid var(--borda);
+  border-bottom: 1px solid var(--borda);
 }
-.perfil-stat{
-  border: 1px solid var(--borda);
-  border-radius: var(--radius);
-  padding: 16px 12px;
-  text-align:center;
-  background: var(--branco);
+.perfil-stat strong{ display:block; font-family: var(--serif); font-size:1.05rem; color: var(--bordo); font-variant-numeric: lining-nums tabular-nums; margin-bottom:2px; }
+.perfil-stat span{ font-size:0.62rem; color: var(--texto-suave); text-transform:uppercase; letter-spacing:0.03em; }
+
+.conta-coluna-lateral-acoes{ display:flex; flex-direction:column; gap:10px; }
+.conta-coluna-lateral-acoes .btn{ font-size:0.78rem; padding:10px 14px; justify-content:center; }
+
+@media (max-width: 860px){
+  .conta-dashboard{ grid-template-columns: 1fr; }
+  .conta-coluna-lateral{ position:static; order:-1; }
+  .conta-cartao-lateral{ display:flex; align-items:center; gap:16px; text-align:left; padding: 18px 20px; }
+  .perfil-avatar-wrap{ margin:0; flex-shrink:0; }
+  .conta-cartao-lateral > h2, .conta-cartao-lateral > span, .perfil-desde{ text-align:left; }
+  .perfil-stats{ display:none; }
+  .conta-coluna-lateral-acoes{ flex-direction:row; flex-wrap:wrap; margin-left:auto; }
 }
-.perfil-stat strong{ display:block; font-family: var(--serif); font-size:1.3rem; color: var(--bordo); font-variant-numeric: lining-nums tabular-nums; margin-bottom:2px; }
-.perfil-stat span{ font-size:0.72rem; color: var(--texto-suave); text-transform:uppercase; letter-spacing:0.04em; }
 @media (max-width: 560px){
-  .perfil-stat strong{ font-size:1.05rem; }
-  .perfil-stat span{ font-size:0.62rem; }
+  .conta-cartao-lateral{ flex-wrap:wrap; }
+  .conta-coluna-lateral-acoes{ width:100%; margin-left:0; flex-direction:column; }
 }
 
 .perfil-tabs{
@@ -1069,6 +1096,59 @@
 
 .perfil-painel{ display:none; }
 .perfil-painel.active{ display:block; }
+
+/* ---------------- CABEÇALHO DO CARD (foto + nome do produto em destaque) ---------------- */
+#contaPedidos .faq-item{ border:none; margin-bottom:14px; }
+#contaPedidos .faq-pergunta{ flex-wrap:nowrap; padding:0; }
+.pedido-card-cabecalho{
+  display:flex;
+  align-items:center;
+  gap: 14px;
+  width:100%;
+  padding: 14px;
+  border: 1px solid var(--borda);
+  border-radius: var(--radius);
+  background: var(--branco);
+  transition: border-color .2s;
+}
+.faq-item.open .pedido-card-cabecalho{ border-color: var(--bordo); }
+.pedido-card-foto{
+  flex-shrink:0;
+  width: 56px; height: 56px;
+  border-radius: var(--radius);
+  background: var(--creme-escuro) center/cover no-repeat;
+}
+.pedido-card-info{ flex:1; min-width:0; text-align:left; }
+.pedido-card-titulo{
+  display:block;
+  font-family: var(--serif);
+  font-weight:500;
+  font-size: 1rem;
+  color: var(--texto);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.pedido-card-subtitulo{ display:block; font-size:0.76rem; color: var(--texto-suave); margin-top:2px; }
+.pedido-card-badges{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.pedido-card-lado{
+  flex-shrink:0;
+  display:flex; flex-direction:column; align-items:flex-end; gap:6px;
+}
+.pedido-card-codigo{
+  font-size:0.66rem;
+  color: var(--texto-suave);
+  letter-spacing:0.02em;
+  background: var(--creme);
+  padding: 2px 7px;
+  border-radius: 20px;
+}
+.pedido-card-total{ font-family: var(--serif); color: var(--bordo); font-size:1rem; font-variant-numeric: lining-nums tabular-nums; }
+.pedido-card-lado svg{ width:15px; height:15px; color: var(--bordo); transition: transform .25s ease; }
+.faq-item.open .pedido-card-lado svg{ transform: rotate(45deg); }
+@media (max-width: 480px){
+  .pedido-card-foto{ width:46px; height:46px; }
+  .pedido-card-subtitulo{ display:none; }
+  .pedido-card-codigo{ display:none; }
+}
 
 /* ---------------- LINHA DO TEMPO DO PEDIDO ---------------- */
 .pedido-meta-linha{
