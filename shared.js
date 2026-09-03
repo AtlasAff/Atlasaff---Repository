@@ -34,6 +34,77 @@ function escaparHtml(texto){
 }
 
 /* ============================================================
+   STATUS DE PEDIDO — labels, cor do badge e linha do tempo.
+   Compartilhado entre conta.html (pedidos de quem tá logado) e
+   rastreio.html (consulta pública por número do pedido).
+   ============================================================ */
+const STATUS_PEDIDO_LABEL = { novo: 'Novo', confirmado: 'Confirmado', enviado: 'Enviado', entregue: 'Entregue', cancelado: 'Cancelado' };
+const STATUS_PEDIDO_COR = { novo: 'amarelo', confirmado: 'verde', enviado: 'verde', entregue: 'verde', cancelado: 'vermelho' };
+const STATUS_PAGAMENTO_LABEL = { pendente: 'Aguardando pagamento', em_analise: 'Pagamento em análise', aprovado: 'Pago', recusado: 'Pagamento recusado', estornado: 'Estornado' };
+const STATUS_PAGAMENTO_COR = { pendente: 'amarelo', em_analise: 'amarelo', aprovado: 'verde', recusado: 'vermelho', estornado: 'vermelho' };
+const FORMA_PAGAMENTO_LABEL = { pix: 'Pix', credit_card: 'Cartão de crédito', debit_card: 'Cartão de débito', ticket: 'Boleto', account_money: 'Saldo Mercado Pago' };
+
+// Link de rastreio — Correios tem URL pública de consulta; outras
+// transportadoras (Melhor Envio parceiras) não têm um padrão único, então
+// cai numa busca que já leva a pessoa a rastrear pelo código.
+function linkRastreio(codigo, transportadora){
+  const t = (transportadora || '').toLowerCase();
+  if (t.includes('correios')) return `https://rastreamento.correios.com.br/app/index.php?objetos=${codigo}`;
+  return `https://www.google.com/search?q=rastrear+encomenda+${encodeURIComponent(codigo)}`;
+}
+
+const ETAPAS_PEDIDO = [
+  { chave: 'novo', rotulo: 'Pedido feito', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8h12l-1 12H7L6 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>' },
+  { chave: 'confirmado', rotulo: 'Confirmado', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M8 12.3l2.6 2.6L16 9.5"/></svg>' },
+  { chave: 'enviado', rotulo: 'Enviado', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2.5 7h11v9h-11z"/><path d="M13.5 11h4l3 3v2h-7z"/><circle cx="6.5" cy="18" r="1.6"/><circle cx="17.5" cy="18" r="1.6"/></svg>' },
+  { chave: 'entregue', rotulo: 'Entregue', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9h12v-9"/><path d="M10 19v-5h4v5"/></svg>' }
+];
+const ICONE_CANCELADO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
+
+function timelinePedidoHtml(status){
+  if (status === 'cancelado'){
+    return `<div class="pedido-cancelado-aviso">${ICONE_CANCELADO}<span>Este pedido foi cancelado.</span></div>`;
+  }
+  const ordem = ETAPAS_PEDIDO.map(e => e.chave);
+  const indiceAtual = Math.max(ordem.indexOf(status), 0);
+  const progresso = (indiceAtual / (ordem.length - 1)) * 100;
+
+  return `
+    <div class="pedido-timeline" style="--progresso:${progresso}%;">
+      <div class="pedido-timeline-linha"><div class="pedido-timeline-linha-fill"></div></div>
+      ${ETAPAS_PEDIDO.map((etapa, i) => `
+        <div class="pedido-etapa ${i < indiceAtual ? 'concluida' : i === indiceAtual ? 'atual' : ''}">
+          <div class="pedido-etapa-icone">${etapa.icone}</div>
+          <span class="pedido-etapa-rotulo">${etapa.rotulo}</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// Previsão simples: data do pedido + prazo (confecção + entrega) escolhido
+// no checkout. Só faz sentido mostrar enquanto o pedido ainda não chegou.
+function previsaoEntregaHtml(p){
+  if (!p.frete_prazo_dias || ['entregue', 'cancelado'].includes(p.status)) return '';
+  const previsao = new Date(p.criado_em);
+  previsao.setDate(previsao.getDate() + Number(p.frete_prazo_dias));
+  return `<span class="pedido-meta-item">📅 Previsão de entrega: <strong>${previsao.toLocaleDateString('pt-BR')}</strong></span>`;
+}
+
+// Card de pedido é "produto em primeiro lugar": mostra a foto e o nome do
+// que a cliente comprou, não o código do pedido (isso vira um detalhe
+// pequeno no canto — ninguém decora "#1E37DC51", mas lembra "o anel que eu comprei").
+function resumoItensPedido(itens){
+  const lista = itens || [];
+  const primeiro = lista[0];
+  if (!primeiro) return { foto: '', titulo: 'Pedido', subtitulo: '' };
+  const extras = lista.length - 1;
+  const titulo = primeiro.nome + (extras > 0 ? ` + ${extras} ${extras === 1 ? 'item' : 'itens'}` : '');
+  const subtitulo = [primeiro.quilate, primeiro.banho, primeiro.tamanho ? `aro ${primeiro.tamanho}` : null].filter(Boolean).join(' · ');
+  return { foto: primeiro.imagem || '', titulo, subtitulo };
+}
+
+/* ============================================================
    FRETE (Melhor Envio) — a chamada de verdade acontece numa Edge
    Function no Supabase (calcular-frete), que esconde o token da
    API. Aqui só formatamos o CEP e chamamos essa função.
