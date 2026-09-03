@@ -93,134 +93,149 @@
 
   <!-- ============ LOGADO: perfil + meus pedidos ============ -->
   <div id="contaLogado" style="display:none;">
+    <div class="conta-dashboard">
 
-    <div class="perfil-header">
-      <div class="perfil-avatar" id="perfilAvatar">?</div>
-      <div class="perfil-header-info">
-        <p class="perfil-desde">Cliente Pavan &amp; Co. <span id="perfilDesde"></span></p>
-        <h2 id="contaPerfilNome"></h2>
-        <span id="contaPerfilEmail"></span>
-      </div>
-      <div class="perfil-header-acoes">
-        <a href="admin.html" class="btn btn-outline" id="btnIrParaAdmin" style="display:none;">Painel administrativo</a>
-        <button type="button" class="btn btn-outline" id="btnAbrirConfig">Configurações da conta</button>
-        <button type="button" class="btn btn-outline" id="btnSairConta">Sair da conta</button>
-      </div>
-    </div>
+      <!-- COLUNA ESQUERDA: pedidos / favoritos / configurações -->
+      <div class="conta-coluna-principal">
 
-    <div class="perfil-stats">
-      <div class="perfil-stat">
-        <strong id="statPedidos">0</strong>
-        <span>Pedidos feitos</span>
-      </div>
-      <div class="perfil-stat">
-        <strong id="statTotal">R$ 0,00</strong>
-        <span>Investido em joias</span>
-      </div>
-      <div class="perfil-stat">
-        <strong id="statFavoritos">0</strong>
-        <span>Favoritos</span>
-      </div>
-    </div>
-
-    <div class="perfil-tabs">
-      <button type="button" class="active" data-painel="pedidos">Meus pedidos</button>
-      <button type="button" data-painel="favoritos">Favoritos</button>
-      <button type="button" data-painel="config">Configurações</button>
-    </div>
-
-    <div class="perfil-painel active" data-painel="pedidos">
-      <div id="contaPedidos"></div>
-    </div>
-
-    <div class="perfil-painel" data-painel="favoritos">
-      <div id="contaFavoritos"></div>
-    </div>
-
-    <div class="perfil-painel" data-painel="config">
-
-      <h3 class="conta-secao-titulo">Meus dados</h3>
-      <div id="msgPerfil" class="conta-msg"></div>
-      <form class="conta-form active" id="formPerfil" style="margin-bottom:34px;">
-        <div class="conta-linha-2">
-          <div>
-            <label for="pfNome">Nome completo</label>
-            <input type="text" id="pfNome" required>
-          </div>
-          <div>
-            <label for="pfTelefone">WhatsApp</label>
-            <input type="tel" id="pfTelefone" placeholder="(00) 00000-0000">
-          </div>
+        <div class="perfil-tabs">
+          <button type="button" class="active" data-painel="pedidos">Meus pedidos</button>
+          <button type="button" data-painel="favoritos">Favoritos</button>
+          <button type="button" data-painel="config">Configurações</button>
         </div>
-        <div class="conta-linha-2">
-          <div>
-            <label for="pfCep">CEP</label>
-            <input type="text" id="pfCep" inputmode="numeric" maxlength="9" placeholder="00000-000">
-          </div>
-          <div>
-            <label for="pfNumero">Número</label>
-            <input type="text" id="pfNumero">
-          </div>
-        </div>
-        <div>
-          <label for="pfEndereco">Endereço</label>
-          <input type="text" id="pfEndereco">
-        </div>
-        <div>
-          <label for="pfComplemento">Complemento</label>
-          <input type="text" id="pfComplemento">
-        </div>
-        <div class="conta-linha-3">
-          <div>
-            <label for="pfBairro">Bairro</label>
-            <input type="text" id="pfBairro">
-          </div>
-          <div>
-            <label for="pfCidade">Cidade</label>
-            <input type="text" id="pfCidade">
-          </div>
-          <div>
-            <label for="pfEstado">UF</label>
-            <select id="pfEstado">
-              <option value="">—</option>
-              <option>AC</option><option>AL</option><option>AP</option><option>AM</option><option>BA</option>
-              <option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option>
-              <option>MT</option><option>MS</option><option>MG</option><option>PA</option><option>PB</option>
-              <option>PR</option><option>PE</option><option>PI</option><option>RJ</option><option>RN</option>
-              <option>RS</option><option>RO</option><option>RR</option><option>SC</option><option>SP</option>
-              <option>SE</option><option>TO</option>
-            </select>
-          </div>
-        </div>
-        <button type="submit" class="btn btn-primary">Salvar dados</button>
-      </form>
 
-      <h3 class="conta-secao-titulo">Segurança</h3>
-      <div id="msgSenha" class="conta-msg"></div>
-      <form class="conta-form active" id="formSenha" style="margin-bottom:34px;">
-        <div class="conta-linha-2">
-          <div>
-            <label for="inputNovaSenha">Nova senha</label>
-            <input type="password" id="inputNovaSenha" minlength="6" placeholder="Mínimo 6 caracteres" required>
-          </div>
-          <div>
-            <label for="inputConfirmaSenha">Confirmar nova senha</label>
-            <input type="password" id="inputConfirmaSenha" minlength="6" placeholder="Repita a senha" required>
-          </div>
+        <div class="perfil-painel active" data-painel="pedidos">
+          <div id="contaPedidos"></div>
         </div>
-        <button type="submit" class="btn btn-primary">Atualizar senha</button>
-      </form>
 
-      <h3 class="conta-secao-titulo">Pagamento</h3>
-      <div class="pagamento-info-card">
-        <div class="pagamento-info-icone">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="5.5" width="19" height="13" rx="2"/><line x1="2.5" y1="10" x2="21.5" y2="10"/></svg>
+        <div class="perfil-painel" data-painel="favoritos">
+          <div id="contaFavoritos"></div>
         </div>
-        <div>
-          <p>Por segurança, a Pavan &amp; Co. não guarda os dados do seu cartão em nenhum momento — cada pagamento é processado direto pelo <strong>Mercado Pago</strong>, no ambiente seguro deles, na hora da compra.</p>
-          <p id="pagamentoUltimaForma" class="pagamento-ultima-forma"></p>
+
+        <div class="perfil-painel" data-painel="config">
+
+          <h3 class="conta-secao-titulo">Meus dados</h3>
+          <div id="msgPerfil" class="conta-msg"></div>
+          <form class="conta-form active" id="formPerfil" style="margin-bottom:34px;">
+            <div class="conta-linha-2">
+              <div>
+                <label for="pfNome">Nome completo</label>
+                <input type="text" id="pfNome" required>
+              </div>
+              <div>
+                <label for="pfTelefone">WhatsApp</label>
+                <input type="tel" id="pfTelefone" placeholder="(00) 00000-0000">
+              </div>
+            </div>
+            <div class="conta-linha-2">
+              <div>
+                <label for="pfCep">CEP</label>
+                <input type="text" id="pfCep" inputmode="numeric" maxlength="9" placeholder="00000-000">
+              </div>
+              <div>
+                <label for="pfNumero">Número</label>
+                <input type="text" id="pfNumero">
+              </div>
+            </div>
+            <div>
+              <label for="pfEndereco">Endereço</label>
+              <input type="text" id="pfEndereco">
+            </div>
+            <div>
+              <label for="pfComplemento">Complemento</label>
+              <input type="text" id="pfComplemento">
+            </div>
+            <div class="conta-linha-3">
+              <div>
+                <label for="pfBairro">Bairro</label>
+                <input type="text" id="pfBairro">
+              </div>
+              <div>
+                <label for="pfCidade">Cidade</label>
+                <input type="text" id="pfCidade">
+              </div>
+              <div>
+                <label for="pfEstado">UF</label>
+                <select id="pfEstado">
+                  <option value="">—</option>
+                  <option>AC</option><option>AL</option><option>AP</option><option>AM</option><option>BA</option>
+                  <option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option>
+                  <option>MT</option><option>MS</option><option>MG</option><option>PA</option><option>PB</option>
+                  <option>PR</option><option>PE</option><option>PI</option><option>RJ</option><option>RN</option>
+                  <option>RS</option><option>RO</option><option>RR</option><option>SC</option><option>SP</option>
+                  <option>SE</option><option>TO</option>
+                </select>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Salvar dados</button>
+          </form>
+
+          <h3 class="conta-secao-titulo">Segurança</h3>
+          <div id="msgSenha" class="conta-msg"></div>
+          <form class="conta-form active" id="formSenha" style="margin-bottom:34px;">
+            <div class="conta-linha-2">
+              <div>
+                <label for="inputNovaSenha">Nova senha</label>
+                <input type="password" id="inputNovaSenha" minlength="6" placeholder="Mínimo 6 caracteres" required>
+              </div>
+              <div>
+                <label for="inputConfirmaSenha">Confirmar nova senha</label>
+                <input type="password" id="inputConfirmaSenha" minlength="6" placeholder="Repita a senha" required>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Atualizar senha</button>
+          </form>
+
+          <h3 class="conta-secao-titulo">Pagamento</h3>
+          <div class="pagamento-info-card">
+            <div class="pagamento-info-icone">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="5.5" width="19" height="13" rx="2"/><line x1="2.5" y1="10" x2="21.5" y2="10"/></svg>
+            </div>
+            <div>
+              <p>Por segurança, a Pavan &amp; Co. não guarda os dados do seu cartão em nenhum momento — cada pagamento é processado direto pelo <strong>Mercado Pago</strong>, no ambiente seguro deles, na hora da compra.</p>
+              <p id="pagamentoUltimaForma" class="pagamento-ultima-forma"></p>
+            </div>
+          </div>
+
         </div>
       </div>
+
+      <!-- COLUNA DIREITA: cartão da conta (foto, dados, ações) -->
+      <aside class="conta-coluna-lateral">
+        <div class="conta-cartao-lateral">
+          <div class="perfil-avatar-wrap">
+            <div class="perfil-avatar" id="perfilAvatar" style="background-image:none;">?</div>
+            <button type="button" class="perfil-avatar-editar" id="btnEditarAvatar" aria-label="Alterar foto de perfil" title="Alterar foto de perfil">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1-2h7l1 2h2A1.5 1.5 0 0 1 20 8.5v9A1.5 1.5 0 0 1 18.5 19h-13A1.5 1.5 0 0 1 4 17.5v-9Z"/><circle cx="12" cy="13" r="3.3"/></svg>
+            </button>
+            <input type="file" id="inputAvatarArquivo" accept="image/png,image/jpeg,image/webp" hidden>
+          </div>
+          <h2 id="contaPerfilNome"></h2>
+          <span id="contaPerfilEmail"></span>
+          <p class="perfil-desde">Cliente Pavan &amp; Co. <span id="perfilDesde"></span></p>
+
+          <div class="perfil-stats">
+            <div class="perfil-stat">
+              <strong id="statPedidos">0</strong>
+              <span>Pedidos</span>
+            </div>
+            <div class="perfil-stat">
+              <strong id="statTotal">R$ 0</strong>
+              <span>Investido</span>
+            </div>
+            <div class="perfil-stat">
+              <strong id="statFavoritos">0</strong>
+              <span>Favoritos</span>
+            </div>
+          </div>
+
+          <div class="conta-coluna-lateral-acoes">
+            <a href="admin.html" class="btn btn-outline" id="btnIrParaAdmin" style="display:none;">Painel administrativo</a>
+            <button type="button" class="btn btn-outline" id="btnAbrirConfig">Configurações da conta</button>
+            <button type="button" class="btn btn-outline" id="btnSairConta">Sair da conta</button>
+          </div>
+        </div>
+      </aside>
 
     </div>
   </div>
@@ -432,6 +447,59 @@ document.getElementById('btnAbrirConfig').addEventListener('click', () => {
   document.querySelector('.perfil-painel[data-painel="config"]').scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
+// ---------- Trocar foto de perfil ----------
+document.getElementById('btnEditarAvatar').addEventListener('click', () => {
+  document.getElementById('inputAvatarArquivo').click();
+});
+document.getElementById('inputAvatarArquivo').addEventListener('change', async (e) => {
+  const arquivo = e.target.files[0];
+  if (!arquivo) return;
+
+  if (arquivo.size > 3 * 1024 * 1024){
+    mostrarToast('Essa imagem passou de 3MB — escolhe uma menor.');
+    e.target.value = '';
+    return;
+  }
+
+  const { data } = await sb.auth.getSession();
+  const sessao = data.session;
+  if (!sessao) return;
+
+  const avatarEl = document.getElementById('perfilAvatar');
+  const extensao = (arquivo.name.split('.').pop() || 'jpg').toLowerCase();
+  // Sempre o mesmo nome de arquivo por usuário (com upsert) — assim a foto
+  // antiga já é sobrescrita, sem acumular lixo no storage.
+  const caminho = `${sessao.user.id}/avatar.${extensao}`;
+
+  const { error: erroUpload } = await sb.storage.from('avatares').upload(caminho, arquivo, { upsert: true });
+  if (erroUpload){
+    mostrarToast('Não foi possível enviar a foto agora — tenta de novo.');
+    e.target.value = '';
+    return;
+  }
+
+  const { data: urlData } = sb.storage.from('avatares').getPublicUrl(caminho);
+  // "?v=timestamp" só pra invalidar o cache do navegador e a foto trocar na
+  // hora, sem precisar dar F5 na página.
+  const urlComVersao = `${urlData.publicUrl}?v=${Date.now()}`;
+
+  const { error: erroSalvar } = await sb.from('perfis').upsert({
+    user_id: sessao.user.id,
+    foto_url: urlComVersao,
+    atualizado_em: new Date().toISOString()
+  }, { onConflict: 'user_id' });
+
+  e.target.value = '';
+  if (erroSalvar){
+    mostrarToast('A foto foi enviada, mas não salvou no seu perfil — tenta de novo.');
+    return;
+  }
+
+  avatarEl.style.backgroundImage = `url('${urlComVersao}')`;
+  avatarEl.textContent = '';
+  mostrarToast('Foto de perfil atualizada ✓');
+});
+
 // Iniciais pro avatar circular — usa nome e sobrenome; se só tiver o
 // e-mail (perfil ainda não preenchido), usa a primeira letra dele.
 function obterIniciaisConta(nome){
@@ -473,7 +541,14 @@ async function mostrarConta(){
   const { data: perfil } = await sb.from('perfis').select('*').eq('user_id', sessao.user.id).maybeSingle();
   const nomeExibicao = perfil?.nome || sessao.user.user_metadata?.nome || sessao.user.email;
   document.getElementById('contaPerfilNome').textContent = nomeExibicao;
-  document.getElementById('perfilAvatar').textContent = obterIniciaisConta(nomeExibicao);
+  const avatarEl = document.getElementById('perfilAvatar');
+  if (perfil?.foto_url){
+    avatarEl.style.backgroundImage = `url('${perfil.foto_url}')`;
+    avatarEl.textContent = '';
+  } else {
+    avatarEl.style.backgroundImage = 'none';
+    avatarEl.textContent = obterIniciaisConta(nomeExibicao);
+  }
   document.getElementById('pfNome').value = perfil?.nome || sessao.user.user_metadata?.nome || '';
   document.getElementById('pfTelefone').value = perfil?.telefone || '';
   document.getElementById('pfCep').value = perfil?.cep ? formatarCep(perfil.cep) : '';
@@ -579,6 +654,19 @@ function previsaoEntregaHtml(p){
   return `<span class="pedido-meta-item">📅 Previsão de entrega: <strong>${previsao.toLocaleDateString('pt-BR')}</strong></span>`;
 }
 
+// Card de pedido é "produto em primeiro lugar": mostra a foto e o nome do
+// que a cliente comprou, não o código do pedido (isso vira um detalhe
+// pequeno no canto — ninguém decora "#1E37DC51", mas lembra "o anel que eu comprei").
+function resumoItensPedido(itens){
+  const lista = itens || [];
+  const primeiro = lista[0];
+  if (!primeiro) return { foto: '', titulo: 'Pedido', subtitulo: '' };
+  const extras = lista.length - 1;
+  const titulo = primeiro.nome + (extras > 0 ? ` + ${extras} ${extras === 1 ? 'item' : 'itens'}` : '');
+  const subtitulo = [primeiro.quilate, primeiro.banho, primeiro.tamanho ? `aro ${primeiro.tamanho}` : null].filter(Boolean).join(' · ');
+  return { foto: primeiro.imagem || '', titulo, subtitulo };
+}
+
 function pedidoParaHtml(p, solicitacoes, avaliadosSet){
   const numero = p.id.slice(0, 8).toUpperCase();
   const dataFormatada = new Date(p.criado_em).toLocaleDateString('pt-BR');
@@ -587,19 +675,26 @@ function pedidoParaHtml(p, solicitacoes, avaliadosSet){
   const formaPagamento = FORMA_PAGAMENTO_LABEL[p.forma_pagamento] || p.forma_pagamento;
   const podeCancelar = ['novo', 'confirmado'].includes(p.status);
   const podeAvaliar = p.status === 'entregue';
+  const resumo = resumoItensPedido(p.itens);
 
   return `
     <div class="faq-item">
       <button type="button" class="faq-pergunta conta-pedido-toggle">
-        <span style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-family:var(--sans);font-size:0.85rem;font-weight:600;">
-          <strong style="font-family:var(--serif);font-size:1rem;font-weight:500;">#${numero}</strong>
-          <span class="conta-pedido-data" style="margin:0;">${dataFormatada}</span>
-          <span class="badge-status badge-status--${corPedido}">${STATUS_PEDIDO_LABEL[p.status] || p.status}</span>
-          <span class="badge-status badge-status--${corPagamento}">${STATUS_PAGAMENTO_LABEL[p.status_pagamento] || p.status_pagamento}</span>
-        </span>
-        <span style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
-          <span class="conta-pedido-total">${formatarPreco(p.total)}</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span class="pedido-card-cabecalho">
+          <span class="pedido-card-foto" style="${resumo.foto ? `background-image:url('${resumo.foto}')` : ''}"></span>
+          <span class="pedido-card-info">
+            <strong class="pedido-card-titulo">${resumo.titulo}</strong>
+            ${resumo.subtitulo ? `<span class="pedido-card-subtitulo">${resumo.subtitulo}</span>` : `<span class="pedido-card-subtitulo">${dataFormatada}</span>`}
+            <span class="pedido-card-badges">
+              <span class="badge-status badge-status--${corPedido}">${STATUS_PEDIDO_LABEL[p.status] || p.status}</span>
+              <span class="badge-status badge-status--${corPagamento}">${STATUS_PAGAMENTO_LABEL[p.status_pagamento] || p.status_pagamento}</span>
+            </span>
+          </span>
+          <span class="pedido-card-lado">
+            <span class="pedido-card-codigo">#${numero}</span>
+            <span class="pedido-card-total">${formatarPreco(p.total)}</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </span>
         </span>
       </button>
       <div class="faq-resposta conta-pedido-detalhes">
