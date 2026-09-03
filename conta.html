@@ -739,9 +739,9 @@ function pedidoParaHtml(p, solicitacoes, avaliadosSet){
         ${solicitacoes.map(s => `
           <div class="conta-solicitacao-linha">
             <span class="badge-status badge-status--${SOLICITACAO_STATUS_COR[s.status]}">${SOLICITACAO_STATUS_LABEL[s.status]}</span>
-            <span>${SOLICITACAO_TIPO_LABEL[s.tipo]}: ${s.motivo}</span>
+            <span>${SOLICITACAO_TIPO_LABEL[s.tipo]}: ${escaparHtml(s.motivo)}</span>
           </div>
-          ${s.resposta_admin ? `<div class="conta-solicitacao-linha" style="padding-left:2px;"><em>Resposta: ${s.resposta_admin}</em></div>` : ''}
+          ${s.resposta_admin ? `<div class="conta-solicitacao-linha" style="padding-left:2px;"><em>Resposta: ${escaparHtml(s.resposta_admin)}</em></div>` : ''}
         `).join('')}
 
         ${podeAvaliar ? `

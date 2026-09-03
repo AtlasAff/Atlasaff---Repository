@@ -18,6 +18,21 @@ const SUPABASE_URL = "https://pqhdtteeukfcjstfsnkn.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxaGR0dGVldWtmY2pzdGZzbmtuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzNzc0MTAsImV4cCI6MjEwMTk1MzQxMH0.VwOKgaNEmKaT-xGqF-S0Cr2mY9i4O_4eIFkqpdv0KiY";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// Escapa texto que veio de alguém DIGITANDO (nome, endereço, mensagem de
+// contato, comentário de avaliação...) antes de jogar num innerHTML.
+// Sem isso, um campo de texto vira uma forma de rodar código na tela de
+// quem for ler — inclusive na tela do admin, logado. Usar em TODO texto
+// de origem externa que for inserido via innerHTML/template literal.
+function escaparHtml(texto){
+  if (texto === null || texto === undefined) return '';
+  return String(texto)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 /* ============================================================
    FRETE (Melhor Envio) — a chamada de verdade acontece numa Edge
    Function no Supabase (calcular-frete), que esconde o token da
@@ -60,17 +75,19 @@ async function assinarNewsletter(form){
   botao.disabled = true;
   botao.textContent = '...';
 
-  const { error } = await sb.from('newsletter_assinantes').insert({ email });
+  const { data, error } = await sb.rpc('assinar_newsletter', { p_email: email });
 
   botao.disabled = false;
   botao.textContent = textoOriginal;
 
   if (error){
-    if (error.code === '23505'){ // e-mail duplicado (unique constraint)
-      mostrarToast('Esse e-mail já tá cadastrado ✓');
-    } else {
-      mostrarToast('Não foi possível assinar agora — tenta de novo.');
-    }
+    mostrarToast(error.message || 'Não foi possível assinar agora — tenta de novo.');
+    return false;
+  }
+
+  if (data === 'duplicado'){
+    mostrarToast('Esse e-mail já tá cadastrado ✓');
+    form.reset();
     return false;
   }
 
@@ -1788,10 +1805,10 @@ async function renderProdutoPage(){
         <div class="avaliacao-item">
           <div class="avaliacao-topo">
             ${estrelasHTML(a.nota, 14)}
-            <span class="avaliacao-nome">${a.nome_cliente}</span>
+            <span class="avaliacao-nome">${escaparHtml(a.nome_cliente)}</span>
             <span class="avaliacao-data">${formatarDataBR(a.data_avaliacao)}</span>
           </div>
-          ${a.comentario ? `<p>${a.comentario}</p>` : ''}
+          ${a.comentario ? `<p>${escaparHtml(a.comentario)}</p>` : ''}
           ${(a.fotos && a.fotos.length) ? `
             <div class="avaliacao-fotos">
               ${a.fotos.map(f => `<img src="${f}" alt="Foto enviada na avaliação">`).join('')}

@@ -124,11 +124,11 @@ document.getElementById('formContato').addEventListener('submit', async (e) => {
   botao.disabled = true;
   botao.textContent = 'Enviando...';
 
-  const { error } = await sb.from('mensagens_contato').insert({
-    nome: document.getElementById('ctNome').value.trim(),
-    email: document.getElementById('ctEmail').value.trim(),
-    assunto: document.getElementById('ctAssunto').value.trim(),
-    mensagem: document.getElementById('ctMensagem').value.trim()
+  const { error } = await sb.rpc('enviar_mensagem_contato', {
+    p_nome: document.getElementById('ctNome').value.trim(),
+    p_email: document.getElementById('ctEmail').value.trim(),
+    p_assunto: document.getElementById('ctAssunto').value.trim(),
+    p_mensagem: document.getElementById('ctMensagem').value.trim()
   });
 
   botao.disabled = false;
@@ -136,7 +136,7 @@ document.getElementById('formContato').addEventListener('submit', async (e) => {
 
   const msg = document.getElementById('msgContato');
   if (error){
-    msg.textContent = 'Não foi possível enviar agora — tenta de novo em instantes.';
+    msg.textContent = error.message || 'Não foi possível enviar agora — tenta de novo em instantes.';
     msg.className = 'conta-msg show erro';
     return;
   }
