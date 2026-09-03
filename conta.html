@@ -561,7 +561,11 @@ async function mostrarConta(){
 
   const pedidosWrap = document.getElementById('contaPedidos');
   pedidosWrap.innerHTML = `<p class="suave" style="color:var(--texto-suave);font-size:0.85rem;">Carregando pedidos...</p>`;
-  const { data: pedidos, error } = await sb.from('pedidos').select('*').order('criado_em', { ascending: false });
+  // Filtra por user_id explicitamente (não só confiar na regra do banco):
+  // pra conta admin, a regra libera TODOS os pedidos da loja (é assim que o
+  // admin.html precisa); aqui em "Minha conta" isso mostraria as compras de
+  // qualquer cliente junto com as da própria pessoa — sempre só as dela.
+  const { data: pedidos, error } = await sb.from('pedidos').select('*').eq('user_id', sessao.user.id).order('criado_em', { ascending: false });
 
   renderFavoritos();
 
