@@ -93,77 +93,136 @@
 
   <!-- ============ LOGADO: perfil + meus pedidos ============ -->
   <div id="contaLogado" style="display:none;">
-    <div class="conta-perfil">
-      <p>Logada(o) como</p>
-      <h3 id="contaPerfilNome"></h3>
-      <span id="contaPerfilEmail"></span>
-      <div class="conta-perfil-acoes">
+
+    <div class="perfil-header">
+      <div class="perfil-avatar" id="perfilAvatar">?</div>
+      <div class="perfil-header-info">
+        <p class="perfil-desde">Cliente Pavan &amp; Co. <span id="perfilDesde"></span></p>
+        <h2 id="contaPerfilNome"></h2>
+        <span id="contaPerfilEmail"></span>
+      </div>
+      <div class="perfil-header-acoes">
         <a href="admin.html" class="btn btn-outline" id="btnIrParaAdmin" style="display:none;">Painel administrativo</a>
+        <button type="button" class="btn btn-outline" id="btnAbrirConfig">Configurações da conta</button>
         <button type="button" class="btn btn-outline" id="btnSairConta">Sair da conta</button>
       </div>
     </div>
 
-    <h3 class="conta-secao-titulo">Meus dados</h3>
-    <div id="msgPerfil" class="conta-msg"></div>
-    <form class="conta-form active" id="formPerfil" style="margin-bottom:34px;">
-      <div class="conta-linha-2">
-        <div>
-          <label for="pfNome">Nome completo</label>
-          <input type="text" id="pfNome" required>
-        </div>
-        <div>
-          <label for="pfTelefone">WhatsApp</label>
-          <input type="tel" id="pfTelefone" placeholder="(00) 00000-0000">
-        </div>
+    <div class="perfil-stats">
+      <div class="perfil-stat">
+        <strong id="statPedidos">0</strong>
+        <span>Pedidos feitos</span>
       </div>
-      <div class="conta-linha-2">
-        <div>
-          <label for="pfCep">CEP</label>
-          <input type="text" id="pfCep" inputmode="numeric" maxlength="9" placeholder="00000-000">
-        </div>
-        <div>
-          <label for="pfNumero">Número</label>
-          <input type="text" id="pfNumero">
-        </div>
+      <div class="perfil-stat">
+        <strong id="statTotal">R$ 0,00</strong>
+        <span>Investido em joias</span>
       </div>
-      <div>
-        <label for="pfEndereco">Endereço</label>
-        <input type="text" id="pfEndereco">
+      <div class="perfil-stat">
+        <strong id="statFavoritos">0</strong>
+        <span>Favoritos</span>
       </div>
-      <div>
-        <label for="pfComplemento">Complemento</label>
-        <input type="text" id="pfComplemento">
-      </div>
-      <div class="conta-linha-3">
-        <div>
-          <label for="pfBairro">Bairro</label>
-          <input type="text" id="pfBairro">
-        </div>
-        <div>
-          <label for="pfCidade">Cidade</label>
-          <input type="text" id="pfCidade">
-        </div>
-        <div>
-          <label for="pfEstado">UF</label>
-          <select id="pfEstado">
-            <option value="">—</option>
-            <option>AC</option><option>AL</option><option>AP</option><option>AM</option><option>BA</option>
-            <option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option>
-            <option>MT</option><option>MS</option><option>MG</option><option>PA</option><option>PB</option>
-            <option>PR</option><option>PE</option><option>PI</option><option>RJ</option><option>RN</option>
-            <option>RS</option><option>RO</option><option>RR</option><option>SC</option><option>SP</option>
-            <option>SE</option><option>TO</option>
-          </select>
-        </div>
-      </div>
-      <button type="submit" class="btn btn-primary">Salvar dados</button>
-    </form>
+    </div>
 
-    <h3 class="conta-secao-titulo">Meus pedidos</h3>
-    <div id="contaPedidos"></div>
+    <div class="perfil-tabs">
+      <button type="button" class="active" data-painel="pedidos">Meus pedidos</button>
+      <button type="button" data-painel="favoritos">Favoritos</button>
+      <button type="button" data-painel="config">Configurações</button>
+    </div>
 
-    <h3 class="conta-secao-titulo">Meus favoritos</h3>
-    <div id="contaFavoritos"></div>
+    <div class="perfil-painel active" data-painel="pedidos">
+      <div id="contaPedidos"></div>
+    </div>
+
+    <div class="perfil-painel" data-painel="favoritos">
+      <div id="contaFavoritos"></div>
+    </div>
+
+    <div class="perfil-painel" data-painel="config">
+
+      <h3 class="conta-secao-titulo">Meus dados</h3>
+      <div id="msgPerfil" class="conta-msg"></div>
+      <form class="conta-form active" id="formPerfil" style="margin-bottom:34px;">
+        <div class="conta-linha-2">
+          <div>
+            <label for="pfNome">Nome completo</label>
+            <input type="text" id="pfNome" required>
+          </div>
+          <div>
+            <label for="pfTelefone">WhatsApp</label>
+            <input type="tel" id="pfTelefone" placeholder="(00) 00000-0000">
+          </div>
+        </div>
+        <div class="conta-linha-2">
+          <div>
+            <label for="pfCep">CEP</label>
+            <input type="text" id="pfCep" inputmode="numeric" maxlength="9" placeholder="00000-000">
+          </div>
+          <div>
+            <label for="pfNumero">Número</label>
+            <input type="text" id="pfNumero">
+          </div>
+        </div>
+        <div>
+          <label for="pfEndereco">Endereço</label>
+          <input type="text" id="pfEndereco">
+        </div>
+        <div>
+          <label for="pfComplemento">Complemento</label>
+          <input type="text" id="pfComplemento">
+        </div>
+        <div class="conta-linha-3">
+          <div>
+            <label for="pfBairro">Bairro</label>
+            <input type="text" id="pfBairro">
+          </div>
+          <div>
+            <label for="pfCidade">Cidade</label>
+            <input type="text" id="pfCidade">
+          </div>
+          <div>
+            <label for="pfEstado">UF</label>
+            <select id="pfEstado">
+              <option value="">—</option>
+              <option>AC</option><option>AL</option><option>AP</option><option>AM</option><option>BA</option>
+              <option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option>
+              <option>MT</option><option>MS</option><option>MG</option><option>PA</option><option>PB</option>
+              <option>PR</option><option>PE</option><option>PI</option><option>RJ</option><option>RN</option>
+              <option>RS</option><option>RO</option><option>RR</option><option>SC</option><option>SP</option>
+              <option>SE</option><option>TO</option>
+            </select>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Salvar dados</button>
+      </form>
+
+      <h3 class="conta-secao-titulo">Segurança</h3>
+      <div id="msgSenha" class="conta-msg"></div>
+      <form class="conta-form active" id="formSenha" style="margin-bottom:34px;">
+        <div class="conta-linha-2">
+          <div>
+            <label for="inputNovaSenha">Nova senha</label>
+            <input type="password" id="inputNovaSenha" minlength="6" placeholder="Mínimo 6 caracteres" required>
+          </div>
+          <div>
+            <label for="inputConfirmaSenha">Confirmar nova senha</label>
+            <input type="password" id="inputConfirmaSenha" minlength="6" placeholder="Repita a senha" required>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Atualizar senha</button>
+      </form>
+
+      <h3 class="conta-secao-titulo">Pagamento</h3>
+      <div class="pagamento-info-card">
+        <div class="pagamento-info-icone">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="5.5" width="19" height="13" rx="2"/><line x1="2.5" y1="10" x2="21.5" y2="10"/></svg>
+        </div>
+        <div>
+          <p>Por segurança, a Pavan &amp; Co. não guarda os dados do seu cartão em nenhum momento — cada pagamento é processado direto pelo <strong>Mercado Pago</strong>, no ambiente seguro deles, na hora da compra.</p>
+          <p id="pagamentoUltimaForma" class="pagamento-ultima-forma"></p>
+        </div>
+      </div>
+
+    </div>
   </div>
 </div>
 
@@ -360,6 +419,30 @@ document.getElementById('btnSairConta').addEventListener('click', async () => {
   location.reload();
 });
 
+// ---------- Abas do painel (Meus pedidos / Favoritos / Configurações) ----------
+document.querySelectorAll('.perfil-tabs button').forEach(botaoAba => {
+  botaoAba.addEventListener('click', () => {
+    const alvo = botaoAba.getAttribute('data-painel');
+    document.querySelectorAll('.perfil-tabs button').forEach(b => b.classList.toggle('active', b === botaoAba));
+    document.querySelectorAll('.perfil-painel').forEach(p => p.classList.toggle('active', p.getAttribute('data-painel') === alvo));
+  });
+});
+document.getElementById('btnAbrirConfig').addEventListener('click', () => {
+  document.querySelector('.perfil-tabs button[data-painel="config"]').click();
+  document.querySelector('.perfil-painel[data-painel="config"]').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
+// Iniciais pro avatar circular — usa nome e sobrenome; se só tiver o
+// e-mail (perfil ainda não preenchido), usa a primeira letra dele.
+function obterIniciaisConta(nome){
+  if (!nome) return '?';
+  if (nome.includes('@')) return nome[0].toUpperCase();
+  const partes = nome.trim().split(/\s+/).filter(Boolean);
+  if (!partes.length) return '?';
+  if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
+  return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+}
+
 // ---------- Mostra a tela certa (logado ou não) ----------
 async function mostrarConta(){
   const { data } = await sb.auth.getSession();
@@ -368,12 +451,18 @@ async function mostrarConta(){
   if (!sessao){
     document.getElementById('contaDeslogado').style.display = 'block';
     document.getElementById('contaLogado').style.display = 'none';
+    document.querySelector('.conta-wrap').classList.remove('conta-wrap--logado');
     return;
   }
 
   document.getElementById('contaDeslogado').style.display = 'none';
   document.getElementById('contaLogado').style.display = 'block';
+  document.querySelector('.conta-wrap').classList.add('conta-wrap--logado');
   document.getElementById('contaPerfilEmail').textContent = sessao.user.email;
+  if (sessao.user.created_at){
+    const desde = new Date(sessao.user.created_at);
+    document.getElementById('perfilDesde').textContent = `— desde ${desde.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}`;
+  }
 
   // Só mostra o botão do painel administrativo pra quem realmente é
   // admin (checado no banco via RPC — não dá pra fingir isso no navegador).
@@ -382,7 +471,9 @@ async function mostrarConta(){
 
   // Preenche o formulário de dados com o que já foi salvo antes (se houver)
   const { data: perfil } = await sb.from('perfis').select('*').eq('user_id', sessao.user.id).maybeSingle();
-  document.getElementById('contaPerfilNome').textContent = perfil?.nome || sessao.user.user_metadata?.nome || sessao.user.email;
+  const nomeExibicao = perfil?.nome || sessao.user.user_metadata?.nome || sessao.user.email;
+  document.getElementById('contaPerfilNome').textContent = nomeExibicao;
+  document.getElementById('perfilAvatar').textContent = obterIniciaisConta(nomeExibicao);
   document.getElementById('pfNome').value = perfil?.nome || sessao.user.user_metadata?.nome || '';
   document.getElementById('pfTelefone').value = perfil?.telefone || '';
   document.getElementById('pfCep').value = perfil?.cep ? formatarCep(perfil.cep) : '';
@@ -398,6 +489,16 @@ async function mostrarConta(){
   const { data: pedidos, error } = await sb.from('pedidos').select('*').order('criado_em', { ascending: false });
 
   renderFavoritos();
+
+  // Estatísticas do topo — some pedidos cancelados não entram no total investido.
+  const pedidosValidos = (pedidos || []).filter(p => p.status !== 'cancelado');
+  document.getElementById('statPedidos').textContent = pedidos ? pedidos.length : 0;
+  document.getElementById('statTotal').textContent = formatarPreco(pedidosValidos.reduce((soma, p) => soma + Number(p.total || 0), 0));
+
+  const ultimaFormaPagamento = (pedidos || []).find(p => p.forma_pagamento)?.forma_pagamento;
+  document.getElementById('pagamentoUltimaForma').textContent = ultimaFormaPagamento
+    ? `Última forma de pagamento usada: ${FORMA_PAGAMENTO_LABEL[ultimaFormaPagamento] || ultimaFormaPagamento}.`
+    : 'Você ainda não tem nenhum pagamento identificado por aqui.';
 
   if (error || !pedidos || !pedidos.length){
     pedidosWrap.innerHTML = `<p class="suave" style="color:var(--texto-suave);font-size:0.85rem;">Você ainda não fez nenhum pedido por aqui logada(o). Pedidos feitos sem estar logada(o) não aparecem nessa lista.</p>`;
@@ -437,6 +538,47 @@ function linkRastreio(codigo, transportadora){
   return `https://www.google.com/search?q=rastrear+encomenda+${encodeURIComponent(codigo)}`;
 }
 
+/* ============================================================
+   LINHA DO TEMPO DO PEDIDO (pedido feito → confirmado → enviado → entregue)
+   ============================================================ */
+const ETAPAS_PEDIDO = [
+  { chave: 'novo', rotulo: 'Pedido feito', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8h12l-1 12H7L6 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>' },
+  { chave: 'confirmado', rotulo: 'Confirmado', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M8 12.3l2.6 2.6L16 9.5"/></svg>' },
+  { chave: 'enviado', rotulo: 'Enviado', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2.5 7h11v9h-11z"/><path d="M13.5 11h4l3 3v2h-7z"/><circle cx="6.5" cy="18" r="1.6"/><circle cx="17.5" cy="18" r="1.6"/></svg>' },
+  { chave: 'entregue', rotulo: 'Entregue', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9h12v-9"/><path d="M10 19v-5h4v5"/></svg>' }
+];
+const ICONE_CANCELADO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
+
+function timelinePedidoHtml(status){
+  if (status === 'cancelado'){
+    return `<div class="pedido-cancelado-aviso">${ICONE_CANCELADO}<span>Este pedido foi cancelado.</span></div>`;
+  }
+  const ordem = ETAPAS_PEDIDO.map(e => e.chave);
+  const indiceAtual = Math.max(ordem.indexOf(status), 0);
+  const progresso = (indiceAtual / (ordem.length - 1)) * 100;
+
+  return `
+    <div class="pedido-timeline" style="--progresso:${progresso}%;">
+      <div class="pedido-timeline-linha"><div class="pedido-timeline-linha-fill"></div></div>
+      ${ETAPAS_PEDIDO.map((etapa, i) => `
+        <div class="pedido-etapa ${i < indiceAtual ? 'concluida' : i === indiceAtual ? 'atual' : ''}">
+          <div class="pedido-etapa-icone">${etapa.icone}</div>
+          <span class="pedido-etapa-rotulo">${etapa.rotulo}</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// Previsão simples: data do pedido + prazo (confecção + entrega) escolhido
+// no checkout. Só faz sentido mostrar enquanto o pedido ainda não chegou.
+function previsaoEntregaHtml(p){
+  if (!p.frete_prazo_dias || ['entregue', 'cancelado'].includes(p.status)) return '';
+  const previsao = new Date(p.criado_em);
+  previsao.setDate(previsao.getDate() + Number(p.frete_prazo_dias));
+  return `<span class="pedido-meta-item">📅 Previsão de entrega: <strong>${previsao.toLocaleDateString('pt-BR')}</strong></span>`;
+}
+
 function pedidoParaHtml(p, solicitacoes, avaliadosSet){
   const numero = p.id.slice(0, 8).toUpperCase();
   const dataFormatada = new Date(p.criado_em).toLocaleDateString('pt-BR');
@@ -461,6 +603,12 @@ function pedidoParaHtml(p, solicitacoes, avaliadosSet){
         </span>
       </button>
       <div class="faq-resposta conta-pedido-detalhes">
+        ${timelinePedidoHtml(p.status)}
+        <div class="pedido-meta-linha">
+          <span class="pedido-meta-item">Pedido <strong>#${numero}</strong></span>
+          <span class="pedido-meta-item">Feito em <strong>${dataFormatada}</strong></span>
+          ${previsaoEntregaHtml(p)}
+        </div>
         <div style="margin-bottom:14px;">
           ${(p.itens || []).map(item => `
             <div style="display:flex;justify-content:space-between;gap:10px;font-size:0.85rem;margin-bottom:8px;">
@@ -677,6 +825,7 @@ async function renderFavoritos(){
   wrap.innerHTML = `<p class="suave" style="color:var(--texto-suave);font-size:0.85rem;">Carregando favoritos...</p>`;
   const produtos = await carregarProdutosFavoritos();
   favoritosCache = new Set(produtos.map(p => p.id)); // sincroniza o cache global (heart da página de produto)
+  document.getElementById('statFavoritos').textContent = produtos.length;
   wrap.innerHTML = produtos.length
     ? `<div class="prod-grid">${produtos.map(cardProdutoHTML).join('')}</div>`
     : `<p class="suave" style="color:var(--texto-suave);font-size:0.85rem;">Você ainda não favoritou nenhuma peça — clique no coração ♥ na página de um produto.</p>`;
@@ -737,6 +886,40 @@ document.getElementById('formPerfil').addEventListener('submit', async (e) => {
   msg.textContent = 'Dados salvos ✓';
   msg.className = 'conta-msg show sucesso';
   document.getElementById('contaPerfilNome').textContent = document.getElementById('pfNome').value.trim() || data.session.user.email;
+});
+
+/* ============================================================
+   SEGURANÇA — trocar senha
+   ============================================================ */
+document.getElementById('formSenha').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById('msgSenha');
+  const novaSenha = document.getElementById('inputNovaSenha').value;
+  const confirmaSenha = document.getElementById('inputConfirmaSenha').value;
+
+  if (novaSenha !== confirmaSenha){
+    msg.textContent = 'As senhas digitadas não são iguais.';
+    msg.className = 'conta-msg show erro';
+    return;
+  }
+
+  const botao = e.target.querySelector('button[type="submit"]');
+  botao.disabled = true;
+  botao.textContent = 'Atualizando...';
+
+  const { error } = await sb.auth.updateUser({ password: novaSenha });
+
+  botao.disabled = false;
+  botao.textContent = 'Atualizar senha';
+
+  if (error){
+    msg.textContent = error.message;
+    msg.className = 'conta-msg show erro';
+    return;
+  }
+  msg.textContent = 'Senha atualizada ✓';
+  msg.className = 'conta-msg show sucesso';
+  e.target.reset();
 });
 
 mostrarConta();
