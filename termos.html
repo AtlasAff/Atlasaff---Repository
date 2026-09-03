@@ -7,7 +7,7 @@
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/png" href="favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<title>Perguntas Frequentes | Pavan & Co.</title>
+<title>Termos de Uso | Pavan & Co.</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -46,11 +46,31 @@
 </header>
 
 <div class="page-content">
-  <span class="eyebrow" style="display:block;text-align:center;">Atendimento</span>
-  <h1>Perguntas frequentes</h1>
+  <span class="eyebrow" style="display:block;text-align:center;">Legal</span>
+  <h1>Termos de uso</h1>
   <div class="linha"></div>
 
-  <div id="listaFaq"></div>
+  <p class="suave">Última atualização: [preencher quando publicar].</p>
+
+  <h2>Sobre a loja</h2>
+  <p>A Pavan & Co. (CNPJ 68.890.084/0001-10) opera este site para venda de joias em ouro 18k, ouro rosé e prata 925, com moissanite e zircônia. Ao usar este site e realizar uma compra, você concorda com os termos abaixo.</p>
+
+  <h2>Cadastro e conta</h2>
+  <p>Você é responsável por manter a confidencialidade da sua senha e por todas as atividades realizadas na sua conta. Informe dados verdadeiros no cadastro e no checkout — endereço e contato incorretos podem atrasar ou impedir a entrega.</p>
+
+  <h2>Preços e pagamento</h2>
+  <p>Os preços exibidos no site estão em reais (R$) e podem ser alterados sem aviso prévio, valendo o preço vigente no momento da finalização da compra. O pagamento é processado com segurança pelo Mercado Pago (Pix, cartão de crédito, cartão de débito ou boleto).</p>
+
+  <h2>Disponibilidade</h2>
+  <p>Fazemos o possível para manter o estoque atualizado, mas peças podem se esgotar entre a navegação e a finalização da compra. Nesse caso, entraremos em contato para reembolso ou substituição.</p>
+
+  <h2>Propriedade intelectual</h2>
+  <p>Todo o conteúdo deste site (fotos, textos, logotipo) pertence à Pavan & Co. e não pode ser reproduzido sem autorização.</p>
+
+  <h2>Alterações</h2>
+  <p>Estes termos podem ser atualizados periodicamente. A versão vigente é sempre a publicada nesta página.</p>
+
+  <p class="suave">Dúvidas? Fale com a gente pela página de <a href="contato.html" style="text-decoration:underline;color:var(--bordo);">Fale conosco</a>. Este texto é um modelo inicial — recomendamos revisão com um advogado antes da publicação oficial.</p>
 </div>
 <footer>
   <div class="container">
@@ -86,33 +106,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="shared.js"></script>
-<script>
-initBuscaForm('searchFormHeader', true);
-
-const perguntas = [
-  { p: "Minhas joias são de ouro de verdade?", r: "Sim. Trabalhamos com ouro 18k, ouro rosé e prata 925 — o material de cada peça está sempre descrito na página do produto." },
-  { p: "Moissanite é a mesma coisa que diamante?", r: "Não, mas é uma pedra certificada, muito próxima visualmente do diamante, com alto brilho e durabilidade — por um preço mais acessível." },
-  { p: "Qual o prazo de entrega?", r: "O prazo varia por região, exibido no fechamento da compra. Pedidos são despachados em até 2 dias úteis." },
-  { p: "Como faço para trocar um produto?", r: "Você tem até 30 dias corridos após o recebimento para solicitar troca ou devolução. Veja o passo a passo na página de Trocas e Devoluções." },
-  { p: "Vocês têm loja física?", r: "Por enquanto atendemos 100% online, com atendimento via WhatsApp para dúvidas antes da compra." }
-];
-
-document.getElementById('listaFaq').innerHTML = perguntas.map((item, i) => `
-  <div class="faq-item" data-i="${i}">
-    <button type="button" class="faq-pergunta">
-      ${item.p}
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-    </button>
-    <div class="faq-resposta"><p>${item.r}</p></div>
-  </div>
-`).join('');
-
-document.querySelectorAll('.faq-pergunta').forEach(btn => {
-  btn.addEventListener('click', () => {
-    btn.closest('.faq-item').classList.toggle('open');
-  });
-});
-</script>
+<script>initBuscaForm('searchFormHeader', true);</script>
 
 </body>
 </html>

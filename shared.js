@@ -171,7 +171,7 @@ async function carregarCategorias(){
 // link_fornecedor (uso interno do admin/dropshipping) — se colocar '*' aqui,
 // esse link vaza no JSON da resposta (visível no Network do navegador)
 // mesmo que a tela não mostre ele em lugar nenhum.
-const COLUNAS_PRODUTO_PUBLICO = 'id, nome, categoria, descricao, material_aro, pedra_central, banho, banhos_disponiveis, quilate_pedra, quilates_disponiveis, pedra_lateral, formato_pedra, cravacao, grau_cor, grau_clareza, grau_corte, largura_mm, tamanhos_disponiveis, preco, estoque, fotos, destaque, ativo, criado_em';
+const COLUNAS_PRODUTO_PUBLICO = 'id, nome, categoria, descricao, material_aro, pedra_central, banho, banhos_disponiveis, quilate_pedra, quilates_disponiveis, pedra_lateral, formato_pedra, cravacao, grau_cor, grau_clareza, grau_corte, largura_mm, tamanhos_disponiveis, preco, estoque, fotos, destaque, ativo, criado_em, frete_gratis_sempre';
 
 function mapProduto(row){
   const pedra = row.pedra_central || "Sem pedra";
@@ -201,7 +201,8 @@ function mapProduto(row){
     fotos: (row.fotos && row.fotos.length) ? row.fotos : ["https://images.unsplash.com/photo-1605100804763-247f67b3557e?q=80&w=800&auto=format&fit=crop"],
     image: (row.fotos && row.fotos[0]) || "https://images.unsplash.com/photo-1605100804763-247f67b3557e?q=80&w=800&auto=format&fit=crop",
     destaque: !!row.destaque,
-    ativo: row.ativo !== false
+    ativo: row.ativo !== false,
+    freteGratisSempre: !!row.frete_gratis_sempre
   };
 }
 
@@ -316,7 +317,9 @@ async function initHeaderShared(){
   const yearEl = document.getElementById('year');
   if (yearEl) yearEl.textContent = new Date().getFullYear();
 
+  injetarSelosSeguranca();
   ativarRevealAoRolar();
+  setTimeout(mostrarPopupCupomBoasVindas, 1800); // espera a página assentar antes de mostrar
   document.body.classList.add('pronto'); // dispara o fade-in inicial da página
 }
 
@@ -408,13 +411,235 @@ async function compartilharProduto(nome, preco, imagemUrl){
 }
 
 /* ============================================================
+   COMPRAR AGORA — pula o carrinho: troca o carrinho local pra
+   conter SÓ essa peça (sobrescreve, não soma) e já manda pro
+   checkout. Quem quiser o fluxo normal continua usando "Adicionar
+   ao carrinho".
+   ============================================================ */
+function comprarAgora(produto){
+  salvarCarrinho([{
+    id: produto.id,
+    nome: produto.nome,
+    preco: Number(produto.preco) || 0,
+    imagem: produto.imagem || '',
+    tamanho: produto.tamanho || null,
+    quilate: produto.quilate || null,
+    banho: produto.banho || null,
+    qtd: produto.qtd || 1,
+    freteGratisSempre: !!produto.freteGratisSempre
+  }]);
+  window.location.href = 'checkout.html';
+}
+
+/* ============================================================
+   FAVORITOS (lista de desejos) — exige login (tabela `favoritos`
+   é por user_id, com RLS). Visitante sem login é convidado a
+   entrar antes de favoritar.
+   ============================================================ */
+let favoritosCache = null; // Set de produto_id, só carregado quando precisa
+
+async function carregarFavoritosIds(){
+  if (favoritosCache) return favoritosCache;
+  const { data: sessao } = await sb.auth.getSession();
+  if (!sessao.session){ favoritosCache = new Set(); return favoritosCache; }
+  const { data, error } = await sb.from('favoritos').select('produto_id').eq('user_id', sessao.session.user.id);
+  favoritosCache = new Set(error ? [] : data.map(f => f.produto_id));
+  return favoritosCache;
+}
+
+async function estaNosFavoritos(produtoId){
+  const ids = await carregarFavoritosIds();
+  return ids.has(produtoId);
+}
+
+// Retorna o novo estado (true = favoritado) ou null se precisar logar antes
+async function alternarFavorito(produtoId){
+  const { data: sessao } = await sb.auth.getSession();
+  if (!sessao.session){
+    mostrarToast('Entre na sua conta pra favoritar peças ♥');
+    return null;
+  }
+  const userId = sessao.session.user.id;
+  const ids = await carregarFavoritosIds();
+  if (ids.has(produtoId)){
+    await sb.from('favoritos').delete().eq('user_id', userId).eq('produto_id', produtoId);
+    ids.delete(produtoId);
+    return false;
+  } else {
+    await sb.from('favoritos').insert({ user_id: userId, produto_id: produtoId });
+    ids.add(produtoId);
+    return true;
+  }
+}
+
+async function carregarProdutosFavoritos(){
+  const { data: sessao } = await sb.auth.getSession();
+  if (!sessao.session) return [];
+  const { data, error } = await sb
+    .from('favoritos')
+    .select(`produto_id, produtos (${COLUNAS_PRODUTO_PUBLICO})`)
+    .eq('user_id', sessao.session.user.id)
+    .order('criado_em', { ascending: false });
+  if (error){ console.error('Erro ao carregar favoritos:', error); return []; }
+  return data.filter(f => f.produtos).map(f => mapProduto(f.produtos));
+}
+
+/* ============================================================
+   CUPOM DE DESCONTO — validação real acontece no servidor (RPC
+   validar_cupom), o front só mostra o resultado. O desconto final
+   também é recalculado de novo no criar_pedido — o valor mostrado
+   aqui é só uma prévia.
+   ============================================================ */
+async function validarCupom(codigo, subtotal){
+  const { data, error } = await sb.rpc('validar_cupom', { p_codigo: codigo, p_subtotal: subtotal }).maybeSingle();
+  if (error || !data) return { valido: false, mensagem: 'Não foi possível validar o cupom agora.' };
+  return data;
+}
+
+/* ============================================================
+   FRETE GRÁTIS — por valor mínimo (R$399) OU porque toda peça no
+   carrinho tem "frete grátis sempre" marcado (configurável por
+   produto no admin, independente do valor da compra).
+   ============================================================ */
+function carrinhoTemFreteGratis(itens){
+  const subtotal = itens.reduce((s, i) => s + i.preco * i.qtd, 0);
+  if (subtotal >= FRETE_GRATIS_MINIMO) return true;
+  return itens.length > 0 && itens.every(i => i.freteGratisSempre);
+}
+
+// Barra/aviso de frete grátis — reaproveitada na gaveta do carrinho e na
+// página carrinho.html.
+function freteGratisBarraHTML(itens){
+  const subtotal = itens.reduce((s, i) => s + i.preco * i.qtd, 0);
+  if (carrinhoTemFreteGratis(itens)){
+    return `<div class="cart-drawer-frete-msg ganhou">🎉 Parabéns! Você ganhou <strong>frete grátis</strong></div>`;
+  }
+  const falta = FRETE_GRATIS_MINIMO - subtotal;
+  const pct = Math.min(100, (subtotal / FRETE_GRATIS_MINIMO) * 100);
+  return `
+    <div class="cart-drawer-frete-msg">Faltam <strong>${formatarPreco(falta)}</strong> pra ganhar frete grátis</div>
+    <div class="cart-drawer-frete-barra"><div class="cart-drawer-frete-progresso" style="width:${pct}%"></div></div>
+  `;
+}
+
+/* ============================================================
+   POPUP DE CUPOM DE BOAS-VINDAS — aparece uma vez por sessão (não
+   incomoda em toda página) se o admin tiver marcado algum cupom
+   pra isso ("Mostrar como popup de boas-vindas" no admin).
+   ============================================================ */
+// Cache compartilhado (promessa, não só valor) — pra qualquer página que
+// precise do cupom em destaque (popup, preço riscado na página do produto,
+// futuramente cards) fazer só UMA chamada ao banco, não uma cada uma.
+let promessaCupomDestaque = null;
+function obterCupomDestaque(){
+  if (!promessaCupomDestaque){
+    promessaCupomDestaque = sb.rpc('cupom_destaque').maybeSingle().then(({ data, error }) => (error ? null : data));
+  }
+  return promessaCupomDestaque;
+}
+
+// Calcula o preço já com o cupom em destaque aplicado, pra mostrar "de/por"
+// na página do produto — respeita o valor mínimo do cupom (se a peça
+// sozinha não bater o mínimo, não mostra o preço promocional errado).
+function calcularPrecoComCupom(preco, cupom){
+  if (!cupom) return null;
+  if (cupom.valor_minimo && preco < cupom.valor_minimo) return null;
+  const desconto = cupom.tipo === 'percentual' ? preco * (cupom.valor / 100) : Math.min(cupom.valor, preco);
+  return Math.max(0, preco - desconto);
+}
+
+// Se existe um cupom em destaque e o cliente ainda não tem nenhum cupom
+// aplicado, guarda ele sozinho — assim o preço com desconto que aparece na
+// página do produto bate certinho com o que é cobrado no carrinho/checkout,
+// sem precisar copiar/colar código nenhum.
+async function autoAplicarCupomDestaque(){
+  const cupom = await obterCupomDestaque();
+  if (cupom && !obterCupomAplicado()) salvarCupomAplicado(cupom.codigo);
+  return cupom;
+}
+
+async function mostrarPopupCupomBoasVindas(){
+  const data = await autoAplicarCupomDestaque();
+  if (!data) return;
+  try {
+    if (sessionStorage.getItem('pavan_popup_cupom_visto')) return;
+  } catch {}
+  if (document.getElementById('painelAdmin')) return; // nunca no admin
+  if (['checkout.html', 'carrinho.html'].some(p => location.pathname.endsWith(p))) return; // já tem cupom lá
+  try { sessionStorage.setItem('pavan_popup_cupom_visto', '1'); } catch {}
+
+  const desconto = data.tipo === 'percentual' ? `${data.valor}% OFF` : `${formatarPreco(data.valor)} OFF`;
+  const minimoTexto = data.valor_minimo > 0 ? ` em compras acima de ${formatarPreco(data.valor_minimo)}` : '';
+
+  const popup = document.createElement('div');
+  popup.className = 'popup-cupom';
+  popup.innerHTML = `
+    <button type="button" class="popup-cupom-fechar" aria-label="Fechar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
+    </button>
+    <span class="popup-cupom-eyebrow">Presente de boas-vindas 🎁</span>
+    <strong class="popup-cupom-desconto">${desconto}</strong>
+    <p>Use o cupom abaixo${minimoTexto} e garanta seu desconto.</p>
+    <button type="button" class="popup-cupom-codigo" data-codigo="${data.codigo}">
+      ${data.codigo}
+      <span class="popup-cupom-copiar">Copiar</span>
+    </button>
+  `;
+  document.body.appendChild(popup);
+  requestAnimationFrame(() => popup.classList.add('show'));
+
+  const fechar = () => { popup.classList.remove('show'); setTimeout(() => popup.remove(), 300); };
+  popup.querySelector('.popup-cupom-fechar').addEventListener('click', fechar);
+  popup.querySelector('.popup-cupom-codigo').addEventListener('click', async (e) => {
+    const codigo = e.currentTarget.getAttribute('data-codigo');
+    try { await navigator.clipboard.writeText(codigo); } catch {}
+    e.currentTarget.querySelector('.popup-cupom-copiar').textContent = 'Copiado ✓';
+    mostrarToast(`Cupom ${codigo} copiado — cole no carrinho!`);
+    setTimeout(fechar, 1400);
+  });
+}
+
+/* ============================================================
+   SELOS DE SEGURANÇA NO RODAPÉ — injetado por JS em todas as
+   páginas (o footer é HTML repetido em cada arquivo; fazer aqui
+   evita editar página por página).
+   ============================================================ */
+function injetarSelosSeguranca(){
+  const footerBottom = document.querySelector('footer .footer-bottom');
+  if (!footerBottom || document.querySelector('.selos-seguranca')) return;
+  const selos = document.createElement('div');
+  selos.className = 'selos-seguranca';
+  selos.innerHTML = `
+    <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> Compra 100% protegida</span>
+    <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M7 15h4"/></svg> Pagamento via Mercado Pago</span>
+    <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="6" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg> Pix, cartão ou boleto</span>
+  `;
+  footerBottom.parentElement.insertBefore(selos, footerBottom);
+}
+
+/* ============================================================
    CARRINHO PERSISTENTE (localStorage) + gaveta lateral
    Ao adicionar um item, abre deslizando pela direita (estilo
    Versale), sem sair da página. Funciona em TODAS as páginas
    porque é montado aqui no shared.js.
    ============================================================ */
 const CARRINHO_STORAGE_KEY = 'pavan_carrinho';
+const CUPOM_STORAGE_KEY = 'pavan_cupom_codigo';
 const FRETE_GRATIS_MINIMO = 399;
+
+// Cupom aplicado persiste entre carrinho.html e checkout.html (o cliente não
+// precisa digitar o código de novo na hora de pagar) — a validação de
+// verdade sempre roda de novo no servidor em cada página, isso aqui só
+// guarda QUAL código tentar reaplicar.
+function obterCupomAplicado(){
+  try { return localStorage.getItem(CUPOM_STORAGE_KEY) || null; } catch { return null; }
+}
+function salvarCupomAplicado(codigo){
+  try { localStorage.setItem(CUPOM_STORAGE_KEY, codigo); } catch {}
+}
+function removerCupomAplicado(){
+  try { localStorage.removeItem(CUPOM_STORAGE_KEY); } catch {}
+}
 
 function obterCarrinho(){
   try {
@@ -463,7 +688,8 @@ function adicionarAoCarrinho(produto){
       tamanho,
       quilate,
       banho,
-      qtd: produto.qtd || 1
+      qtd: produto.qtd || 1,
+      freteGratisSempre: !!produto.freteGratisSempre
     });
   }
   salvarCarrinho(itens);
@@ -543,20 +769,9 @@ function renderCartDrawer(){
 
   const subtotal = itens.reduce((s, i) => s + i.preco * i.qtd, 0);
 
-  // Barra de frete grátis — mesma regra usada no resto do site (acima de R$399)
+  // Barra de frete grátis — mesma regra usada no resto do site (acima de R$399, ou por produto)
   const freteEl = document.getElementById('cartDrawerFrete');
-  if (itens.length === 0){
-    freteEl.innerHTML = '';
-  } else if (subtotal >= FRETE_GRATIS_MINIMO){
-    freteEl.innerHTML = `<div class="cart-drawer-frete-msg ganhou">🎉 Parabéns! Você ganhou <strong>frete grátis</strong></div>`;
-  } else {
-    const falta = FRETE_GRATIS_MINIMO - subtotal;
-    const pct = Math.min(100, (subtotal / FRETE_GRATIS_MINIMO) * 100);
-    freteEl.innerHTML = `
-      <div class="cart-drawer-frete-msg">Faltam <strong>${formatarPreco(falta)}</strong> pra ganhar frete grátis</div>
-      <div class="cart-drawer-frete-barra"><div class="cart-drawer-frete-progresso" style="width:${pct}%"></div></div>
-    `;
-  }
+  freteEl.innerHTML = itens.length === 0 ? '' : freteGratisBarraHTML(itens);
 
   const lista = document.getElementById('cartDrawerLista');
   const rodape = document.getElementById('cartDrawerRodape');
@@ -623,7 +838,8 @@ function adicionarAoCarrinhoCard(btn){
     id: btn.dataset.id,
     nome: btn.dataset.nome,
     preco: parseFloat(btn.dataset.preco),
-    imagem: btn.dataset.imagem
+    imagem: btn.dataset.imagem,
+    freteGratisSempre: btn.dataset.freteGratis === 'true'
   };
 
   // Peça com aro, quilate e/ou banho cadastrado: não dá pra adicionar sem
@@ -811,6 +1027,7 @@ function cardProdutoHTML(p){
               data-tamanhos="${(p.tamanhos || []).join(',')}"
               data-quilates="${encodeURIComponent(JSON.stringify(p.quilates || []))}"
               data-banhos="${encodeURIComponent(JSON.stringify(p.banhos || []))}"
+              data-frete-gratis="${!!p.freteGratisSempre}"
               onclick="adicionarAoCarrinhoCard(this)">Adicionar ao carrinho</button>`}
       </div>
     </div>
@@ -1181,6 +1398,9 @@ async function renderProdutoPage(){
   document.getElementById('produtoTags').innerHTML = `
     <span>${p.material}</span>${p.temPedra ? `<span>${p.pedra}</span>` : ''}${p.formato ? `<span>${p.formato}</span>` : ''}
   `;
+  document.getElementById('produtoTextoFrete').textContent = p.freteGratisSempre
+    ? 'Frete grátis nesta peça'
+    : 'Frete grátis acima de R$399';
 
   // Sem estoque: mostra o selo e trava a compra (sem isso, dava pra comprar
   // peça esgotada normalmente)
@@ -1190,15 +1410,28 @@ async function renderProdutoPage(){
     const btnAdd = document.getElementById('btnAddCarrinho');
     btnAdd.disabled = true;
     btnAdd.textContent = 'Esgotado';
+    document.getElementById('btnComprarAgora').style.display = 'none';
     document.getElementById('qtdMenos').disabled = true;
     document.getElementById('qtdMais').disabled = true;
   }
 
   // Preço muda conforme o quilate escolhido (cada opção tem o próprio preço)
   let precoAtual = p.preco;
+  const cupomDestaque = await autoAplicarCupomDestaque(); // já aplica sozinho pro carrinho/checkout baterem com o preço mostrado aqui
   function atualizarPrecoExibido(){
-    document.getElementById('produtoPreco').textContent = formatarPreco(precoAtual);
-    document.getElementById('produtoParcelas').textContent = `12x de ${formatarPreco(precoAtual / 12)} sem juros`;
+    const precoComCupom = calcularPrecoComCupom(precoAtual, cupomDestaque);
+    const precoEl = document.getElementById('produtoPreco');
+    const cupomEl = document.getElementById('produtoPrecoCupom');
+    if (precoComCupom !== null){
+      precoEl.innerHTML = `<s class="preco-riscado">${formatarPreco(precoAtual)}</s> ${formatarPreco(precoComCupom)}`;
+      cupomEl.style.display = 'block';
+      cupomEl.innerHTML = `🎁 Preço com o cupom de boas-vindas <strong>${cupomDestaque.codigo}</strong> já aplicado`;
+      document.getElementById('produtoParcelas').textContent = `12x de ${formatarPreco(precoComCupom / 12)} sem juros`;
+    } else {
+      precoEl.textContent = formatarPreco(precoAtual);
+      cupomEl.style.display = 'none';
+      document.getElementById('produtoParcelas').textContent = `12x de ${formatarPreco(precoAtual / 12)} sem juros`;
+    }
   }
   atualizarPrecoExibido();
 
@@ -1268,22 +1501,27 @@ async function renderProdutoPage(){
   document.getElementById('qtdMenos').addEventListener('click', () => { qtd = Math.max(1, qtd - 1); qtdDisplay.textContent = qtd; });
   document.getElementById('qtdMais').addEventListener('click', () => { qtd++; qtdDisplay.textContent = qtd; });
 
-  document.getElementById('btnAddCarrinho').addEventListener('click', (e) => {
+  // Confere se falta escolher alguma variante (quilate/banho/tamanho) antes
+  // de adicionar ao carrinho OU comprar direto — os dois botões usam a
+  // mesma checagem, só mudam o que fazem depois de validar.
+  function faltaVarianteObrigatoria(){
     if (p.quilates.length && !quilateSelecionado){
       mostrarToast('Selecione o quilate da pedra antes de continuar');
-      return;
+      return true;
     }
     if (p.banhos.length && !banhoSelecionado){
       mostrarToast('Selecione o banho antes de continuar');
-      return;
+      return true;
     }
     if (p.tamanhos.length && !tamanhoSelecionado){
       mostrarToast('Selecione um tamanho antes de continuar');
-      return;
+      return true;
     }
-    e.target.classList.add('clicado');
-    setTimeout(() => e.target.classList.remove('clicado'), 300);
-    adicionarAoCarrinho({
+    return false;
+  }
+
+  function itemAtualDoCarrinho(){
+    return {
       id: p.id,
       nome: p.nome,
       preco: precoAtual,
@@ -1291,8 +1529,33 @@ async function renderProdutoPage(){
       tamanho: tamanhoSelecionado || null,
       quilate: quilateSelecionado || null,
       banho: banhoSelecionado || null,
-      qtd
-    });
+      qtd,
+      freteGratisSempre: p.freteGratisSempre
+    };
+  }
+
+  document.getElementById('btnAddCarrinho').addEventListener('click', (e) => {
+    if (faltaVarianteObrigatoria()) return;
+    e.target.classList.add('clicado');
+    setTimeout(() => e.target.classList.remove('clicado'), 300);
+    adicionarAoCarrinho(itemAtualDoCarrinho());
+  });
+
+  document.getElementById('btnComprarAgora').addEventListener('click', () => {
+    if (faltaVarianteObrigatoria()) return;
+    comprarAgora(itemAtualDoCarrinho());
+  });
+
+  // Favoritar (coração) — exige login; se já favoritado, mostra preenchido
+  const btnFavoritar = document.getElementById('btnFavoritar');
+  estaNosFavoritos(p.id).then(favoritado => {
+    btnFavoritar.setAttribute('aria-pressed', favoritado);
+  });
+  btnFavoritar.addEventListener('click', async () => {
+    const novoEstado = await alternarFavorito(p.id);
+    if (novoEstado === null) return; // não estava logado — já mostrou o toast
+    btnFavoritar.setAttribute('aria-pressed', novoEstado);
+    mostrarToast(novoEstado ? 'Adicionado aos favoritos ♥' : 'Removido dos favoritos');
   });
 
   document.getElementById('btnCompartilharProduto').addEventListener('click', () => {
@@ -1319,7 +1582,7 @@ async function renderProdutoPage(){
         freteResultado.innerHTML = `<p class="frete-msg">Nenhuma transportadora disponível pra esse CEP.</p>`;
         return;
       }
-      const gratis = precoAtual >= 399;
+      const gratis = carrinhoTemFreteGratis([{ preco: precoAtual, qtd: 1, freteGratisSempre: p.freteGratisSempre }]);
       freteResultado.innerHTML = resultado.opcoes.map(o => `
         <div class="frete-opcao">
           <div>

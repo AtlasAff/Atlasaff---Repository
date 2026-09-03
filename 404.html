@@ -7,12 +7,32 @@
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/png" href="favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<title>Perguntas Frequentes | Pavan & Co.</title>
+<meta name="robots" content="noindex">
+<title>Página não encontrada | Pavan & Co.</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=Lato:wght@300;400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<style>
+  .pagina-404{
+    min-height: 60vh;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center;
+    padding: 60px 20px;
+  }
+  .pagina-404-numero{
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 6rem;
+    line-height: 1;
+    color: var(--bordo);
+    opacity: 0.85;
+  }
+  .pagina-404 h1{ margin: 10px 0 12px; }
+  .pagina-404 p{ color: var(--texto-suave); max-width: 440px; margin-bottom: 26px; }
+  .pagina-404-acoes{ display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
+</style>
 </head>
 <body>
 
@@ -45,13 +65,16 @@
   </div>
 </header>
 
-<div class="page-content">
-  <span class="eyebrow" style="display:block;text-align:center;">Atendimento</span>
-  <h1>Perguntas frequentes</h1>
-  <div class="linha"></div>
-
-  <div id="listaFaq"></div>
+<div class="container pagina-404">
+  <span class="pagina-404-numero">404</span>
+  <h1>Essa peça não está aqui</h1>
+  <p>A página que você procurou não existe ou foi movida. Que tal dar uma olhada no nosso catálogo?</p>
+  <div class="pagina-404-acoes">
+    <a href="index.html" class="btn btn-primary">Voltar à loja</a>
+    <a href="contato.html" class="btn btn-outline">Falar com a gente</a>
+  </div>
 </div>
+
 <footer>
   <div class="container">
     <div class="footer-grid">
@@ -86,33 +109,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="shared.js"></script>
-<script>
-initBuscaForm('searchFormHeader', true);
-
-const perguntas = [
-  { p: "Minhas joias são de ouro de verdade?", r: "Sim. Trabalhamos com ouro 18k, ouro rosé e prata 925 — o material de cada peça está sempre descrito na página do produto." },
-  { p: "Moissanite é a mesma coisa que diamante?", r: "Não, mas é uma pedra certificada, muito próxima visualmente do diamante, com alto brilho e durabilidade — por um preço mais acessível." },
-  { p: "Qual o prazo de entrega?", r: "O prazo varia por região, exibido no fechamento da compra. Pedidos são despachados em até 2 dias úteis." },
-  { p: "Como faço para trocar um produto?", r: "Você tem até 30 dias corridos após o recebimento para solicitar troca ou devolução. Veja o passo a passo na página de Trocas e Devoluções." },
-  { p: "Vocês têm loja física?", r: "Por enquanto atendemos 100% online, com atendimento via WhatsApp para dúvidas antes da compra." }
-];
-
-document.getElementById('listaFaq').innerHTML = perguntas.map((item, i) => `
-  <div class="faq-item" data-i="${i}">
-    <button type="button" class="faq-pergunta">
-      ${item.p}
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-    </button>
-    <div class="faq-resposta"><p>${item.r}</p></div>
-  </div>
-`).join('');
-
-document.querySelectorAll('.faq-pergunta').forEach(btn => {
-  btn.addEventListener('click', () => {
-    btn.closest('.faq-item').classList.toggle('open');
-  });
-});
-</script>
+<script>initBuscaForm('searchFormHeader', true);</script>
 
 </body>
 </html>

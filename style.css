@@ -519,8 +519,26 @@
   .social-row a{ width:34px; height:34px; border:1px solid rgba(247,243,236,0.35); border-radius:50%; display:flex; align-items:center; justify-content:center; }
   .social-row svg{ width:16px; height:16px; }
 
+  .selos-seguranca{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap: 10px 22px;
+    padding: 20px 20px 0;
+  }
+  .selos-seguranca span{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    font-size: 0.76rem;
+    opacity:.75;
+    white-space:nowrap;
+  }
+  .selos-seguranca svg{ width:16px; height:16px; flex-shrink:0; }
+
   .footer-bottom{
     border-top: 1px solid rgba(247,243,236,0.15);
+    margin-top: 20px;
     padding: 18px 20px;
     text-align:center;
     font-size: 0.78rem;
@@ -933,6 +951,49 @@
 .badge-status--amarelo{ background: var(--amarelo-bg); color: var(--amarelo); }
 .badge-status--vermelho{ background: var(--vermelho-bg); color: var(--vermelho); }
 
+/* ---------------- AÇÕES DO PEDIDO (conta.html) ---------------- */
+.conta-pedido-rastreio{
+  font-size: 0.82rem;
+  padding: 10px 12px;
+  background: var(--creme);
+  border-radius: var(--radius);
+  margin: 10px 0;
+}
+.conta-pedido-rastreio a{ color: var(--bordo); text-decoration:underline; font-weight:600; }
+.conta-pedido-acoes{
+  display:flex;
+  flex-wrap:wrap;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--borda);
+}
+.conta-pedido-acoes button{
+  font-size: 0.78rem;
+  padding: 8px 14px;
+  border: 1px solid var(--borda);
+  border-radius: 30px;
+  color: var(--texto);
+}
+.conta-pedido-acoes button:hover{ background: var(--creme); }
+.conta-pedido-acoes button.acao-cancelar{ color: var(--vermelho); border-color: var(--vermelho-bg); }
+.conta-pedido-avaliar-item{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  font-size: 0.82rem;
+  padding: 6px 0;
+}
+.conta-pedido-avaliar-item button{ font-size:0.76rem; color: var(--bordo); text-decoration:underline; white-space:nowrap; }
+.conta-solicitacao-linha{
+  font-size: 0.8rem;
+  color: var(--texto-suave);
+  margin-top: 8px;
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+}
+.estrelas-picker-conta{ display:flex; gap:6px; }
+.estrelas-picker-conta button{ color: var(--borda); }
+.estrelas-picker-conta button.ativa{ color: #D9A441; }
+.estrelas-picker-conta svg{ width:28px; height:28px; }
+
 /* ============================================================
    CARRINHO
    ============================================================ */
@@ -1001,6 +1062,10 @@
   padding: 60px 20px;
   color: var(--texto-suave);
 }
+.carrinho-frete-gratis-box{ margin-bottom: 24px; }
+.cupom-linha{ margin-top: 22px; }
+.cupom-linha label{ font-size: 0.8rem; font-weight:600; display:block; margin-bottom:8px; }
+.cupom-linha input{ text-transform: uppercase; }
 
 /* ============================================================
    GAVETA DO CARRINHO (abre deslizando pela direita ao adicionar
@@ -1242,6 +1307,20 @@
   margin-top: 10px;
   font-variant-numeric: lining-nums tabular-nums;
 }
+.produto-preco .preco-riscado{
+  font-family: var(--sans);
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--texto-suave);
+  text-decoration: line-through;
+  margin-right: 8px;
+}
+.produto-preco-cupom{
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--verde);
+  margin-top: 4px;
+}
 .badge-esgotado{
   display:inline-block;
   margin-top: 12px;
@@ -1348,6 +1427,21 @@
 .qtd-stepper button{ width:26px; height:26px; font-size:1.1rem; color: var(--bordo); }
 .qtd-stepper button:disabled{ opacity:.4; cursor:not-allowed; }
 
+.produto-acoes-linha{ display:flex; gap:10px; align-items:stretch; }
+.btn-favoritar{
+  flex-shrink:0;
+  width: 54px;
+  display:flex; align-items:center; justify-content:center;
+  border: 1px solid var(--borda);
+  border-radius: var(--radius);
+  color: var(--bordo);
+  transition: background .18s ease, color .18s ease, border-color .18s ease;
+}
+.btn-favoritar:hover{ background: var(--creme); }
+.btn-favoritar svg{ width:22px; height:22px; }
+.btn-favoritar[aria-pressed="true"]{ background: var(--bordo); border-color: var(--bordo); color:#fff; }
+.btn-favoritar[aria-pressed="true"] svg{ fill: currentColor; }
+
 .trust-row{
   display:grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1410,6 +1504,26 @@
 #freteResultado .frete-opcao .preco{ font-family: var(--serif); color: var(--bordo); white-space:nowrap; font-size: 1.15rem; font-weight:600; }
 #freteResultado .frete-msg{ font-size: 0.85rem; color: var(--texto-suave); }
 #freteResultado .frete-msg.erro{ color: var(--bordo); }
+
+/* ---------------- OPÇÕES DE FRETE (checkout — cliente escolhe) ---------------- */
+#checkoutFrete .frete-opcao{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--borda);
+  font-size: 0.86rem;
+  flex-wrap: wrap;
+}
+#checkoutFrete .frete-opcao > div{ min-width: 0; }
+#checkoutFrete .frete-opcao:last-child{ border-bottom:none; }
+#checkoutFrete .frete-opcao .transportadora{ font-weight:600; }
+#checkoutFrete .frete-opcao .prazo{ color: var(--texto-suave); font-size:0.78rem; display:block; }
+#checkoutFrete .frete-opcao .preco{ font-family: var(--serif); color: var(--bordo); white-space:nowrap; font-size: 1.15rem; font-weight:600; }
+.frete-opcao-radio{ cursor:pointer; align-items:center; }
+.frete-opcao-radio input[type="radio"]{ margin-right:10px; width:16px; height:16px; flex-shrink:0; accent-color: var(--bordo); }
+.frete-opcao-radio:hover{ background: var(--creme); }
 #freteResultado .frete-gratis{
   background: var(--creme-escuro);
   color: var(--bordo);
@@ -1676,4 +1790,67 @@ body.pronto .entra-com-pagina{ opacity: 1; transform: translateY(0); }
   .faixa-img{ aspect-ratio: auto; min-height: 420px; }
   .faixa-content{ padding: 50px 60px; }
   .faixa--reverso{ grid-template-columns: 1fr 1.2fr; }
+}
+
+/* ============================================================
+   POPUP DE CUPOM DE BOAS-VINDAS
+   ============================================================ */
+.popup-cupom{
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 900;
+  max-width: 300px;
+  background: var(--branco);
+  border: 1px solid var(--borda);
+  border-radius: var(--radius);
+  box-shadow: var(--sombra);
+  padding: 22px 20px;
+  transform: translateY(24px);
+  opacity: 0;
+  transition: transform .35s ease, opacity .35s ease;
+}
+.popup-cupom.show{ transform: translateY(0); opacity: 1; }
+.popup-cupom-fechar{
+  position: absolute; top: 10px; right: 10px;
+  width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--texto-suave);
+}
+.popup-cupom-eyebrow{
+  display: block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--texto-suave);
+  margin-bottom: 6px;
+}
+.popup-cupom-desconto{
+  display: block;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.6rem;
+  color: var(--bordo);
+  margin-bottom: 8px;
+}
+.popup-cupom p{ font-size: 0.82rem; color: var(--texto-suave); margin-bottom: 14px; line-height: 1.5; }
+.popup-cupom-codigo{
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px dashed var(--bordo);
+  border-radius: var(--radius);
+  font-family: var(--sans);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--bordo);
+}
+.popup-cupom-codigo:hover{ background: var(--creme); }
+.popup-cupom-copiar{ font-size: 0.72rem; font-weight: 600; text-decoration: underline; }
+
+@media (max-width: 480px){
+  .popup-cupom{ left: 14px; right: 14px; max-width: none; bottom: 14px; }
 }

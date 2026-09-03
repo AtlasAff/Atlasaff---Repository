@@ -7,7 +7,14 @@
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/png" href="favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<title>Perguntas Frequentes | Pavan & Co.</title>
+<meta name="robots" content="noindex">
+<title>Redefinir senha | Pavan & Co.</title>
+
+<!--
+  Link de "esqueci minha senha" do e-mail leva pra cá. O Supabase Auth já
+  cria a sessão de recuperação sozinho a partir do link (token vem no hash
+  da URL) — só precisamos pedir a nova senha e chamar updateUser().
+-->
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -45,13 +52,30 @@
   </div>
 </header>
 
-<div class="page-content">
-  <span class="eyebrow" style="display:block;text-align:center;">Atendimento</span>
-  <h1>Perguntas frequentes</h1>
-  <div class="linha"></div>
+<div class="conta-wrap" style="max-width:440px;">
+  <div class="page-title" style="padding-top:0;">
+    <span class="eyebrow">Segurança</span>
+    <h1>Redefinir senha</h1>
+    <div class="linha"></div>
+  </div>
 
-  <div id="listaFaq"></div>
+  <div id="msgRedefinir" class="conta-msg"></div>
+
+  <div id="blocoFormNovaSenha">
+    <form class="conta-form active" id="formNovaSenha">
+      <div>
+        <label for="novaSenha1">Nova senha</label>
+        <input type="password" id="novaSenha1" required minlength="6" placeholder="Mínimo 6 caracteres">
+      </div>
+      <div>
+        <label for="novaSenha2">Confirme a nova senha</label>
+        <input type="password" id="novaSenha2" required minlength="6" placeholder="Repita a senha">
+      </div>
+      <button type="submit" class="btn btn-primary">Salvar nova senha</button>
+    </form>
+  </div>
 </div>
+
 <footer>
   <div class="container">
     <div class="footer-grid">
@@ -89,28 +113,46 @@
 <script>
 initBuscaForm('searchFormHeader', true);
 
-const perguntas = [
-  { p: "Minhas joias são de ouro de verdade?", r: "Sim. Trabalhamos com ouro 18k, ouro rosé e prata 925 — o material de cada peça está sempre descrito na página do produto." },
-  { p: "Moissanite é a mesma coisa que diamante?", r: "Não, mas é uma pedra certificada, muito próxima visualmente do diamante, com alto brilho e durabilidade — por um preço mais acessível." },
-  { p: "Qual o prazo de entrega?", r: "O prazo varia por região, exibido no fechamento da compra. Pedidos são despachados em até 2 dias úteis." },
-  { p: "Como faço para trocar um produto?", r: "Você tem até 30 dias corridos após o recebimento para solicitar troca ou devolução. Veja o passo a passo na página de Trocas e Devoluções." },
-  { p: "Vocês têm loja física?", r: "Por enquanto atendemos 100% online, com atendimento via WhatsApp para dúvidas antes da compra." }
-];
+function mostrarMsgRedefinir(mensagem, tipo){
+  const msg = document.getElementById('msgRedefinir');
+  msg.textContent = mensagem;
+  msg.className = `conta-msg show ${tipo}`;
+}
 
-document.getElementById('listaFaq').innerHTML = perguntas.map((item, i) => `
-  <div class="faq-item" data-i="${i}">
-    <button type="button" class="faq-pergunta">
-      ${item.p}
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-    </button>
-    <div class="faq-resposta"><p>${item.r}</p></div>
-  </div>
-`).join('');
+// O supabase-js v2 já detecta o token de recuperação no hash da URL e cria
+// a sessão sozinho (detectSessionInUrl, ligado por padrão) — só confirmamos
+// que existe sessão antes de deixar trocar a senha.
+(async () => {
+  const { data } = await sb.auth.getSession();
+  if (!data.session){
+    document.getElementById('blocoFormNovaSenha').style.display = 'none';
+    mostrarMsgRedefinir('Esse link de redefinição é inválido ou expirou. Peça um novo em "Esqueci minha senha" na tela de login.', 'erro');
+  }
+})();
 
-document.querySelectorAll('.faq-pergunta').forEach(btn => {
-  btn.addEventListener('click', () => {
-    btn.closest('.faq-item').classList.toggle('open');
-  });
+document.getElementById('formNovaSenha').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const senha1 = document.getElementById('novaSenha1').value;
+  const senha2 = document.getElementById('novaSenha2').value;
+  if (senha1 !== senha2){
+    mostrarMsgRedefinir('As senhas não são iguais.', 'erro');
+    return;
+  }
+  const botao = e.target.querySelector('button[type="submit"]');
+  botao.disabled = true;
+  botao.textContent = 'Salvando...';
+
+  const { error } = await sb.auth.updateUser({ password: senha1 });
+
+  botao.disabled = false;
+  botao.textContent = 'Salvar nova senha';
+
+  if (error){
+    mostrarMsgRedefinir(error.message, 'erro');
+    return;
+  }
+  mostrarMsgRedefinir('Senha alterada com sucesso! Redirecionando...', 'sucesso');
+  setTimeout(() => { window.location.href = 'conta.html'; }, 1500);
 });
 </script>
 

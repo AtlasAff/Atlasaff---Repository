@@ -58,6 +58,7 @@
 </div>
 
 <div class="carrinho-wrap">
+  <div id="freteGratisBarraCarrinho"></div>
   <div id="listaCarrinho"></div>
   <div id="resumoCarrinho"></div>
 </div>
@@ -75,6 +76,9 @@
         <ul>
           <li><a href="faq.html">Perguntas frequentes</a></li>
           <li><a href="trocas-devolucoes.html">Trocas e devoluções</a></li>
+          <li><a href="politica-frete.html">Política de frete</a></li>
+          <li><a href="garantia.html">Garantia</a></li>
+          <li><a href="termos.html">Termos de uso</a></li>
           <li><a href="privacidade.html">Política de privacidade</a></li>
           <li><a href="contato.html">Fale conosco</a></li>
         </ul>
@@ -96,12 +100,17 @@
 <script>
 initBuscaForm('searchFormHeader', true);
 
+let freteEscolhidoCarrinho = null; // { transportadora, servico, preco, prazoConfeccaoDias, prazoEntregaDiasMin, prazoEntregaDias }
+let cupomAtualCarrinho = null; // { codigo, tipo, valor, desconto }
+
 function renderCarrinho(){
   const itens = obterCarrinho();
   const lista = document.getElementById('listaCarrinho');
   const resumo = document.getElementById('resumoCarrinho');
+  const barraFrete = document.getElementById('freteGratisBarraCarrinho');
 
   if (itens.length === 0){
+    barraFrete.innerHTML = '';
     lista.innerHTML = '';
     resumo.innerHTML = `
       <div class="carrinho-vazio">
@@ -111,6 +120,8 @@ function renderCarrinho(){
     `;
     return;
   }
+
+  barraFrete.innerHTML = `<div class="carrinho-frete-gratis-box">${freteGratisBarraHTML(itens)}</div>`;
 
   lista.innerHTML = itens.map(item => `
     <div class="carrinho-item">
@@ -131,15 +142,30 @@ function renderCarrinho(){
     </div>
   `).join('');
 
-  const subtotal = itens.reduce((soma, item) => soma + item.preco * item.qtd, 0);
   resumo.innerHTML = `
-    <div class="carrinho-resumo">
-      <span>Subtotal</span>
-      <span>${formatarPreco(subtotal)}</span>
+    <div class="frete-calc" style="margin-top:0;">
+      <label for="carrinhoCep">Calcular frete</label>
+      <div class="frete-calc-linha">
+        <input type="text" id="carrinhoCep" placeholder="Seu CEP" inputmode="numeric" maxlength="9">
+        <button type="button" class="btn btn-outline" id="btnCalcularFreteCarrinho">Calcular</button>
+      </div>
+      <div id="carrinhoFreteResultado"></div>
     </div>
-    <p class="suave" style="margin-top:8px;font-size:0.82rem;color:var(--texto-suave);">Frete calculado na página de cada peça por enquanto — a etapa de pagamento vem a seguir.</p>
+
+    <div class="cupom-linha">
+      <label for="carrinhoCupom">Cupom de desconto</label>
+      <div class="frete-calc-linha">
+        <input type="text" id="carrinhoCupom" placeholder="Digite o código" style="text-transform:uppercase;">
+        <button type="button" class="btn btn-outline" id="btnAplicarCupom">Aplicar</button>
+      </div>
+      <div id="carrinhoCupomResultado"></div>
+    </div>
+
+    <div id="carrinhoTotais" style="margin-top:20px;"></div>
     <a href="checkout.html" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:18px;">Finalizar compra</a>
   `;
+
+  atualizarTotaisCarrinho();
 
   lista.querySelectorAll('button[data-acao]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -154,6 +180,117 @@ function renderCarrinho(){
       renderCarrinho();
     });
   });
+
+  // ---------- CEP: frete estimado do carrinho inteiro ----------
+  const cepInput = document.getElementById('carrinhoCep');
+  const cepSalvo = (() => { try { return localStorage.getItem('pavan_ultimo_cep') || ''; } catch { return ''; } })();
+  if (cepSalvo) cepInput.value = formatarCep(cepSalvo);
+  cepInput.addEventListener('input', (e) => { e.target.value = formatarCep(e.target.value); });
+  document.getElementById('btnCalcularFreteCarrinho').addEventListener('click', calcularFreteCarrinho);
+  cepInput.addEventListener('keydown', (e) => { if (e.key === 'Enter'){ e.preventDefault(); calcularFreteCarrinho(); } });
+
+  // ---------- Cupom ----------
+  const cupomInput = document.getElementById('carrinhoCupom');
+  const cupomSalvo = obterCupomAplicado();
+  if (cupomSalvo){
+    cupomInput.value = cupomSalvo;
+    aplicarCupomCarrinho(cupomSalvo, true);
+  } else {
+    // Sem cupom salvo ainda — confere se existe um cupom de boas-vindas em
+    // destaque (não espera o popup aparecer, pra já vir aplicado de cara).
+    obterCupomDestaque().then(cupom => {
+      if (!cupom || obterCupomAplicado()) return;
+      cupomInput.value = cupom.codigo;
+      aplicarCupomCarrinho(cupom.codigo, true);
+    });
+  }
+  document.getElementById('btnAplicarCupom').addEventListener('click', () => aplicarCupomCarrinho(cupomInput.value.trim()));
+  cupomInput.addEventListener('keydown', (e) => { if (e.key === 'Enter'){ e.preventDefault(); aplicarCupomCarrinho(cupomInput.value.trim()); } });
+}
+
+async function calcularFreteCarrinho(){
+  const cepInput = document.getElementById('carrinhoCep');
+  const resultado = document.getElementById('carrinhoFreteResultado');
+  const cep = cepInput.value.replace(/\D/g, '');
+  if (cep.length !== 8){
+    resultado.innerHTML = `<p class="frete-msg erro">Digite um CEP válido (8 dígitos).</p>`;
+    return;
+  }
+  try { localStorage.setItem('pavan_ultimo_cep', cep); } catch {}
+  resultado.innerHTML = `<p class="frete-msg">Calculando...</p>`;
+  const itens = obterCarrinho();
+  try {
+    const resp = await calcularFrete(cep, null, itens.map(i => ({ preco: i.preco, qtd: i.qtd })));
+    if (resp.error || !resp.opcoes || !resp.opcoes.length){
+      resultado.innerHTML = `<p class="frete-msg erro">Não foi possível calcular o frete pra esse CEP.</p>`;
+      freteEscolhidoCarrinho = null;
+      atualizarTotaisCarrinho();
+      return;
+    }
+    freteEscolhidoCarrinho = resp.opcoes[0];
+    const gratis = carrinhoTemFreteGratis(itens);
+    resultado.innerHTML = `
+      <div class="frete-opcao">
+        <div>
+          <span class="transportadora">${freteEscolhidoCarrinho.transportadora} — ${freteEscolhidoCarrinho.servico}</span>
+          <span class="prazo">${freteEscolhidoCarrinho.prazoConfeccaoDias} dias de confecção + ${freteEscolhidoCarrinho.prazoEntregaDiasMin} a ${freteEscolhidoCarrinho.prazoEntregaDias} dias úteis de entrega</span>
+        </div>
+        <span class="preco">${gratis ? 'Grátis' : formatarPreco(freteEscolhidoCarrinho.preco)}</span>
+      </div>
+    `;
+    atualizarTotaisCarrinho();
+  } catch {
+    resultado.innerHTML = `<p class="frete-msg erro">Não foi possível calcular o frete agora.</p>`;
+    freteEscolhidoCarrinho = null;
+    atualizarTotaisCarrinho();
+  }
+}
+
+async function aplicarCupomCarrinho(codigo, silencioso){
+  const resultadoEl = document.getElementById('carrinhoCupomResultado');
+  if (!codigo){
+    if (!silencioso) resultadoEl.innerHTML = `<p class="frete-msg erro">Digite um código de cupom.</p>`;
+    return;
+  }
+  const itens = obterCarrinho();
+  const subtotal = itens.reduce((s, i) => s + i.preco * i.qtd, 0);
+  resultadoEl.innerHTML = `<p class="frete-msg">Verificando cupom...</p>`;
+  const resp = await validarCupom(codigo, subtotal);
+  if (!resp.valido){
+    cupomAtualCarrinho = null;
+    removerCupomAplicado();
+    resultadoEl.innerHTML = `<p class="frete-msg erro">${resp.mensagem}</p>`;
+    atualizarTotaisCarrinho();
+    return;
+  }
+  cupomAtualCarrinho = { codigo: codigo.toUpperCase(), tipo: resp.tipo, valor: resp.valor, desconto: resp.desconto };
+  salvarCupomAplicado(cupomAtualCarrinho.codigo);
+  resultadoEl.innerHTML = `<p class="frete-msg" style="color:var(--verde, #2C6E37);">✓ Cupom <strong>${cupomAtualCarrinho.codigo}</strong> aplicado — ${formatarPreco(resp.desconto)} de desconto <button type="button" id="btnRemoverCupom" style="text-decoration:underline;margin-left:8px;">remover</button></p>`;
+  document.getElementById('btnRemoverCupom').addEventListener('click', () => {
+    cupomAtualCarrinho = null;
+    removerCupomAplicado();
+    document.getElementById('carrinhoCupom').value = '';
+    resultadoEl.innerHTML = '';
+    atualizarTotaisCarrinho();
+  });
+  atualizarTotaisCarrinho();
+}
+
+function atualizarTotaisCarrinho(){
+  const itens = obterCarrinho();
+  const subtotal = itens.reduce((s, i) => s + i.preco * i.qtd, 0);
+  const gratis = carrinhoTemFreteGratis(itens);
+  const freteValor = freteEscolhidoCarrinho ? (gratis ? 0 : freteEscolhidoCarrinho.preco) : null;
+  const desconto = cupomAtualCarrinho ? cupomAtualCarrinho.desconto : 0;
+  const total = subtotal + (freteValor || 0) - desconto;
+
+  document.getElementById('carrinhoTotais').innerHTML = `
+    <div class="checkout-total-linha"><span>Subtotal</span><span>${formatarPreco(subtotal)}</span></div>
+    ${desconto > 0 ? `<div class="checkout-total-linha" style="color:var(--verde,#2C6E37);"><span>Desconto (${cupomAtualCarrinho.codigo})</span><span>−${formatarPreco(desconto)}</span></div>` : ''}
+    <div class="checkout-total-linha"><span>Frete</span><span>${freteValor === null ? 'Calcule o CEP acima' : (freteValor === 0 ? 'Grátis' : formatarPreco(freteValor))}</span></div>
+    <div class="checkout-total-linha checkout-total-final"><span>Total estimado</span><span>${formatarPreco(Math.max(0, total))}</span></div>
+    <p class="suave" style="margin-top:6px;font-size:0.76rem;color:var(--texto-suave);">O frete final é recalculado na próxima etapa, com seu endereço completo.</p>
+  `;
 }
 
 renderCarrinho();

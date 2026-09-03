@@ -154,6 +154,16 @@
   <aside class="checkout-resumo">
     <h2>Seu pedido</h2>
     <div id="checkoutItens"></div>
+
+    <div class="cupom-linha">
+      <label for="ckCupom">Cupom de desconto</label>
+      <div class="frete-calc-linha">
+        <input type="text" id="ckCupom" placeholder="Digite o código">
+        <button type="button" class="btn btn-outline" id="btnAplicarCupomCheckout">Aplicar</button>
+      </div>
+      <div id="ckCupomResultado"></div>
+    </div>
+
     <div class="checkout-totais" id="checkoutTotais"></div>
     <button type="submit" form="formCheckout" class="btn btn-primary" id="btnConfirmarPedido" style="width:100%;justify-content:center;margin-top:16px;">Ir para o pagamento</button>
     <div class="pagamento-mp-box" style="margin-top:14px;">
@@ -188,6 +198,9 @@
         <ul>
           <li><a href="faq.html">Perguntas frequentes</a></li>
           <li><a href="trocas-devolucoes.html">Trocas e devoluções</a></li>
+          <li><a href="politica-frete.html">Política de frete</a></li>
+          <li><a href="garantia.html">Garantia</a></li>
+          <li><a href="termos.html">Termos de uso</a></li>
           <li><a href="privacidade.html">Política de privacidade</a></li>
           <li><a href="contato.html">Fale conosco</a></li>
         </ul>
@@ -212,6 +225,8 @@ initBuscaForm('searchFormHeader', true);
 const WHATSAPP_NUMERO = '5511941104553';
 let itensCarrinho = [];
 let freteEscolhido = null; // { transportadora, servico, preco, prazoDias }
+let opcoesFreteAtuais = [];
+let cupomAtualCheckout = null; // { codigo, tipo, valor, desconto }
 
 // Se a URL tem ?pedido=ID, o cliente tá voltando do Mercado Pago (aprovado,
 // recusado ou pendente) — nesse caso a tela é só de resultado, nem olha
@@ -387,6 +402,67 @@ function iniciarFormularioCheckout(itens){
   itensCarrinho = itens;
   renderResumo();
   preencherComPerfilSalvo();
+
+  // CEP salvo no carrinho (guest ou não) — só usado se o perfil não
+  // preencher um primeiro (ver preencherComPerfilSalvo, que roda antes).
+  // Usa document.getElementById direto (não a const ckCep, que só é
+  // declarada mais abaixo no arquivo) — isso aqui roda de forma síncrona,
+  // ainda durante a execução inicial do script.
+  const cepSalvo = (() => { try { return localStorage.getItem('pavan_ultimo_cep') || ''; } catch { return ''; } })();
+  const cepInputInicial = document.getElementById('ckCep');
+  if (cepSalvo && !cepInputInicial.value){
+    cepInputInicial.value = formatarCep(cepSalvo);
+    cepInputInicial.dispatchEvent(new Event('blur'));
+  }
+
+  // Cupom salvo do carrinho — reaplica automaticamente (valida de novo aqui)
+  const cupomSalvo = obterCupomAplicado();
+  if (cupomSalvo){
+    document.getElementById('ckCupom').value = cupomSalvo;
+    aplicarCupomCheckout(cupomSalvo, true);
+  } else {
+    // Sem cupom salvo ainda — confere se existe um cupom de boas-vindas em
+    // destaque (não espera o popup aparecer, pra já vir aplicado de cara).
+    obterCupomDestaque().then(cupom => {
+      if (!cupom || obterCupomAplicado()) return;
+      document.getElementById('ckCupom').value = cupom.codigo;
+      aplicarCupomCheckout(cupom.codigo, true);
+    });
+  }
+  document.getElementById('btnAplicarCupomCheckout').addEventListener('click', () => {
+    aplicarCupomCheckout(document.getElementById('ckCupom').value.trim());
+  });
+  document.getElementById('ckCupom').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter'){ e.preventDefault(); aplicarCupomCheckout(document.getElementById('ckCupom').value.trim()); }
+  });
+}
+
+async function aplicarCupomCheckout(codigo, silencioso){
+  const resultadoEl = document.getElementById('ckCupomResultado');
+  if (!codigo){
+    if (!silencioso) resultadoEl.innerHTML = `<p class="frete-msg erro">Digite um código de cupom.</p>`;
+    return;
+  }
+  resultadoEl.innerHTML = `<p class="frete-msg">Verificando cupom...</p>`;
+  const resp = await validarCupom(codigo, subtotalCarrinho());
+  if (!resp.valido){
+    cupomAtualCheckout = null;
+    removerCupomAplicado();
+    resultadoEl.innerHTML = `<p class="frete-msg erro">${resp.mensagem}</p>`;
+    renderResumo();
+    return;
+  }
+  cupomAtualCheckout = { codigo: codigo.toUpperCase(), tipo: resp.tipo, valor: resp.valor, desconto: resp.desconto };
+  salvarCupomAplicado(cupomAtualCheckout.codigo);
+  resultadoEl.innerHTML = `<p class="frete-msg" style="color:var(--verde);">✓ Cupom <strong>${cupomAtualCheckout.codigo}</strong> aplicado <button type="button" id="btnRemoverCupomCheckout" style="text-decoration:underline;margin-left:8px;">remover</button></p>`;
+  document.getElementById('btnRemoverCupomCheckout').addEventListener('click', () => {
+    cupomAtualCheckout = null;
+    removerCupomAplicado();
+    document.getElementById('ckCupom').value = '';
+    resultadoEl.innerHTML = '';
+    renderResumo();
+  });
+  renderResumo();
 }
 
 // Cliente logado: preenche o formulário com o que já foi salvo em "Meus
@@ -436,12 +512,14 @@ function renderResumo(){
   `).join('');
 
   const freteValor = freteEscolhido ? freteEscolhido.preco : null;
-  const freteGratis = subtotal >= 399;
+  const freteGratis = carrinhoTemFreteGratis(itensCarrinho);
   const freteFinal = freteValor === null ? null : (freteGratis ? 0 : freteValor);
-  const total = subtotal + (freteFinal || 0);
+  const desconto = cupomAtualCheckout ? Math.min(cupomAtualCheckout.desconto, subtotal) : 0;
+  const total = Math.max(0, subtotal + (freteFinal || 0) - desconto);
 
   document.getElementById('checkoutTotais').innerHTML = `
     <div class="checkout-total-linha"><span>Subtotal</span><span>${formatarPreco(subtotal)}</span></div>
+    ${desconto > 0 ? `<div class="checkout-total-linha" style="color:var(--verde);"><span>Desconto (${cupomAtualCheckout.codigo})</span><span>−${formatarPreco(desconto)}</span></div>` : ''}
     <div class="checkout-total-linha"><span>Frete</span><span>${freteFinal === null ? 'Calcule o CEP' : (freteFinal === 0 ? 'Grátis' : formatarPreco(freteFinal))}</span></div>
     <div class="checkout-total-linha checkout-total-final"><span>Total</span><span>${formatarPreco(total)}</span></div>
   `;
@@ -483,27 +561,43 @@ ckCep.addEventListener('blur', async () => {
     if (resultado.error || !resultado.opcoes || !resultado.opcoes.length){
       document.getElementById('checkoutFrete').innerHTML = `<p class="checkout-frete-msg erro">Não foi possível calcular o frete pra esse CEP. Confere se ele tá certo.</p>`;
       freteEscolhido = null;
+      opcoesFreteAtuais = [];
       renderResumo();
       return;
     }
-    freteEscolhido = resultado.opcoes[0];
-    const gratis = subtotalCarrinho() >= 399;
-    document.getElementById('checkoutFrete').innerHTML = `
-      <div class="frete-opcao">
-        <div>
-          <span class="transportadora">${freteEscolhido.transportadora} — ${freteEscolhido.servico}</span>
-          <span class="prazo">${freteEscolhido.prazoConfeccaoDias} dias de confecção + ${freteEscolhido.prazoEntregaDiasMin} a ${freteEscolhido.prazoEntregaDias} dias úteis de entrega</span>
-        </div>
-        <span class="preco">${gratis ? 'Grátis' : formatarPreco(freteEscolhido.preco)}</span>
-      </div>
-    `;
+    opcoesFreteAtuais = resultado.opcoes;
+    freteEscolhido = opcoesFreteAtuais[0]; // pré-seleciona a primeira; cliente pode trocar abaixo
+    renderOpcoesFrete();
     renderResumo();
   } catch {
     document.getElementById('checkoutFrete').innerHTML = `<p class="checkout-frete-msg erro">Não foi possível calcular o frete agora. Tente de novo.</p>`;
     freteEscolhido = null;
+    opcoesFreteAtuais = [];
     renderResumo();
   }
 });
+
+// Mostra TODAS as opções de frete retornadas (não só a mais barata/primeira)
+// como rádios — o cliente escolhe qual transportadora/prazo prefere.
+function renderOpcoesFrete(){
+  const gratis = carrinhoTemFreteGratis(itensCarrinho);
+  document.getElementById('checkoutFrete').innerHTML = opcoesFreteAtuais.map((o, i) => `
+    <label class="frete-opcao frete-opcao-radio">
+      <input type="radio" name="freteOpcao" value="${i}" ${freteEscolhido === o ? 'checked' : ''}>
+      <div>
+        <span class="transportadora">${o.transportadora} — ${o.servico}</span>
+        <span class="prazo">${o.prazoConfeccaoDias} dias de confecção + ${o.prazoEntregaDiasMin} a ${o.prazoEntregaDias} dias úteis de entrega</span>
+      </div>
+      <span class="preco">${gratis ? 'Grátis' : formatarPreco(o.preco)}</span>
+    </label>
+  `).join('');
+  document.querySelectorAll('input[name="freteOpcao"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      freteEscolhido = opcoesFreteAtuais[Number(radio.value)];
+      renderResumo();
+    });
+  });
+}
 
 // ---------- Envio do pedido ----------
 document.getElementById('formCheckout').addEventListener('submit', async (e) => {
@@ -519,7 +613,7 @@ document.getElementById('formCheckout').addEventListener('submit', async (e) => 
   const restaurarBotao = () => { botao.disabled = false; botao.textContent = 'Ir para o pagamento'; };
 
   const subtotal = subtotalCarrinho();
-  const gratis = subtotal >= 399;
+  const gratis = carrinhoTemFreteGratis(itensCarrinho);
   const freteFinal = gratis ? 0 : freteEscolhido.preco;
 
   const pedido = {
@@ -539,7 +633,8 @@ document.getElementById('formCheckout').addEventListener('submit', async (e) => 
     frete_servico: `${freteEscolhido.transportadora} — ${freteEscolhido.servico}`,
     frete_prazo_dias: freteEscolhido.prazoDias,
     total: subtotal + freteFinal,
-    observacoes: document.getElementById('ckObservacoes').value.trim() || null
+    observacoes: document.getElementById('ckObservacoes').value.trim() || null,
+    cupom_codigo: cupomAtualCheckout ? cupomAtualCheckout.codigo : null
   };
 
   try {
@@ -550,6 +645,7 @@ document.getElementById('formCheckout').addEventListener('submit', async (e) => 
     // próprio pedido) — some com ele mesmo que o pagamento ainda não
     // tenha sido confirmado, igual qualquer loja de verdade faz.
     localStorage.removeItem(CARRINHO_STORAGE_KEY);
+    removerCupomAplicado();
     atualizarContadorCarrinho();
 
     botao.textContent = 'Abrindo pagamento...';

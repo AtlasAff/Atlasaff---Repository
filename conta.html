@@ -71,6 +71,7 @@
         <input type="password" id="loginSenha" required minlength="6" placeholder="••••••••">
       </div>
       <button type="submit" class="btn btn-primary">Entrar</button>
+      <button type="button" id="btnEsqueciSenha" style="display:block;margin-top:12px;font-size:0.82rem;text-decoration:underline;color:var(--texto-suave);">Esqueci minha senha</button>
     </form>
 
     <form class="conta-form" id="formCriar" data-form="criar">
@@ -160,6 +161,66 @@
 
     <h3 class="conta-secao-titulo">Meus pedidos</h3>
     <div id="contaPedidos"></div>
+
+    <h3 class="conta-secao-titulo">Meus favoritos</h3>
+    <div id="contaFavoritos"></div>
+  </div>
+</div>
+
+<!-- ============ MODAL: solicitar troca / devolução / problema ============ -->
+<div class="tamanho-modal-overlay" id="modalSolicitacao">
+  <div class="tamanho-modal" style="max-width:440px;">
+    <button type="button" class="tamanho-modal-fechar" id="btnFecharModalSolicitacao" aria-label="Fechar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
+    </button>
+    <p style="font-family:var(--serif);font-size:1.2rem;margin-bottom:16px;">Falar sobre o pedido <span id="solicitacaoPedidoNumero"></span></p>
+    <div id="msgSolicitacao" class="conta-msg"></div>
+    <form id="formSolicitacao" style="display:flex;flex-direction:column;gap:14px;">
+      <input type="hidden" id="solicitacaoPedidoId">
+      <div>
+        <label for="solicitacaoTipo" style="font-size:0.85rem;font-weight:600;display:block;margin-bottom:6px;">O que você precisa?</label>
+        <select id="solicitacaoTipo" style="width:100%;padding:11px 12px;border:1px solid var(--borda);border-radius:var(--radius);font-family:var(--sans);">
+          <option value="problema">Relatar um problema</option>
+          <option value="troca">Solicitar troca</option>
+          <option value="devolucao">Solicitar devolução</option>
+        </select>
+      </div>
+      <div>
+        <label for="solicitacaoMotivo" style="font-size:0.85rem;font-weight:600;display:block;margin-bottom:6px;">Motivo</label>
+        <input type="text" id="solicitacaoMotivo" required placeholder="Ex: peça veio com defeito" style="width:100%;padding:11px 12px;border:1px solid var(--borda);border-radius:var(--radius);">
+      </div>
+      <div>
+        <label for="solicitacaoMensagem" style="font-size:0.85rem;font-weight:600;display:block;margin-bottom:6px;">Conte mais detalhes (opcional)</label>
+        <textarea id="solicitacaoMensagem" rows="4" style="width:100%;padding:11px 12px;border:1px solid var(--borda);border-radius:var(--radius);font-family:var(--sans);resize:vertical;"></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Enviar solicitação</button>
+    </form>
+  </div>
+</div>
+
+<!-- ============ MODAL: avaliar produto ============ -->
+<div class="tamanho-modal-overlay" id="modalAvaliarProduto">
+  <div class="tamanho-modal" style="max-width:440px;">
+    <button type="button" class="tamanho-modal-fechar" id="btnFecharModalAvaliar" aria-label="Fechar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
+    </button>
+    <p style="font-family:var(--serif);font-size:1.2rem;margin-bottom:6px;" id="avaliarProdutoNome"></p>
+    <p class="suave" style="font-size:0.82rem;color:var(--texto-suave);margin-bottom:16px;">Sua avaliação passa por uma checagem rápida antes de aparecer na página do produto.</p>
+    <div id="msgAvaliar" class="conta-msg"></div>
+    <form id="formAvaliarProduto" style="display:flex;flex-direction:column;gap:14px;">
+      <input type="hidden" id="avaliarPedidoId">
+      <input type="hidden" id="avaliarProdutoId">
+      <div>
+        <label style="font-size:0.85rem;font-weight:600;display:block;margin-bottom:8px;">Nota</label>
+        <div class="estrelas-picker-conta" id="avaliarEstrelas"></div>
+        <input type="hidden" id="avaliarNota" value="5">
+      </div>
+      <div>
+        <label for="avaliarComentario" style="font-size:0.85rem;font-weight:600;display:block;margin-bottom:6px;">Comentário (opcional)</label>
+        <textarea id="avaliarComentario" rows="4" style="width:100%;padding:11px 12px;border:1px solid var(--borda);border-radius:var(--radius);font-family:var(--sans);resize:vertical;" placeholder="O que você achou da peça?"></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Enviar avaliação</button>
+    </form>
   </div>
 </div>
 
@@ -176,6 +237,9 @@
         <ul>
           <li><a href="faq.html">Perguntas frequentes</a></li>
           <li><a href="trocas-devolucoes.html">Trocas e devoluções</a></li>
+          <li><a href="politica-frete.html">Política de frete</a></li>
+          <li><a href="garantia.html">Garantia</a></li>
+          <li><a href="termos.html">Termos de uso</a></li>
           <li><a href="privacidade.html">Política de privacidade</a></li>
           <li><a href="contato.html">Fale conosco</a></li>
         </ul>
@@ -270,6 +334,26 @@ document.getElementById('formEntrar').addEventListener('submit', async (e) => {
   mostrarConta();
 });
 
+// ---------- Esqueci minha senha ----------
+document.getElementById('btnEsqueciSenha').addEventListener('click', async () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  if (!email){
+    mostrarMsgConta('Digite seu e-mail no campo acima primeiro.', 'erro');
+    return;
+  }
+  const botao = document.getElementById('btnEsqueciSenha');
+  botao.disabled = true;
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}${window.location.pathname.replace('conta.html', '')}redefinir-senha.html`
+  });
+  botao.disabled = false;
+  if (error){
+    mostrarMsgConta('Não foi possível enviar o e-mail agora — tenta de novo em instantes.', 'erro');
+    return;
+  }
+  mostrarMsgConta('Se esse e-mail tiver uma conta, enviamos um link pra redefinir a senha.', 'sucesso');
+});
+
 // ---------- Sair ----------
 document.getElementById('btnSairConta').addEventListener('click', async () => {
   await sb.auth.signOut();
@@ -312,11 +396,27 @@ async function mostrarConta(){
   const pedidosWrap = document.getElementById('contaPedidos');
   pedidosWrap.innerHTML = `<p class="suave" style="color:var(--texto-suave);font-size:0.85rem;">Carregando pedidos...</p>`;
   const { data: pedidos, error } = await sb.from('pedidos').select('*').order('criado_em', { ascending: false });
+
+  renderFavoritos();
+
   if (error || !pedidos || !pedidos.length){
     pedidosWrap.innerHTML = `<p class="suave" style="color:var(--texto-suave);font-size:0.85rem;">Você ainda não fez nenhum pedido por aqui logada(o). Pedidos feitos sem estar logada(o) não aparecem nessa lista.</p>`;
     return;
   }
-  pedidosWrap.innerHTML = pedidos.map(pedidoParaHtml).join('');
+
+  // Busca de uma vez só (não pedido a pedido): solicitações de troca/devolução
+  // já abertas e quais itens já foram avaliados, pra decidir o que mostrar
+  // em cada card sem disparar N consultas.
+  const idsPedidos = pedidos.map(p => p.id);
+  const [{ data: solicitacoes }, { data: avaliadas }] = await Promise.all([
+    sb.from('solicitacoes_troca').select('*').in('pedido_id', idsPedidos).order('criado_em', { ascending: false }),
+    sb.from('avaliacoes').select('pedido_id, produto_id').eq('user_id', sessao.user.id).in('pedido_id', idsPedidos)
+  ]);
+  const solicitacoesPorPedido = {};
+  (solicitacoes || []).forEach(s => { (solicitacoesPorPedido[s.pedido_id] ||= []).push(s); });
+  const avaliadosSet = new Set((avaliadas || []).map(a => `${a.pedido_id}:${a.produto_id}`));
+
+  pedidosWrap.innerHTML = pedidos.map(p => pedidoParaHtml(p, solicitacoesPorPedido[p.id] || [], avaliadosSet)).join('');
 }
 
 const STATUS_PEDIDO_LABEL = { novo: 'Novo', confirmado: 'Confirmado', enviado: 'Enviado', entregue: 'Entregue', cancelado: 'Cancelado' };
@@ -324,13 +424,27 @@ const STATUS_PEDIDO_COR = { novo: 'amarelo', confirmado: 'verde', enviado: 'verd
 const STATUS_PAGAMENTO_LABEL = { pendente: 'Aguardando pagamento', em_analise: 'Pagamento em análise', aprovado: 'Pago', recusado: 'Pagamento recusado', estornado: 'Estornado' };
 const STATUS_PAGAMENTO_COR = { pendente: 'amarelo', em_analise: 'amarelo', aprovado: 'verde', recusado: 'vermelho', estornado: 'vermelho' };
 const FORMA_PAGAMENTO_LABEL = { pix: 'Pix', credit_card: 'Cartão de crédito', debit_card: 'Cartão de débito', ticket: 'Boleto', account_money: 'Saldo Mercado Pago' };
+const SOLICITACAO_TIPO_LABEL = { troca: 'Troca', devolucao: 'Devolução', problema: 'Problema relatado' };
+const SOLICITACAO_STATUS_LABEL = { aberta: 'Aberta', em_analise: 'Em análise', aprovada: 'Aprovada', recusada: 'Recusada', concluida: 'Concluída' };
+const SOLICITACAO_STATUS_COR = { aberta: 'amarelo', em_analise: 'amarelo', aprovada: 'verde', recusada: 'vermelho', concluida: 'verde' };
 
-function pedidoParaHtml(p){
+// Link de rastreio — Correios tem URL pública de consulta; outras
+// transportadoras (Melhor Envio parceiras) não têm um padrão único, então
+// cai numa busca que já leva a pessoa a rastrear pelo código.
+function linkRastreio(codigo, transportadora){
+  const t = (transportadora || '').toLowerCase();
+  if (t.includes('correios')) return `https://rastreamento.correios.com.br/app/index.php?objetos=${codigo}`;
+  return `https://www.google.com/search?q=rastrear+encomenda+${encodeURIComponent(codigo)}`;
+}
+
+function pedidoParaHtml(p, solicitacoes, avaliadosSet){
   const numero = p.id.slice(0, 8).toUpperCase();
   const dataFormatada = new Date(p.criado_em).toLocaleDateString('pt-BR');
   const corPedido = STATUS_PEDIDO_COR[p.status] || 'amarelo';
   const corPagamento = STATUS_PAGAMENTO_COR[p.status_pagamento] || 'amarelo';
   const formaPagamento = FORMA_PAGAMENTO_LABEL[p.forma_pagamento] || p.forma_pagamento;
+  const podeCancelar = ['novo', 'confirmado'].includes(p.status);
+  const podeAvaliar = p.status === 'entregue';
 
   return `
     <div class="faq-item">
@@ -358,23 +472,216 @@ function pedidoParaHtml(p){
             <span>Frete${p.frete_servico ? ' (' + p.frete_servico + ')' : ''}</span>
             <span>${p.frete === 0 ? 'Grátis' : formatarPreco(p.frete)}</span>
           </div>
+          ${p.desconto > 0 ? `
+          <div style="display:flex;justify-content:space-between;font-size:0.82rem;color:var(--verde);margin-top:4px;">
+            <span>Desconto${p.cupom_codigo ? ' (' + p.cupom_codigo + ')' : ''}</span>
+            <span>−${formatarPreco(p.desconto)}</span>
+          </div>` : ''}
         </div>
         <div style="font-size:0.82rem;color:var(--texto-suave);line-height:1.7;">
           ${formaPagamento ? `Pago com <strong style="color:var(--texto);">${formaPagamento}</strong><br>` : ''}
           Entrega: ${p.endereco}, ${p.numero}${p.complemento ? ' - ' + p.complemento : ''} — ${p.bairro}, ${p.cidade}/${p.estado}
+        </div>
+
+        ${p.codigo_rastreio ? `
+        <div class="conta-pedido-rastreio">
+          📦 Código de rastreio: <strong>${p.codigo_rastreio}</strong>${p.transportadora_rastreio ? ` (${p.transportadora_rastreio})` : ''}
+          — <a href="${linkRastreio(p.codigo_rastreio, p.transportadora_rastreio)}" target="_blank" rel="noopener">Rastrear entrega</a>
+        </div>` : ''}
+
+        ${solicitacoes.map(s => `
+          <div class="conta-solicitacao-linha">
+            <span class="badge-status badge-status--${SOLICITACAO_STATUS_COR[s.status]}">${SOLICITACAO_STATUS_LABEL[s.status]}</span>
+            <span>${SOLICITACAO_TIPO_LABEL[s.tipo]}: ${s.motivo}</span>
+          </div>
+          ${s.resposta_admin ? `<div class="conta-solicitacao-linha" style="padding-left:2px;"><em>Resposta: ${s.resposta_admin}</em></div>` : ''}
+        `).join('')}
+
+        ${podeAvaliar ? `
+        <div style="margin-top:14px;padding-top:14px;border-top:1px dashed var(--borda);">
+          <p style="font-size:0.8rem;font-weight:600;margin-bottom:4px;">Avalie sua compra</p>
+          ${(p.itens || []).map(item => {
+            const jaAvaliado = avaliadosSet.has(`${p.id}:${item.id}`);
+            return `
+              <div class="conta-pedido-avaliar-item">
+                <span>${item.nome}</span>
+                ${jaAvaliado
+                  ? `<span style="color:var(--texto-suave);font-size:0.76rem;">Avaliado ✓</span>`
+                  : `<button type="button" data-acao="avaliar" data-pedido-id="${p.id}" data-produto-id="${item.id}" data-produto-nome="${item.nome.replace(/"/g, '&quot;')}">Avaliar</button>`}
+              </div>
+            `;
+          }).join('')}
+        </div>` : ''}
+
+        <div class="conta-pedido-acoes">
+          <button type="button" data-acao="repetir" data-pedido-id="${p.id}">Comprar novamente</button>
+          <button type="button" data-acao="problema" data-pedido-id="${p.id}">Tenho um problema com esse pedido</button>
+          ${podeCancelar ? `<button type="button" class="acao-cancelar" data-acao="cancelar" data-pedido-id="${p.id}">Cancelar pedido</button>` : ''}
         </div>
       </div>
     </div>
   `;
 }
 
-// Expande/recolhe os detalhes de um pedido ao clicar (delegado, porque a
-// lista é recriada toda vez que os pedidos recarregam).
-document.getElementById('contaPedidos').addEventListener('click', (e) => {
-  const btn = e.target.closest('.conta-pedido-toggle');
+// Expande/recolhe os detalhes de um pedido, e trata os botões de ação —
+// tudo delegado num só listener, porque a lista é recriada toda vez que
+// os pedidos recarregam.
+document.getElementById('contaPedidos').addEventListener('click', async (e) => {
+  const toggle = e.target.closest('.conta-pedido-toggle');
+  if (toggle){ toggle.closest('.faq-item').classList.toggle('open'); return; }
+
+  const btn = e.target.closest('button[data-acao]');
   if (!btn) return;
-  btn.closest('.faq-item').classList.toggle('open');
+  const acao = btn.getAttribute('data-acao');
+  const pedidoId = btn.getAttribute('data-pedido-id');
+
+  if (acao === 'cancelar'){
+    if (!confirm('Cancelar esse pedido? Essa ação não pode ser desfeita.')) return;
+    const { error } = await sb.rpc('cancelar_pedido_cliente', { p_id: pedidoId });
+    if (error){ alert(error.message); return; }
+    mostrarToast('Pedido cancelado.');
+    mostrarConta();
+  }
+
+  if (acao === 'repetir'){
+    const { data: pedido } = await sb.from('pedidos').select('itens').eq('id', pedidoId).maybeSingle();
+    if (!pedido) return;
+    const carrinhoAtual = obterCarrinho();
+    (pedido.itens || []).forEach(item => {
+      const existente = carrinhoAtual.find(i => i.id === item.id && (i.tamanho||null) === (item.tamanho||null) && (i.quilate||null) === (item.quilate||null) && (i.banho||null) === (item.banho||null));
+      if (existente) existente.qtd += item.qtd;
+      else carrinhoAtual.push({ ...item });
+    });
+    salvarCarrinho(carrinhoAtual);
+    mostrarToast('Itens adicionados ao carrinho ✓');
+    setTimeout(() => { window.location.href = 'carrinho.html'; }, 700);
+  }
+
+  if (acao === 'problema'){
+    document.getElementById('solicitacaoPedidoId').value = pedidoId;
+    document.getElementById('solicitacaoPedidoNumero').textContent = `#${pedidoId.slice(0, 8).toUpperCase()}`;
+    document.getElementById('formSolicitacao').reset();
+    document.getElementById('msgSolicitacao').className = 'conta-msg';
+    document.getElementById('modalSolicitacao').classList.add('show');
+  }
+
+  if (acao === 'avaliar'){
+    document.getElementById('avaliarPedidoId').value = pedidoId;
+    document.getElementById('avaliarProdutoId').value = btn.getAttribute('data-produto-id');
+    document.getElementById('avaliarProdutoNome').textContent = btn.getAttribute('data-produto-nome');
+    document.getElementById('formAvaliarProduto').reset();
+    document.getElementById('msgAvaliar').className = 'conta-msg';
+    marcarEstrelasConta(5);
+    document.getElementById('modalAvaliarProduto').classList.add('show');
+  }
 });
+
+/* ============================================================
+   MODAL: solicitar troca / devolução / problema
+   ============================================================ */
+document.getElementById('btnFecharModalSolicitacao').addEventListener('click', () => {
+  document.getElementById('modalSolicitacao').classList.remove('show');
+});
+document.getElementById('modalSolicitacao').addEventListener('click', (e) => {
+  if (e.target.id === 'modalSolicitacao') e.target.classList.remove('show');
+});
+document.getElementById('formSolicitacao').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const botao = e.target.querySelector('button[type="submit"]');
+  botao.disabled = true;
+  botao.textContent = 'Enviando...';
+
+  const { error } = await sb.rpc('criar_solicitacao_troca', {
+    p_pedido_id: document.getElementById('solicitacaoPedidoId').value,
+    p_tipo: document.getElementById('solicitacaoTipo').value,
+    p_motivo: document.getElementById('solicitacaoMotivo').value.trim(),
+    p_mensagem: document.getElementById('solicitacaoMensagem').value.trim()
+  });
+
+  botao.disabled = false;
+  botao.textContent = 'Enviar solicitação';
+
+  const msg = document.getElementById('msgSolicitacao');
+  if (error){
+    msg.textContent = error.message;
+    msg.className = 'conta-msg show erro';
+    return;
+  }
+  msg.textContent = 'Solicitação enviada! Nossa equipe vai analisar e responder por aqui.';
+  msg.className = 'conta-msg show sucesso';
+  setTimeout(() => {
+    document.getElementById('modalSolicitacao').classList.remove('show');
+    mostrarConta();
+  }, 1400);
+});
+
+/* ============================================================
+   MODAL: avaliar produto
+   ============================================================ */
+document.getElementById('avaliarEstrelas').innerHTML = [1,2,3,4,5].map(n => `
+  <button type="button" data-nota="${n}">
+    <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9"/></svg>
+  </button>
+`).join('');
+function marcarEstrelasConta(nota){
+  document.getElementById('avaliarNota').value = nota;
+  document.querySelectorAll('#avaliarEstrelas button').forEach(b => {
+    b.classList.toggle('ativa', Number(b.getAttribute('data-nota')) <= nota);
+  });
+}
+document.querySelectorAll('#avaliarEstrelas button').forEach(b => {
+  b.addEventListener('click', () => marcarEstrelasConta(Number(b.getAttribute('data-nota'))));
+});
+document.getElementById('btnFecharModalAvaliar').addEventListener('click', () => {
+  document.getElementById('modalAvaliarProduto').classList.remove('show');
+});
+document.getElementById('modalAvaliarProduto').addEventListener('click', (e) => {
+  if (e.target.id === 'modalAvaliarProduto') e.target.classList.remove('show');
+});
+document.getElementById('formAvaliarProduto').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const botao = e.target.querySelector('button[type="submit"]');
+  botao.disabled = true;
+  botao.textContent = 'Enviando...';
+
+  const { error } = await sb.rpc('enviar_avaliacao_cliente', {
+    p_pedido_id: document.getElementById('avaliarPedidoId').value,
+    p_produto_id: document.getElementById('avaliarProdutoId').value,
+    p_nota: Number(document.getElementById('avaliarNota').value),
+    p_comentario: document.getElementById('avaliarComentario').value.trim(),
+    p_fotos: []
+  });
+
+  botao.disabled = false;
+  botao.textContent = 'Enviar avaliação';
+
+  const msg = document.getElementById('msgAvaliar');
+  if (error){
+    msg.textContent = error.message;
+    msg.className = 'conta-msg show erro';
+    return;
+  }
+  msg.textContent = 'Avaliação enviada! Assim que for aprovada, aparece na página do produto.';
+  msg.className = 'conta-msg show sucesso';
+  setTimeout(() => {
+    document.getElementById('modalAvaliarProduto').classList.remove('show');
+    mostrarConta();
+  }, 1400);
+});
+
+/* ============================================================
+   MEUS FAVORITOS
+   ============================================================ */
+async function renderFavoritos(){
+  const wrap = document.getElementById('contaFavoritos');
+  wrap.innerHTML = `<p class="suave" style="color:var(--texto-suave);font-size:0.85rem;">Carregando favoritos...</p>`;
+  const produtos = await carregarProdutosFavoritos();
+  favoritosCache = new Set(produtos.map(p => p.id)); // sincroniza o cache global (heart da página de produto)
+  wrap.innerHTML = produtos.length
+    ? `<div class="prod-grid">${produtos.map(cardProdutoHTML).join('')}</div>`
+    : `<p class="suave" style="color:var(--texto-suave);font-size:0.85rem;">Você ainda não favoritou nenhuma peça — clique no coração ♥ na página de um produto.</p>`;
+  revelarNovosElementos();
+}
 
 // ---------- Busca endereço automático pelo CEP (igual ao checkout) ----------
 const pfCep = document.getElementById('pfCep');

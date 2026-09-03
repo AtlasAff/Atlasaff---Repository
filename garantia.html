@@ -7,7 +7,7 @@
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/png" href="favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<title>Perguntas Frequentes | Pavan & Co.</title>
+<title>Garantia | Pavan & Co.</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -47,10 +47,23 @@
 
 <div class="page-content">
   <span class="eyebrow" style="display:block;text-align:center;">Atendimento</span>
-  <h1>Perguntas frequentes</h1>
+  <h1>Garantia</h1>
   <div class="linha"></div>
 
-  <div id="listaFaq"></div>
+  <h2>Garantia contra defeitos de fabricação</h2>
+  <p>Toda peça Pavan & Co. tem 90 dias de garantia contra defeitos de fabricação a partir da data de recebimento — cobrindo problemas como banho descascando prematuramente, pedra soltando da cravação ou fechos com defeito de fábrica.</p>
+
+  <h2>O que não é coberto</h2>
+  <p>Desgaste natural do uso diário, contato com produtos químicos (perfume, álcool em gel, cloro), quedas, batidas ou mau uso não são cobertos pela garantia.</p>
+
+  <h2>Como acionar</h2>
+  <p>Entre em contato pela página de <a href="contato.html" style="text-decoration:underline;color:var(--bordo);">Fale conosco</a> ou pelo WhatsApp, informando o número do pedido e fotos do problema. Nossa equipe avalia e retorna com o próximo passo (conserto, troca ou reembolso).</p>
+
+  <h2>Certificado da Moissanite</h2>
+  <p>Toda peça com moissanite acompanha certificado de avaliação da pedra, atestando corte, cor e clareza — uma garantia extra de autenticidade sobre o que você está levando.</p>
+
+  <h2>Cuidados para preservar a peça</h2>
+  <p>Evite contato com perfume, cremes e água do mar/piscina. Guarde a peça em local seco, longe de outras joias que possam arranhá-la, e limpe com um pano macio e seco após o uso.</p>
 </div>
 <footer>
   <div class="container">
@@ -86,33 +99,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="shared.js"></script>
-<script>
-initBuscaForm('searchFormHeader', true);
-
-const perguntas = [
-  { p: "Minhas joias são de ouro de verdade?", r: "Sim. Trabalhamos com ouro 18k, ouro rosé e prata 925 — o material de cada peça está sempre descrito na página do produto." },
-  { p: "Moissanite é a mesma coisa que diamante?", r: "Não, mas é uma pedra certificada, muito próxima visualmente do diamante, com alto brilho e durabilidade — por um preço mais acessível." },
-  { p: "Qual o prazo de entrega?", r: "O prazo varia por região, exibido no fechamento da compra. Pedidos são despachados em até 2 dias úteis." },
-  { p: "Como faço para trocar um produto?", r: "Você tem até 30 dias corridos após o recebimento para solicitar troca ou devolução. Veja o passo a passo na página de Trocas e Devoluções." },
-  { p: "Vocês têm loja física?", r: "Por enquanto atendemos 100% online, com atendimento via WhatsApp para dúvidas antes da compra." }
-];
-
-document.getElementById('listaFaq').innerHTML = perguntas.map((item, i) => `
-  <div class="faq-item" data-i="${i}">
-    <button type="button" class="faq-pergunta">
-      ${item.p}
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-    </button>
-    <div class="faq-resposta"><p>${item.r}</p></div>
-  </div>
-`).join('');
-
-document.querySelectorAll('.faq-pergunta').forEach(btn => {
-  btn.addEventListener('click', () => {
-    btn.closest('.faq-item').classList.toggle('open');
-  });
-});
-</script>
+<script>initBuscaForm('searchFormHeader', true);</script>
 
 </body>
 </html>

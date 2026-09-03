@@ -7,7 +7,7 @@
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/png" href="favicon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<title>Perguntas Frequentes | Pavan & Co.</title>
+<title>Política de Frete | Pavan & Co.</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -47,10 +47,23 @@
 
 <div class="page-content">
   <span class="eyebrow" style="display:block;text-align:center;">Atendimento</span>
-  <h1>Perguntas frequentes</h1>
+  <h1>Política de frete</h1>
   <div class="linha"></div>
 
-  <div id="listaFaq"></div>
+  <h2>Frete grátis</h2>
+  <p>Compras a partir de R$399 têm frete grátis para todo o Brasil, calculado automaticamente no carrinho e no checkout.</p>
+
+  <h2>Cálculo do frete</h2>
+  <p>O valor e o prazo são calculados em tempo real pelo seu CEP, direto na página do produto, no carrinho ou no checkout — antes de você confirmar a compra, sem surpresas.</p>
+
+  <h2>Prazo de confecção e envio</h2>
+  <p>Peças sob encomenda passam por um prazo de confecção (exibido junto com o frete) antes de serem despachadas. Depois de enviado, você recebe o código de rastreio por e-mail e pode acompanhá-lo também em <a href="conta.html" style="text-decoration:underline;color:var(--bordo);">Minha conta → Meus pedidos</a>.</p>
+
+  <h2>Transportadoras</h2>
+  <p>Trabalhamos com transportadoras parceiras que atendem todo o território nacional, com opções de prazo e custo exibidas na hora do cálculo do frete.</p>
+
+  <h2>Endereço de entrega</h2>
+  <p>Confira atentamente o endereço no checkout — pedidos com endereço incorreto podem ser devolvidos à nossa central e reenviados apenas mediante novo custo de frete.</p>
 </div>
 <footer>
   <div class="container">
@@ -86,33 +99,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="shared.js"></script>
-<script>
-initBuscaForm('searchFormHeader', true);
-
-const perguntas = [
-  { p: "Minhas joias são de ouro de verdade?", r: "Sim. Trabalhamos com ouro 18k, ouro rosé e prata 925 — o material de cada peça está sempre descrito na página do produto." },
-  { p: "Moissanite é a mesma coisa que diamante?", r: "Não, mas é uma pedra certificada, muito próxima visualmente do diamante, com alto brilho e durabilidade — por um preço mais acessível." },
-  { p: "Qual o prazo de entrega?", r: "O prazo varia por região, exibido no fechamento da compra. Pedidos são despachados em até 2 dias úteis." },
-  { p: "Como faço para trocar um produto?", r: "Você tem até 30 dias corridos após o recebimento para solicitar troca ou devolução. Veja o passo a passo na página de Trocas e Devoluções." },
-  { p: "Vocês têm loja física?", r: "Por enquanto atendemos 100% online, com atendimento via WhatsApp para dúvidas antes da compra." }
-];
-
-document.getElementById('listaFaq').innerHTML = perguntas.map((item, i) => `
-  <div class="faq-item" data-i="${i}">
-    <button type="button" class="faq-pergunta">
-      ${item.p}
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-    </button>
-    <div class="faq-resposta"><p>${item.r}</p></div>
-  </div>
-`).join('');
-
-document.querySelectorAll('.faq-pergunta').forEach(btn => {
-  btn.addEventListener('click', () => {
-    btn.closest('.faq-item').classList.toggle('open');
-  });
-});
-</script>
+<script>initBuscaForm('searchFormHeader', true);</script>
 
 </body>
 </html>

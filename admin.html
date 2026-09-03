@@ -558,6 +558,7 @@
         <button type="button" class="admin-tile" data-secao="produtos">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 8l-9-5-9 5 9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
           <span class="tile-label">Produtos</span>
+          <span class="tile-badge" id="tileBadgeEstoqueBaixo" style="display:none;background:var(--amarelo);" title="Peças com estoque baixo"></span>
         </button>
         <button type="button" class="admin-tile" data-secao="categorias">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg>
@@ -570,6 +571,7 @@
         <button type="button" class="admin-tile" data-secao="pedidos">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 8V6a6 6 0 0 1 12 0v2"/><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M9 12h6"/></svg>
           <span class="tile-label">Pedidos</span>
+          <span class="tile-badge" id="tileBadgeNovosPedidos" style="display:none;"></span>
         </button>
         <button type="button" class="admin-tile" data-secao="mensagens">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
@@ -578,7 +580,17 @@
         </button>
         <button type="button" class="admin-tile" data-secao="promocoes">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20.6 12.6 12 21.2 2.8 12 12 2.8h8.6z" transform="rotate(45 12 12)"/><circle cx="9" cy="9" r="1.4" fill="currentColor" stroke="none"/><path d="m8.5 15.5 7-7"/></svg>
-          <span class="tile-label">Promoções</span>
+          <span class="tile-label">Cupons</span>
+        </button>
+        <button type="button" class="admin-tile" data-secao="avaliacoes-pendentes">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9"/></svg>
+          <span class="tile-label">Avaliações pendentes</span>
+          <span class="tile-badge" id="tileBadgeAvaliacoes" style="display:none;"></span>
+        </button>
+        <button type="button" class="admin-tile" data-secao="trocas">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>
+          <span class="tile-label">Trocas/devoluções</span>
+          <span class="tile-badge" id="tileBadgeTrocas" style="display:none;"></span>
         </button>
       </div>
     </div>
@@ -751,8 +763,103 @@
   <div class="modal-card" style="max-width:520px;">
     <h2>Pedido <span id="detalhesPedidoNumero"></span></h2>
     <div id="detalhesPedidoConteudo"></div>
+
+    <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--cinza-borda);">
+      <h3 style="font-size:0.82rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--texto-suave);margin-bottom:10px;">Rastreio</h3>
+      <div class="form-linha cols-2">
+        <div class="form-campo">
+          <label for="detalhesTransportadora">Transportadora</label>
+          <input type="text" id="detalhesTransportadora" placeholder="Ex: Correios">
+        </div>
+        <div class="form-campo">
+          <label for="detalhesCodigoRastreio">Código de rastreio</label>
+          <input type="text" id="detalhesCodigoRastreio" placeholder="Ex: BR123456789BR">
+        </div>
+      </div>
+      <button type="button" class="btn-admin btn-admin-primary" id="btnSalvarRastreio" style="margin-top:6px;">Salvar rastreio</button>
+    </div>
+
     <div class="modal-footer">
       <button type="button" class="btn-admin btn-admin-outline" id="btnFecharDetalhesPedido">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalCupons">
+  <div class="modal-card" style="max-width:640px;">
+    <h2>Cupons de desconto</h2>
+    <div class="admin-tabela-wrap" style="border:1px solid var(--cinza-borda);margin-bottom:22px;">
+      <table class="admin-tabela">
+        <thead>
+          <tr><th>Código</th><th>Desconto</th><th>Mín.</th><th>Usos</th><th>Status</th><th></th></tr>
+        </thead>
+        <tbody id="corpoTabelaCupons"></tbody>
+      </table>
+    </div>
+    <h3 style="margin:0 0 12px;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--texto-suave);">Novo cupom</h3>
+    <form id="formNovoCupom">
+      <div class="form-linha cols-2">
+        <div class="form-campo">
+          <label for="cupomCodigo">Código *</label>
+          <input type="text" id="cupomCodigo" required placeholder="Ex: BEMVINDA10" style="text-transform:uppercase;">
+        </div>
+        <div class="form-campo">
+          <label for="cupomTipo">Tipo *</label>
+          <select id="cupomTipo">
+            <option value="percentual">Percentual (%)</option>
+            <option value="fixo">Valor fixo (R$)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-linha cols-3">
+        <div class="form-campo">
+          <label for="cupomValor">Valor *</label>
+          <input type="number" id="cupomValor" step="0.01" required placeholder="Ex: 10">
+        </div>
+        <div class="form-campo">
+          <label for="cupomMinimo">Compra mínima (R$)</label>
+          <input type="number" id="cupomMinimo" step="0.01" placeholder="0">
+        </div>
+        <div class="form-campo">
+          <label for="cupomUsoMaximo">Limite de usos</label>
+          <input type="number" id="cupomUsoMaximo" placeholder="Sem limite">
+        </div>
+      </div>
+      <div class="form-campo">
+        <label for="cupomValidade">Validade (opcional)</label>
+        <input type="date" id="cupomValidade">
+      </div>
+      <label class="checkbox-linha">
+        <input type="checkbox" id="cupomExibirPopup">
+        Mostrar num popup de boas-vindas pra quem visita o site <span style="font-weight:400;color:var(--texto-suave);">(só 1 cupom por vez — marcar este desmarca outro que já esteja em destaque)</span>
+      </label>
+      <div class="modal-footer" style="justify-content:flex-start;">
+        <button type="submit" class="btn-admin btn-admin-primary">Criar cupom</button>
+      </div>
+    </form>
+    <div class="modal-footer">
+      <button type="button" class="btn-admin btn-admin-outline" id="btnFecharCupons">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalAvaliacoesPendentes">
+  <div class="modal-card" style="max-width:640px;">
+    <h2>Avaliações pendentes</h2>
+    <p style="font-size:0.82rem;color:var(--texto-suave);margin-bottom:16px;">Avaliações enviadas pelos próprios clientes depois da entrega — aprove pra elas aparecerem na página do produto.</p>
+    <div id="listaAvaliacoesPendentes"></div>
+    <div class="modal-footer">
+      <button type="button" class="btn-admin btn-admin-outline" id="btnFecharAvaliacoesPendentes">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalTrocas">
+  <div class="modal-card" style="max-width:720px;">
+    <h2>Trocas, devoluções e problemas</h2>
+    <div id="listaTrocas"></div>
+    <div class="modal-footer">
+      <button type="button" class="btn-admin btn-admin-outline" id="btnFecharTrocas">Fechar</button>
     </div>
   </div>
 </div>
@@ -969,6 +1076,12 @@
             <input type="number" id="fEstoque" placeholder="Ex: 10">
           </div>
         </div>
+        <div class="form-linha cols-2">
+          <div class="form-campo">
+            <label for="fEstoqueMinimo">Avisar quando o estoque chegar em <span style="font-weight:400;color:var(--texto-suave);">(mostra um alerta no painel)</span></label>
+            <input type="number" id="fEstoqueMinimo" placeholder="Ex: 5" value="5">
+          </div>
+        </div>
       </div>
 
       <div class="form-secao tab-painel" data-tab="fornecedor">
@@ -990,6 +1103,7 @@
         <h3>Publicação</h3>
         <label class="checkbox-linha"><input type="checkbox" id="fDestaque"> Marcar como destaque (aparece na home)</label>
         <label class="checkbox-linha"><input type="checkbox" id="fAtivo" checked> Ativar produto (visível na loja — desmarque para rascunho)</label>
+        <label class="checkbox-linha"><input type="checkbox" id="fFreteGratisSempre"> Frete grátis sempre nesta peça <span style="font-weight:400;color:var(--texto-suave);">(independente do valor total da compra)</span></label>
 
         <h3 style="margin-top:22px;">Coleções temáticas</h3>
         <p style="font-size:0.8rem;color:var(--texto-suave);margin-bottom:10px;">Marque se essa peça deve aparecer nas vitrines "Coleções em destaque" da home (configure o link de cada card em Início → Coleções em destaque).</p>
@@ -1091,6 +1205,10 @@ async function confirmarAcessoAdmin(){
   await carregarCategoriasAdmin();
   popularSelectsDeCategoria();
   atualizarBadgeMensagens();
+  atualizarBadgeAvaliacoesPendentes();
+  atualizarBadgeTrocas();
+  atualizarBadgeEstoqueBaixo();
+  ativarNotificacaoNovoPedido();
   return true;
 }
 
@@ -1158,7 +1276,9 @@ document.querySelectorAll('.admin-tile').forEach(tile => {
     else if (secao === 'pagina-inicial') document.getElementById('btnPaginaInicial').click();
     else if (secao === 'pedidos') document.getElementById('btnPedidos').click();
     else if (secao === 'mensagens') document.getElementById('btnMensagens').click();
-    else if (secao === 'promocoes') alert('Em breve! Cupons de desconto chegam numa próxima atualização.');
+    else if (secao === 'promocoes') abrirModalCupons();
+    else if (secao === 'avaliacoes-pendentes') abrirModalAvaliacoesPendentes();
+    else if (secao === 'trocas') abrirModalTrocas();
   });
 });
 
@@ -1592,8 +1712,13 @@ async function renderTabelaPedidos(){
 
   document.querySelectorAll('#corpoTabelaPedidos select[data-acao="status"]').forEach(sel => {
     sel.addEventListener('change', async () => {
-      const { error } = await sb.from('pedidos').update({ status: sel.value }).eq('id', sel.getAttribute('data-id'));
-      if (error) alert('Erro ao atualizar status: ' + error.message);
+      const pedidoId = sel.getAttribute('data-id');
+      const { error } = await sb.from('pedidos').update({ status: sel.value }).eq('id', pedidoId);
+      if (error){ alert('Erro ao atualizar status: ' + error.message); return; }
+      // Dispara o e-mail de status pro cliente — não bloqueia a tela nem
+      // mostra erro se falhar (ex: Resend ainda não configurado); é
+      // best-effort, o pedido já foi salvo de qualquer forma.
+      sb.functions.invoke('notificar-status-pedido', { body: { pedido_id: pedidoId, novo_status: sel.value } }).catch(() => {});
     });
   });
 
@@ -1602,9 +1727,14 @@ async function renderTabelaPedidos(){
   });
 }
 
+let pedidoDetalhesAtual = null;
+
 function abrirDetalhesPedido(pedido){
+  pedidoDetalhesAtual = pedido;
   const numero = pedido.id.slice(0, 8).toUpperCase();
   document.getElementById('detalhesPedidoNumero').textContent = `#${numero}`;
+  document.getElementById('detalhesTransportadora').value = pedido.transportadora_rastreio || '';
+  document.getElementById('detalhesCodigoRastreio').value = pedido.codigo_rastreio || '';
   document.getElementById('detalhesPedidoConteudo').innerHTML = `
     <div style="margin-bottom:14px;">
       <span class="status-pill cor-${STATUS_PAGAMENTO_COR[pedido.status_pagamento] || 'amarelo'}">${STATUS_PAGAMENTO_LABEL[pedido.status_pagamento] || pedido.status_pagamento}</span>
@@ -1649,6 +1779,45 @@ document.getElementById('btnFecharPedidos').addEventListener('click', () => {
 document.getElementById('btnFecharDetalhesPedido').addEventListener('click', () => {
   document.getElementById('modalDetalhesPedido').classList.remove('show');
 });
+
+document.getElementById('btnSalvarRastreio').addEventListener('click', async () => {
+  if (!pedidoDetalhesAtual) return;
+  const botao = document.getElementById('btnSalvarRastreio');
+  botao.disabled = true;
+  botao.textContent = 'Salvando...';
+
+  const transportadora = document.getElementById('detalhesTransportadora').value.trim() || null;
+  const codigo = document.getElementById('detalhesCodigoRastreio').value.trim() || null;
+
+  const { error } = await sb.from('pedidos').update({
+    transportadora_rastreio: transportadora,
+    codigo_rastreio: codigo
+  }).eq('id', pedidoDetalhesAtual.id);
+
+  botao.disabled = false;
+  botao.textContent = 'Salvar rastreio';
+
+  if (error){ alert('Erro ao salvar rastreio: ' + error.message); return; }
+  mostrarToastAdmin('Rastreio salvo ✓');
+  if (codigo) sb.functions.invoke('notificar-status-pedido', { body: { pedido_id: pedidoDetalhesAtual.id, novo_status: 'rastreio_atualizado' } }).catch(() => {});
+});
+
+// Toast simples pro admin (o site público tem mostrarToast() no shared.js,
+// mas o admin não carrega o CSS público — reaproveita o alert nativo se o
+// elemento não existir, sem quebrar nada).
+function mostrarToastAdmin(mensagem){
+  let toast = document.getElementById('adminToast');
+  if (!toast){
+    toast = document.createElement('div');
+    toast.id = 'adminToast';
+    toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--petroleo-escuro);color:#fff;padding:12px 22px;border-radius:30px;font-size:0.85rem;z-index:2000;opacity:0;transition:opacity .25s ease;pointer-events:none;';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = mensagem;
+  toast.style.opacity = '1';
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => { toast.style.opacity = '0'; }, 2200);
+}
 
 /* ============================================================
    MENSAGENS (Fale conosco + Newsletter)
@@ -1730,6 +1899,276 @@ document.getElementById('btnMensagens').addEventListener('click', () => {
 document.getElementById('btnFecharMensagens').addEventListener('click', () => {
   document.getElementById('modalMensagens').classList.remove('show');
   atualizarBadgeMensagens();
+});
+
+/* ============================================================
+   CUPONS DE DESCONTO
+   ============================================================ */
+async function renderTabelaCupons(){
+  const { data, error } = await sb.from('cupons').select('*').order('criado_em', { ascending: false });
+  if (error){ console.error('Erro ao carregar cupons:', error); return; }
+
+  document.getElementById('corpoTabelaCupons').innerHTML = data.map(c => `
+    <tr>
+      <td><strong>${c.codigo}</strong>${c.exibir_popup ? ' <span class="status-pill status-destaque" title="Aparece no popup de boas-vindas do site">🎁 Popup</span>' : ''}</td>
+      <td>${c.tipo === 'percentual' ? c.valor + '%' : formatarPreco(c.valor)}</td>
+      <td>${c.valor_minimo > 0 ? formatarPreco(c.valor_minimo) : '—'}</td>
+      <td>${c.uso_atual}${c.uso_maximo ? ' / ' + c.uso_maximo : ''}</td>
+      <td><span class="status-pill ${c.ativo ? 'status-ativo' : 'status-rascunho'}">${c.ativo ? 'Ativo' : 'Inativo'}</span></td>
+      <td>
+        <div class="acoes-linha">
+          <button type="button" data-acao="alternar-cupom" data-id="${c.id}" data-ativo="${c.ativo}">${c.ativo ? 'Desativar' : 'Ativar'}</button>
+          <button type="button" data-acao="alternar-popup" data-id="${c.id}" data-popup="${c.exibir_popup}">${c.exibir_popup ? 'Tirar do popup' : 'Usar no popup'}</button>
+          <button type="button" class="excluir" data-acao="excluir-cupom" data-id="${c.id}">Excluir</button>
+        </div>
+      </td>
+    </tr>
+  `).join('') || `<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--texto-suave);">Nenhum cupom cadastrado ainda.</td></tr>`;
+
+  document.querySelectorAll('#corpoTabelaCupons button[data-acao="alternar-cupom"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const ativo = btn.getAttribute('data-ativo') === 'true';
+      await sb.from('cupons').update({ ativo: !ativo }).eq('id', btn.getAttribute('data-id'));
+      renderTabelaCupons();
+    });
+  });
+  document.querySelectorAll('#corpoTabelaCupons button[data-acao="alternar-popup"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const estaNoPopup = btn.getAttribute('data-popup') === 'true';
+      // Só 1 cupom por vez no popup — desmarca todos antes de marcar o novo
+      if (!estaNoPopup) await sb.from('cupons').update({ exibir_popup: false }).eq('exibir_popup', true);
+      await sb.from('cupons').update({ exibir_popup: !estaNoPopup }).eq('id', btn.getAttribute('data-id'));
+      renderTabelaCupons();
+    });
+  });
+  document.querySelectorAll('#corpoTabelaCupons button[data-acao="excluir-cupom"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Excluir esse cupom?')) return;
+      await sb.from('cupons').delete().eq('id', btn.getAttribute('data-id'));
+      renderTabelaCupons();
+    });
+  });
+}
+
+function abrirModalCupons(){
+  renderTabelaCupons();
+  document.getElementById('modalCupons').classList.add('show');
+}
+document.getElementById('btnFecharCupons').addEventListener('click', () => {
+  document.getElementById('modalCupons').classList.remove('show');
+});
+document.getElementById('formNovoCupom').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const botao = e.target.querySelector('button[type="submit"]');
+  botao.disabled = true;
+  botao.textContent = 'Criando...';
+
+  const marcarComoPopup = document.getElementById('cupomExibirPopup').checked;
+  if (marcarComoPopup){
+    // Só 1 cupom por vez no popup — desmarca qualquer outro antes de criar este já marcado
+    await sb.from('cupons').update({ exibir_popup: false }).eq('exibir_popup', true);
+  }
+
+  const { error } = await sb.from('cupons').insert({
+    codigo: document.getElementById('cupomCodigo').value.trim().toUpperCase(),
+    tipo: document.getElementById('cupomTipo').value,
+    valor: parseFloat(document.getElementById('cupomValor').value),
+    valor_minimo: parseFloat(document.getElementById('cupomMinimo').value) || 0,
+    uso_maximo: document.getElementById('cupomUsoMaximo').value ? parseInt(document.getElementById('cupomUsoMaximo').value) : null,
+    validade: document.getElementById('cupomValidade').value || null,
+    exibir_popup: marcarComoPopup
+  });
+
+  botao.disabled = false;
+  botao.textContent = 'Criar cupom';
+
+  if (error){
+    alert(error.code === '23505' ? 'Já existe um cupom com esse código.' : 'Erro ao criar cupom: ' + error.message);
+    return;
+  }
+  e.target.reset();
+  document.getElementById('cupomTipo').value = 'percentual';
+  renderTabelaCupons();
+});
+
+/* ============================================================
+   AVALIAÇÕES PENDENTES (enviadas por clientes de verdade)
+   ============================================================ */
+async function renderAvaliacoesPendentes(){
+  const { data, error } = await sb
+    .from('avaliacoes')
+    .select('*, produtos(nome)')
+    .eq('aprovado', false)
+    .order('criado_em', { ascending: false });
+  const wrap = document.getElementById('listaAvaliacoesPendentes');
+  if (error){ wrap.innerHTML = `<p style="color:var(--texto-suave);">Erro ao carregar avaliações.</p>`; return; }
+
+  wrap.innerHTML = data.length ? data.map(a => `
+    <div class="avaliacao-admin-linha">
+      <div class="conteudo">
+        <strong>${'★'.repeat(a.nota)}${'☆'.repeat(5 - a.nota)}</strong> ${a.nome_cliente} — <em>${a.produtos?.nome || 'Produto removido'}</em>
+        ${a.comentario ? `<div style="color:var(--texto-suave);">${a.comentario}</div>` : ''}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+        <button type="button" data-acao="aprovar-avaliacao" data-id="${a.id}" style="color:var(--verde);text-decoration:underline;font-size:0.78rem;">Aprovar</button>
+        <button type="button" class="excluir-av" data-acao="recusar-avaliacao" data-id="${a.id}">Recusar</button>
+      </div>
+    </div>
+  `).join('') : `<p style="color:var(--texto-suave);font-size:0.85rem;">Nenhuma avaliação aguardando aprovação.</p>`;
+
+  wrap.querySelectorAll('button[data-acao="aprovar-avaliacao"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await sb.from('avaliacoes').update({ aprovado: true }).eq('id', btn.getAttribute('data-id'));
+      renderAvaliacoesPendentes();
+      atualizarBadgeAvaliacoesPendentes();
+    });
+  });
+  wrap.querySelectorAll('button[data-acao="recusar-avaliacao"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Recusar (excluir) essa avaliação?')) return;
+      await sb.from('avaliacoes').delete().eq('id', btn.getAttribute('data-id'));
+      renderAvaliacoesPendentes();
+      atualizarBadgeAvaliacoesPendentes();
+    });
+  });
+}
+
+function abrirModalAvaliacoesPendentes(){
+  renderAvaliacoesPendentes();
+  document.getElementById('modalAvaliacoesPendentes').classList.add('show');
+}
+document.getElementById('btnFecharAvaliacoesPendentes').addEventListener('click', () => {
+  document.getElementById('modalAvaliacoesPendentes').classList.remove('show');
+  atualizarBadgeAvaliacoesPendentes();
+});
+
+async function atualizarBadgeAvaliacoesPendentes(){
+  const { count } = await sb.from('avaliacoes').select('id', { count: 'exact', head: true }).eq('aprovado', false);
+  const badge = document.getElementById('tileBadgeAvaliacoes');
+  if (count > 0){ badge.textContent = count; badge.style.display = 'flex'; }
+  else badge.style.display = 'none';
+}
+
+/* ============================================================
+   TROCAS, DEVOLUÇÕES E PROBLEMAS
+   ============================================================ */
+const SOLICITACAO_TIPO_LABEL_ADMIN = { troca: 'Troca', devolucao: 'Devolução', problema: 'Problema' };
+const SOLICITACAO_STATUS_LABEL_ADMIN = { aberta: 'Aberta', em_analise: 'Em análise', aprovada: 'Aprovada', recusada: 'Recusada', concluida: 'Concluída' };
+
+async function renderTrocas(){
+  const { data, error } = await sb
+    .from('solicitacoes_troca')
+    .select('*, pedidos(id, nome_cliente)')
+    .order('criado_em', { ascending: false });
+  const wrap = document.getElementById('listaTrocas');
+  if (error){ wrap.innerHTML = `<p style="color:var(--texto-suave);">Erro ao carregar solicitações.</p>`; return; }
+
+  wrap.innerHTML = data.length ? data.map(s => `
+    <div class="mensagem-linha">
+      <div class="mensagem-cabecalho">
+        <span class="mensagem-remetente">#${(s.pedidos?.id || '').slice(0,8).toUpperCase()} — ${s.pedidos?.nome_cliente || 'Cliente'} <span style="font-weight:400;color:var(--texto-suave);">(${SOLICITACAO_TIPO_LABEL_ADMIN[s.tipo]})</span></span>
+        <span class="mensagem-data">${new Date(s.criado_em).toLocaleString('pt-BR')}</span>
+      </div>
+      <div class="mensagem-assunto">${s.motivo}</div>
+      ${s.mensagem ? `<div class="mensagem-corpo">${s.mensagem}</div>` : ''}
+      <div class="form-linha cols-2" style="margin-top:8px;">
+        <div class="form-campo">
+          <label>Status</label>
+          <select data-acao="status-troca" data-id="${s.id}">
+            ${Object.entries(SOLICITACAO_STATUS_LABEL_ADMIN).map(([v,l]) => `<option value="${v}" ${s.status===v?'selected':''}>${l}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-campo">
+          <label>Resposta pro cliente</label>
+          <input type="text" data-campo="resposta-troca" data-id="${s.id}" value="${(s.resposta_admin || '').replace(/"/g,'&quot;')}" placeholder="Ex: etiqueta enviada por e-mail">
+        </div>
+      </div>
+      <button type="button" data-acao="salvar-troca" data-id="${s.id}" style="font-size:0.78rem;color:var(--bordo);text-decoration:underline;margin-top:6px;">Salvar</button>
+    </div>
+  `).join('') : `<p style="color:var(--texto-suave);font-size:0.85rem;">Nenhuma solicitação registrada ainda.</p>`;
+
+  wrap.querySelectorAll('button[data-acao="salvar-troca"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-id');
+      const status = wrap.querySelector(`select[data-acao="status-troca"][data-id="${id}"]`).value;
+      const resposta = wrap.querySelector(`input[data-campo="resposta-troca"][data-id="${id}"]`).value.trim() || null;
+      btn.disabled = true;
+      btn.textContent = 'Salvando...';
+      const { error } = await sb.from('solicitacoes_troca').update({ status, resposta_admin: resposta, atualizado_em: new Date().toISOString() }).eq('id', id);
+      btn.disabled = false;
+      btn.textContent = 'Salvar';
+      if (error){ alert('Erro: ' + error.message); return; }
+      mostrarToastAdmin('Solicitação atualizada ✓');
+      atualizarBadgeTrocas();
+    });
+  });
+}
+
+function abrirModalTrocas(){
+  renderTrocas();
+  document.getElementById('modalTrocas').classList.add('show');
+}
+document.getElementById('btnFecharTrocas').addEventListener('click', () => {
+  document.getElementById('modalTrocas').classList.remove('show');
+});
+
+async function atualizarBadgeTrocas(){
+  const { count } = await sb.from('solicitacoes_troca').select('id', { count: 'exact', head: true }).eq('status', 'aberta');
+  const badge = document.getElementById('tileBadgeTrocas');
+  if (count > 0){ badge.textContent = count; badge.style.display = 'flex'; }
+  else badge.style.display = 'none';
+}
+
+/* ============================================================
+   ESTOQUE BAIXO
+   ============================================================ */
+async function atualizarBadgeEstoqueBaixo(){
+  const { data, error } = await sb.from('produtos').select('estoque, estoque_minimo').eq('ativo', true);
+  const badge = document.getElementById('tileBadgeEstoqueBaixo');
+  if (error){ badge.style.display = 'none'; return; }
+  const qtd = data.filter(p => (p.estoque ?? 0) <= (p.estoque_minimo ?? 5)).length;
+  if (qtd > 0){ badge.textContent = qtd; badge.style.display = 'flex'; badge.title = `${qtd} peça(s) com estoque baixo`; }
+  else badge.style.display = 'none';
+}
+
+/* ============================================================
+   NOTIFICAÇÃO DE NOVO PEDIDO (Realtime — toca um som e avisa se o
+   painel estiver aberto quando um pedido novo chega)
+   ============================================================ */
+function tocarSomNotificacao(){
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.5);
+  } catch {}
+}
+
+let contagemPedidosNovos = 0;
+let canalNotificacaoAtivo = false; // evita inscrever o mesmo canal 2x (ex: sair e entrar de novo sem recarregar a página)
+function ativarNotificacaoNovoPedido(){
+  if (canalNotificacaoAtivo) return;
+  canalNotificacaoAtivo = true;
+  sb.channel('admin-novos-pedidos')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pedidos' }, (payload) => {
+      contagemPedidosNovos++;
+      const badge = document.getElementById('tileBadgeNovosPedidos');
+      badge.textContent = contagemPedidosNovos;
+      badge.style.display = 'flex';
+      tocarSomNotificacao();
+      mostrarToastAdmin(`🛍️ Novo pedido de ${payload.new.nome_cliente}!`);
+    })
+    .subscribe();
+}
+document.getElementById('btnPedidos').addEventListener('click', () => {
+  contagemPedidosNovos = 0;
+  document.getElementById('tileBadgeNovosPedidos').style.display = 'none';
 });
 
 const CATEGORIA_LABEL = { aliancas: "Alianças", aneis: "Anéis", brincos: "Brincos", colares: "Colares", pulseiras: "Pulseiras", joias: "Joias" };
@@ -2156,6 +2595,7 @@ function abrirModalProduto(produto){
     document.getElementById('fLargura').value = produto.largura_mm || '';
     document.getElementById('fPreco').value = produto.preco || '';
     document.getElementById('fEstoque').value = produto.estoque || '';
+    document.getElementById('fEstoqueMinimo').value = produto.estoque_minimo ?? 5;
     document.getElementById('fCustoPeca').value = produto.custo_peca ?? '';
     document.getElementById('fCotacaoDolar').value = produto.cotacao_dolar ?? '';
     document.getElementById('fIcmsPct').value = produto.icms_pct ?? 18;
@@ -2165,6 +2605,7 @@ function abrirModalProduto(produto){
     document.getElementById('fLinkFornecedor').value = produto.link_fornecedor || '';
     document.getElementById('fDestaque').checked = !!produto.destaque;
     document.getElementById('fAtivo').checked = produto.ativo !== false;
+    document.getElementById('fFreteGratisSempre').checked = !!produto.frete_gratis_sempre;
     const colecoesDoProduto = produto.colecoes || [];
     document.getElementById('fColecaoNoivado').checked = colecoesDoProduto.includes('noivado');
     document.getElementById('fColecaoMaisVendidos').checked = colecoesDoProduto.includes('mais-vendidos');
@@ -2334,6 +2775,7 @@ document.getElementById('formProduto').addEventListener('submit', async (e) => {
       tamanhos_disponiveis: [...tamanhosFormAtual].sort((a, b) => parseFloat(a) - parseFloat(b)),
       preco: parseFloat(document.getElementById('fPreco').value) || 0,
       estoque: parseInt(document.getElementById('fEstoque').value) || 0,
+      estoque_minimo: parseInt(document.getElementById('fEstoqueMinimo').value) || 5,
       custo_peca: document.getElementById('fCustoPeca').value ? parseFloat(document.getElementById('fCustoPeca').value) : null,
       custo_imposto: document.getElementById('fCustoImposto').value ? parseFloat(document.getElementById('fCustoImposto').value) : null,
       cotacao_dolar: document.getElementById('fCotacaoDolar').value ? parseFloat(document.getElementById('fCotacaoDolar').value) : null,
@@ -2344,6 +2786,7 @@ document.getElementById('formProduto').addEventListener('submit', async (e) => {
       fotos: fotosUrls,
       destaque: document.getElementById('fDestaque').checked,
       ativo: document.getElementById('fAtivo').checked,
+      frete_gratis_sempre: document.getElementById('fFreteGratisSempre').checked,
       colecoes: [
         document.getElementById('fColecaoNoivado').checked ? 'noivado' : null,
         document.getElementById('fColecaoMaisVendidos').checked ? 'mais-vendidos' : null,
@@ -2360,6 +2803,7 @@ document.getElementById('formProduto').addEventListener('submit', async (e) => {
 
     fecharModalProduto();
     await renderTabela();
+    atualizarBadgeEstoqueBaixo();
   } catch (err) {
     alert('Não foi possível salvar: ' + err.message);
   } finally {
