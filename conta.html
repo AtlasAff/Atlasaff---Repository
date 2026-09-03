@@ -761,6 +761,7 @@ function pedidoParaHtml(p, solicitacoes, avaliadosSet){
         </div>` : ''}
 
         <div class="conta-pedido-acoes">
+          ${p.nota_fiscal_path ? `<button type="button" data-acao="baixar-nf" data-pedido-id="${p.id}">📄 Baixar nota fiscal</button>` : ''}
           <button type="button" data-acao="repetir" data-pedido-id="${p.id}">Comprar novamente</button>
           <button type="button" data-acao="problema" data-pedido-id="${p.id}">Tenho um problema com esse pedido</button>
           ${podeCancelar ? `<button type="button" class="acao-cancelar" data-acao="cancelar" data-pedido-id="${p.id}">Cancelar pedido</button>` : ''}
@@ -781,6 +782,21 @@ document.getElementById('contaPedidos').addEventListener('click', async (e) => {
   if (!btn) return;
   const acao = btn.getAttribute('data-acao');
   const pedidoId = btn.getAttribute('data-pedido-id');
+
+  if (acao === 'baixar-nf'){
+    btn.disabled = true;
+    const textoOriginal = btn.textContent;
+    btn.textContent = 'Abrindo...';
+    const { data: pedidoNf } = await sb.from('pedidos').select('nota_fiscal_path').eq('id', pedidoId).maybeSingle();
+    if (pedidoNf?.nota_fiscal_path){
+      const { data: assinada, error } = await sb.storage.from('notas-fiscais').createSignedUrl(pedidoNf.nota_fiscal_path, 60);
+      if (assinada?.signedUrl) window.open(assinada.signedUrl, '_blank');
+      else mostrarToast(error?.message || 'Não foi possível abrir a nota fiscal agora.');
+    }
+    btn.disabled = false;
+    btn.textContent = textoOriginal;
+    return;
+  }
 
   if (acao === 'cancelar'){
     if (!confirm('Cancelar esse pedido? Essa ação não pode ser desfeita.')) return;

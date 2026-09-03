@@ -779,6 +779,14 @@
       <button type="button" class="btn-admin btn-admin-primary" id="btnSalvarRastreio" style="margin-top:6px;">Salvar rastreio</button>
     </div>
 
+    <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--cinza-borda);">
+      <h3 style="font-size:0.82rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--texto-suave);margin-bottom:10px;">Nota fiscal</h3>
+      <p id="detalhesNotaFiscalStatus" style="font-size:0.82rem;color:var(--texto-suave);margin-bottom:10px;">Nenhuma nota fiscal anexada ainda.</p>
+      <input type="file" id="detalhesNotaFiscalArquivo" accept="application/pdf" style="margin-bottom:10px;">
+      <button type="button" class="btn-admin btn-admin-primary" id="btnEnviarNotaFiscal">Anexar e enviar por e-mail</button>
+      <p style="font-size:0.76rem;color:var(--texto-suave);margin-top:6px;">Só PDF. Assim que anexar, o cliente já recebe um e-mail com o link pra baixar.</p>
+    </div>
+
     <div class="modal-footer">
       <button type="button" class="btn-admin btn-admin-outline" id="btnFecharDetalhesPedido">Fechar</button>
     </div>
@@ -1739,6 +1747,10 @@ function abrirDetalhesPedido(pedido){
   document.getElementById('detalhesPedidoNumero').textContent = `#${numero}`;
   document.getElementById('detalhesTransportadora').value = pedido.transportadora_rastreio || '';
   document.getElementById('detalhesCodigoRastreio').value = pedido.codigo_rastreio || '';
+  document.getElementById('detalhesNotaFiscalStatus').textContent = pedido.nota_fiscal_path
+    ? '✓ Nota fiscal anexada — subir outro PDF substitui a atual e reenvia o e-mail.'
+    : 'Nenhuma nota fiscal anexada ainda.';
+  document.getElementById('detalhesNotaFiscalArquivo').value = '';
   document.getElementById('detalhesPedidoConteudo').innerHTML = `
     <div style="margin-bottom:14px;">
       <span class="status-pill cor-${STATUS_PAGAMENTO_COR[pedido.status_pagamento] || 'amarelo'}">${STATUS_PAGAMENTO_LABEL[pedido.status_pagamento] || pedido.status_pagamento}</span>
@@ -1793,17 +1805,70 @@ document.getElementById('btnSalvarRastreio').addEventListener('click', async () 
   const transportadora = document.getElementById('detalhesTransportadora').value.trim() || null;
   const codigo = document.getElementById('detalhesCodigoRastreio').value.trim() || null;
 
-  const { error } = await sb.from('pedidos').update({
-    transportadora_rastreio: transportadora,
-    codigo_rastreio: codigo
-  }).eq('id', pedidoDetalhesAtual.id);
+  // Colocar um código de rastreio, na prática, é avisar que o pedido foi
+  // enviado — promove o status pra "enviado" sozinho (só quando ainda faz
+  // sentido: não mexe se o pedido já foi entregue ou cancelado, pra não
+  // "regredir" o status por engano numa edição posterior do rastreio).
+  const promoverParaEnviado = !!codigo && ['novo', 'confirmado'].includes(pedidoDetalhesAtual.status);
+  const atualizacao = { transportadora_rastreio: transportadora, codigo_rastreio: codigo };
+  if (promoverParaEnviado) atualizacao.status = 'enviado';
+
+  const { error } = await sb.from('pedidos').update(atualizacao).eq('id', pedidoDetalhesAtual.id);
 
   botao.disabled = false;
   botao.textContent = 'Salvar rastreio';
 
   if (error){ alert('Erro ao salvar rastreio: ' + error.message); return; }
   mostrarToastAdmin('Rastreio salvo ✓');
-  if (codigo) sb.functions.invoke('notificar-status-pedido', { body: { pedido_id: pedidoDetalhesAtual.id, novo_status: 'rastreio_atualizado' } }).catch(() => {});
+
+  if (promoverParaEnviado){
+    // E-mail de "pedido enviado" já inclui o código de rastreio sozinho
+    // (o template olha pedido.codigo_rastreio independente do status).
+    pedidoDetalhesAtual.status = 'enviado';
+    sb.functions.invoke('notificar-status-pedido', { body: { pedido_id: pedidoDetalhesAtual.id, novo_status: 'enviado' } }).catch(() => {});
+  } else if (codigo) {
+    // Só corrigindo/editando o rastreio de um pedido que já tinha outro
+    // status (ex: já entregue) — avisa sem fingir que "acabou de enviar".
+    sb.functions.invoke('notificar-status-pedido', { body: { pedido_id: pedidoDetalhesAtual.id, novo_status: 'rastreio_atualizado' } }).catch(() => {});
+  }
+  renderTabelaPedidos();
+});
+
+document.getElementById('btnEnviarNotaFiscal').addEventListener('click', async () => {
+  if (!pedidoDetalhesAtual) return;
+  const arquivo = document.getElementById('detalhesNotaFiscalArquivo').files[0];
+  if (!arquivo){ alert('Escolhe o PDF da nota fiscal primeiro.'); return; }
+  if (arquivo.type !== 'application/pdf'){ alert('Só é aceito arquivo PDF.'); return; }
+
+  const botao = document.getElementById('btnEnviarNotaFiscal');
+  botao.disabled = true;
+  botao.textContent = 'Enviando...';
+
+  // Mesmo caminho sempre (com upsert) — subir de novo substitui a nota
+  // fiscal anterior desse pedido, não acumula arquivo velho no storage.
+  const caminho = `${pedidoDetalhesAtual.id}/nota-fiscal.pdf`;
+  const { error: erroUpload } = await sb.storage.from('notas-fiscais').upload(caminho, arquivo, { upsert: true, contentType: 'application/pdf' });
+
+  if (erroUpload){
+    botao.disabled = false;
+    botao.textContent = 'Anexar e enviar por e-mail';
+    alert('Erro ao subir o PDF: ' + erroUpload.message);
+    return;
+  }
+
+  const { error: erroSalvar } = await sb.from('pedidos').update({ nota_fiscal_path: caminho }).eq('id', pedidoDetalhesAtual.id);
+
+  botao.disabled = false;
+  botao.textContent = 'Anexar e enviar por e-mail';
+
+  if (erroSalvar){ alert('PDF subiu, mas não salvou no pedido: ' + erroSalvar.message); return; }
+
+  pedidoDetalhesAtual.nota_fiscal_path = caminho;
+  document.getElementById('detalhesNotaFiscalStatus').textContent = '✓ Nota fiscal anexada — subir outro PDF substitui a atual e reenvia o e-mail.';
+  document.getElementById('detalhesNotaFiscalArquivo').value = '';
+  mostrarToastAdmin('Nota fiscal anexada ✓');
+
+  sb.functions.invoke('notificar-status-pedido', { body: { pedido_id: pedidoDetalhesAtual.id, novo_status: 'nota_fiscal_disponivel' } }).catch(() => {});
 });
 
 // Toast simples pro admin (o site público tem mostrarToast() no shared.js,
