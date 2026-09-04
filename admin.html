@@ -341,6 +341,9 @@
     box-shadow: var(--sombra);
     overflow-x:auto;
   }
+  .carregar-mais-wrap{ display:flex; justify-content:center; margin-top:18px; }
+  .carregar-mais-wrap .btn-admin{ min-width:220px; justify-content:center; }
+  .carregar-mais-contagem{ opacity:.7; font-weight:400; margin-left:2px; }
   table.admin-tabela{ width:100%; border-collapse:collapse; min-width: 720px; }
   .admin-tabela th{
     text-align:left;
@@ -803,6 +806,7 @@
             <tbody id="corpoTabelaAdmin"></tbody>
           </table>
           </div>
+          <div class="carregar-mais-wrap" id="produtosCarregarMaisWrap" style="margin-bottom:0;"></div>
         </div>
 
         <!-- ============ LOJA (configurações) ============ -->
@@ -2517,15 +2521,37 @@ async function carregarProdutosAdmin(){
   return data;
 }
 
-async function renderTabela(){
+// Igual ao "carregar mais" da loja pública — evita jogar a tabela
+// inteira na tela de uma vez se o catálogo crescer bastante. Reseta pra
+// primeira página sempre que busca/filtro muda; só "carregar mais"
+// mantém.
+const ITENS_POR_PAGINA_ADMIN = 20;
+let itensVisiveisAdmin = ITENS_POR_PAGINA_ADMIN;
+
+async function renderTabela(manterPagina){
   const termo = document.getElementById('buscaAdmin').value.toLowerCase();
   const catFiltro = document.getElementById('filtroCategoriaAdmin').value;
 
   produtosAdmin = await carregarProdutosAdmin();
 
-  const lista = produtosAdmin.filter(p =>
+  const listaCompleta = produtosAdmin.filter(p =>
     p.nome.toLowerCase().includes(termo) && (!catFiltro || p.categoria === catFiltro)
   );
+
+  if (!manterPagina) itensVisiveisAdmin = ITENS_POR_PAGINA_ADMIN;
+  const lista = listaCompleta.slice(0, itensVisiveisAdmin);
+
+  const wrapCarregarMais = document.getElementById('produtosCarregarMaisWrap');
+  if (itensVisiveisAdmin >= listaCompleta.length){
+    wrapCarregarMais.innerHTML = '';
+  } else {
+    const restantes = listaCompleta.length - itensVisiveisAdmin;
+    wrapCarregarMais.innerHTML = `<button type="button" class="btn-admin btn-admin-outline" id="btnCarregarMaisAdmin">Carregar mais produtos <span class="carregar-mais-contagem">(+${Math.min(restantes, ITENS_POR_PAGINA_ADMIN)})</span></button>`;
+    document.getElementById('btnCarregarMaisAdmin').addEventListener('click', () => {
+      itensVisiveisAdmin += ITENS_POR_PAGINA_ADMIN;
+      renderTabela(true);
+    });
+  }
 
   document.getElementById('corpoTabelaAdmin').innerHTML = lista.map(p => `
     <tr>
@@ -2561,8 +2587,8 @@ async function renderTabela(){
   });
 }
 
-document.getElementById('buscaAdmin').addEventListener('input', renderTabela);
-document.getElementById('filtroCategoriaAdmin').addEventListener('change', renderTabela);
+document.getElementById('buscaAdmin').addEventListener('input', () => renderTabela());
+document.getElementById('filtroCategoriaAdmin').addEventListener('change', () => renderTabela());
 
 async function duplicarProduto(id){
   const original = produtosAdmin.find(p => p.id === id);
