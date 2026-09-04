@@ -1120,6 +1120,23 @@ function adicionarAoCarrinhoCard(btn){
   btn.classList.add('clicado');
   setTimeout(() => btn.classList.remove('clicado'), 300);
   adicionarAoCarrinho({ ...produto, tamanho: null, quilate: null, banho: null, qtd: 1 });
+  mostrarSucessoBotaoAdd(btn);
+}
+
+// Troca o texto do botão por "Adicionado ✓" por um instante — feedback
+// mais forte que só a ondinha de clique, sem precisar sair da página
+// (a gaveta do carrinho já abre também, isso aqui é só o botão em si).
+function mostrarSucessoBotaoAdd(btn){
+  if (btn.dataset.animando) return;
+  btn.dataset.animando = '1';
+  const textoOriginal = btn.textContent;
+  btn.classList.add('sucesso');
+  btn.textContent = 'Adicionado ✓';
+  setTimeout(() => {
+    btn.classList.remove('sucesso');
+    btn.textContent = textoOriginal;
+    delete btn.dataset.animando;
+  }, 1100);
 }
 
 /* ============================================================
@@ -1311,6 +1328,43 @@ function skeletonGridHTML(qtd = 6){
   `).join('');
 }
 
+// "Carregar mais" reaproveitado por categoria/busca/coleção — em vez de
+// jogar a lista inteira na tela de uma vez (lento e cansativo de rolar
+// se o catálogo crescer), mostra um tanto por vez. Guarda quanto já tá
+// visível de cada grid (WeakMap = não vaza memória entre navegações) pra
+// "carregar mais" saber de onde continuar sem re-renderizar do zero.
+const ITENS_POR_PAGINA_GRID = 12;
+const paginacaoGridState = new WeakMap();
+
+function renderGridPaginado(gridEl, listaCompleta, opts = {}){
+  const { manterPagina = false, vazio = '<p class="sem-resultados">Nenhum produto encontrado.</p>' } = opts;
+  const visiveis = manterPagina
+    ? (paginacaoGridState.get(gridEl) || ITENS_POR_PAGINA_GRID)
+    : ITENS_POR_PAGINA_GRID;
+  paginacaoGridState.set(gridEl, visiveis);
+
+  const fatia = listaCompleta.slice(0, visiveis);
+  gridEl.innerHTML = fatia.length ? fatia.map(cardProdutoHTML).join('') : vazio;
+
+  let wrap = gridEl.nextElementSibling;
+  if (!wrap || !wrap.classList.contains('carregar-mais-wrap')){
+    wrap = document.createElement('div');
+    wrap.className = 'carregar-mais-wrap';
+    gridEl.insertAdjacentElement('afterend', wrap);
+  }
+  if (visiveis >= listaCompleta.length){
+    wrap.innerHTML = '';
+  } else {
+    const restantes = listaCompleta.length - visiveis;
+    wrap.innerHTML = `<button type="button" class="btn btn-outline btn-carregar-mais">Carregar mais peças <span class="carregar-mais-contagem">(+${Math.min(restantes, ITENS_POR_PAGINA_GRID)})</span></button>`;
+    wrap.querySelector('.btn-carregar-mais').addEventListener('click', () => {
+      paginacaoGridState.set(gridEl, visiveis + ITENS_POR_PAGINA_GRID);
+      renderGridPaginado(gridEl, listaCompleta, { ...opts, manterPagina: true });
+    });
+  }
+  revelarNovosElementos();
+}
+
 /* ============================================================
    PÁGINA DE CATEGORIA (genérica — categoria.html?c=slug)
    Inclui o seletor "Escolha por formato" (estilo Versale) além
@@ -1445,12 +1499,9 @@ async function renderCategoryPage(){
 
   function renderizarTudo(){
     const lista = ordenarLista(produtosFiltrados());
-    grid.innerHTML = lista.length
-      ? lista.map(cardProdutoHTML).join('')
-      : `<p class="sem-resultados">Nenhum produto encontrado com esses filtros.</p>`;
     document.getElementById('resultCount').textContent = `${lista.length} produto${lista.length === 1 ? '' : 's'}`;
     renderChips();
-    revelarNovosElementos();
+    renderGridPaginado(grid, lista, { vazio: '<p class="sem-resultados">Nenhum produto encontrado com esses filtros.</p>' });
   }
 
   const filtrosBtn = document.getElementById('filtrosBtn');
@@ -1521,10 +1572,7 @@ async function renderBuscaPage(){
 
   tituloEl.textContent = `Resultados para "${termo}"`;
   countEl.textContent = `${resultados.length} produto${resultados.length === 1 ? '' : 's'} encontrado${resultados.length === 1 ? '' : 's'}`;
-  grid.innerHTML = resultados.length
-    ? resultados.map(cardProdutoHTML).join('')
-    : `<p class="sem-resultados">Nenhum produto encontrado para "${termo}". Tente outro termo.</p>`;
-  revelarNovosElementos();
+  renderGridPaginado(grid, resultados, { vazio: `<p class="sem-resultados">Nenhum produto encontrado para "${termo}". Tente outro termo.</p>` });
 }
 
 /* ============================================================
@@ -1560,10 +1608,7 @@ async function renderColecaoPage(){
   grid.innerHTML = skeletonGridHTML();
   const produtos = await carregarProdutosPorColecao(tipo);
   document.getElementById('resultCount').textContent = `${produtos.length} produto${produtos.length === 1 ? '' : 's'}`;
-  grid.innerHTML = produtos.length
-    ? produtos.map(cardProdutoHTML).join('')
-    : `<p class="sem-resultados">Nenhum produto nessa coleção ainda — volte em breve.</p>`;
-  revelarNovosElementos();
+  renderGridPaginado(grid, produtos, { vazio: '<p class="sem-resultados">Nenhum produto nessa coleção ainda — volte em breve.</p>' });
 }
 
 function initBuscaForm(formId, redireciona){
@@ -1618,6 +1663,10 @@ async function renderProdutoPage(){
   let fotoIndexAtual = 0;
   function trocarFotoPrincipal(thumb){
     const video = thumb.getAttribute('data-video');
+    // Pequeno "flash" de opacidade em vez de corte seco — sem atrasar a
+    // troca em si (a imagem já muda no mesmo instante), então passar o
+    // mouse rápido pelos thumbnails continua respondendo na hora.
+    galeriaPrincipal.classList.add('trocando');
     if (video){
       galeriaPrincipal.style.backgroundImage = 'none';
       galeriaPrincipal.innerHTML = `<video src="${video}" class="galeria-video" controls playsinline></video>`;
@@ -1625,6 +1674,7 @@ async function renderProdutoPage(){
       galeriaPrincipal.innerHTML = '';
       galeriaPrincipal.style.backgroundImage = `url('${thumb.getAttribute('data-foto')}')`;
     }
+    requestAnimationFrame(() => requestAnimationFrame(() => galeriaPrincipal.classList.remove('trocando')));
     galeriaThumbs.querySelectorAll('.galeria-thumb').forEach(t => t.classList.remove('active'));
     thumb.classList.add('active');
     fotoIndexAtual = [...galeriaThumbs.children].indexOf(thumb);
@@ -1706,6 +1756,13 @@ async function renderProdutoPage(){
   function atualizarPrecoExibido(){
     const precoEl = document.getElementById('produtoPreco');
     const cupomEl = document.getElementById('produtoPrecoCupom');
+
+    // Pulso rápido toda vez que o preço muda (troca de quilate/banho) —
+    // remove e força reflow antes de adicionar de novo, senão a animação
+    // não reinicia numa segunda troca seguida (mesma classe já presente).
+    precoEl.classList.remove('pulso-preco');
+    void precoEl.offsetWidth;
+    precoEl.classList.add('pulso-preco');
 
     if (fatorFabrica !== undefined){
       const precoFabrica = precoAtual * fatorFabrica;
@@ -1835,6 +1892,7 @@ async function renderProdutoPage(){
     e.target.classList.add('clicado');
     setTimeout(() => e.target.classList.remove('clicado'), 300);
     adicionarAoCarrinho(itemAtualDoCarrinho());
+    mostrarSucessoBotaoAdd(e.target);
   });
 
   document.getElementById('btnComprarAgora').addEventListener('click', () => {
