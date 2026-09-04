@@ -814,7 +814,7 @@ async function aplicarPrecoFabricaNoDOM(){
     const precoOriginal = parseFloat(el.dataset.precoOriginal);
     if (!precoOriginal) return;
     el.dataset.fabricaAplicado = '1';
-    el.innerHTML = `<s class="preco-riscado">${formatarPreco(precoOriginal)}</s> ${formatarPreco(precoOriginal * fator)}`;
+    el.innerHTML = `${formatarPreco(precoOriginal * fator)} <s class="preco-riscado">${formatarPreco(precoOriginal)}</s>`;
   });
 }
 let observadorPrecoFabricaIniciado = false;
@@ -839,7 +839,7 @@ async function aplicarPrecoCupomDestaqueNoDOM(){
     const precoComCupom = calcularPrecoComCupom(precoOriginal, cupom);
     if (precoComCupom === null) return; // não bateu o valor mínimo do cupom
     el.dataset.cupomAplicado = '1';
-    el.innerHTML = `<s class="preco-riscado">${formatarPreco(precoOriginal)}</s> ${formatarPreco(precoComCupom)}`;
+    el.innerHTML = `${formatarPreco(precoComCupom)} <s class="preco-riscado">${formatarPreco(precoOriginal)}</s>`;
   });
 }
 let observadorPrecoCupomDestaqueIniciado = false;
@@ -1815,17 +1815,9 @@ async function renderProdutoPage(){
     void precoEl.offsetWidth;
     precoEl.classList.add('pulso-preco');
 
-    // Selo de frete grátis perto do preço — recalcula a cada troca de
-    // quilate/banho, já que o preço (e por tabela o limiar de R$399)
-    // muda junto.
-    const seloFreteWrap = document.getElementById('produtoSeloFreteGratisWrap');
-    seloFreteWrap.innerHTML = (precoAtual >= FRETE_GRATIS_MINIMO || p.freteGratisSempre)
-      ? seloFreteGratisHTML()
-      : '';
-
     if (fatorFabrica !== undefined){
       const precoFabrica = precoAtual * fatorFabrica;
-      precoEl.innerHTML = `<s class="preco-riscado">${formatarPreco(precoAtual)}</s> ${formatarPreco(precoFabrica)}`;
+      precoEl.innerHTML = `${formatarPreco(precoFabrica)} <s class="preco-riscado">${formatarPreco(precoAtual)}</s>`;
       cupomEl.style.display = 'block';
       cupomEl.innerHTML = `🏭 Preço de fábrica ativado pra sua conta`;
       document.getElementById('produtoParcelas').textContent = `12x de ${formatarPreco(precoFabrica / 12)} sem juros`;
@@ -1834,7 +1826,7 @@ async function renderProdutoPage(){
 
     const precoComCupom = calcularPrecoComCupom(precoAtual, cupomDestaque);
     if (precoComCupom !== null){
-      precoEl.innerHTML = `<s class="preco-riscado">${formatarPreco(precoAtual)}</s> ${formatarPreco(precoComCupom)}`;
+      precoEl.innerHTML = `${formatarPreco(precoComCupom)} <s class="preco-riscado">${formatarPreco(precoAtual)}</s>`;
       cupomEl.style.display = 'block';
       cupomEl.innerHTML = `🎁 Preço com o cupom de boas-vindas <strong>${cupomDestaque.codigo}</strong> já aplicado`;
       document.getElementById('produtoParcelas').textContent = `12x de ${formatarPreco(precoComCupom / 12)} sem juros`;
