@@ -467,12 +467,13 @@ document.getElementById('inputAvatarArquivo').addEventListener('change', async (
   if (!sessao) return;
 
   const avatarEl = document.getElementById('perfilAvatar');
-  const extensao = (arquivo.name.split('.').pop() || 'jpg').toLowerCase();
+  const arquivoOtimizado = await otimizarImagemParaUpload(arquivo);
+  const extensao = (arquivoOtimizado.name.split('.').pop() || 'jpg').toLowerCase();
   // Sempre o mesmo nome de arquivo por usuário (com upsert) — assim a foto
   // antiga já é sobrescrita, sem acumular lixo no storage.
   const caminho = `${sessao.user.id}/avatar.${extensao}`;
 
-  const { error: erroUpload } = await sb.storage.from('avatares').upload(caminho, arquivo, { upsert: true });
+  const { error: erroUpload } = await sb.storage.from('avatares').upload(caminho, arquivoOtimizado, { upsert: true });
   if (erroUpload){
     mostrarToast('Não foi possível enviar a foto agora — tenta de novo.');
     e.target.value = '';

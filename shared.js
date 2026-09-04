@@ -219,6 +219,46 @@ function formatarPreco(valor){
 }
 
 /* ============================================================
+   OTIMIZAÇÃO DE IMAGEM ANTES DO UPLOAD — toda foto que sobe pro
+   Supabase Storage (produto, categoria, destaque, avaliação, avatar)
+   passa por aqui primeiro: redimensiona pro tamanho máximo que o site
+   realmente exibe e recomprime em WebP. Uma foto de câmera (D5200,
+   celular etc.) que chega com 6-10MB sai daqui com uns 150-400KB, sem
+   perda visível — é o que deixava o site pesado pra carregar.
+   ============================================================ */
+async function otimizarImagemParaUpload(file, { maxLado = 1600, qualidade = 0.82 } = {}){
+  // Não é imagem (ex: vídeo) ou já é pequena o bastante — não vale o
+  // trabalho de recomprimir, manda como está.
+  if (!file || !file.type?.startsWith('image/') || file.size < 180_000) return file;
+
+  try {
+    const bitmap = await createImageBitmap(file);
+    const escala = Math.min(1, maxLado / Math.max(bitmap.width, bitmap.height));
+    const largura = Math.round(bitmap.width * escala);
+    const altura = Math.round(bitmap.height * escala);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = largura;
+    canvas.height = altura;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(bitmap, 0, 0, largura, altura);
+    bitmap.close?.();
+
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', qualidade));
+    // Navegador sem suporte a exportar WebP (raro hoje em dia) — mantém o original.
+    if (!blob) return file;
+
+    const nomeBase = file.name.replace(/\.[^.]+$/, '');
+    return new File([blob], `${nomeBase}.webp`, { type: 'image/webp' });
+  } catch (err) {
+    // Qualquer falha na otimização não pode travar o upload — sobe a
+    // foto original em vez de quebrar o formulário.
+    console.error('Erro ao otimizar imagem, enviando original:', err);
+    return file;
+  }
+}
+
+/* ============================================================
    DESTAQUE PRINCIPAL (banner do topo da home) — editável no admin
    ============================================================ */
 async function carregarHomeHero(){
@@ -259,7 +299,7 @@ async function carregarCategorias(){
 // link_fornecedor (uso interno do admin/dropshipping) — se colocar '*' aqui,
 // esse link vaza no JSON da resposta (visível no Network do navegador)
 // mesmo que a tela não mostre ele em lugar nenhum.
-const COLUNAS_PRODUTO_PUBLICO = 'id, nome, categoria, descricao, material_aro, pedra_central, banho, banhos_disponiveis, quilate_pedra, quilates_disponiveis, pedra_lateral, formato_pedra, cravacao, grau_cor, grau_clareza, grau_corte, largura_mm, tamanhos_disponiveis, preco, estoque, fotos, destaque, ativo, criado_em, frete_gratis_sempre';
+const COLUNAS_PRODUTO_PUBLICO = 'id, nome, categoria, descricao, material_aro, pedra_central, banho, banhos_disponiveis, quilate_pedra, quilates_disponiveis, pedra_lateral, formato_pedra, cravacao, grau_cor, grau_clareza, grau_corte, largura_mm, tamanhos_disponiveis, preco, estoque, fotos, video_url, destaque, ativo, criado_em, frete_gratis_sempre';
 
 function mapProduto(row){
   const pedra = row.pedra_central || "Sem pedra";
@@ -288,6 +328,7 @@ function mapProduto(row){
     estoque: row.estoque,
     fotos: (row.fotos && row.fotos.length) ? row.fotos : ["https://images.unsplash.com/photo-1605100804763-247f67b3557e?q=80&w=800&auto=format&fit=crop"],
     image: (row.fotos && row.fotos[0]) || "https://images.unsplash.com/photo-1605100804763-247f67b3557e?q=80&w=800&auto=format&fit=crop",
+    videoUrl: row.video_url || null,
     destaque: !!row.destaque,
     ativo: row.ativo !== false,
     freteGratisSempre: !!row.frete_gratis_sempre
@@ -1569,10 +1610,21 @@ async function renderProdutoPage(){
   galeriaPrincipal.style.backgroundImage = `url('${p.fotos[0]}')`;
   galeriaThumbs.innerHTML = p.fotos.map((foto, i) => `
     <button type="button" class="galeria-thumb ${i === 0 ? 'active' : ''}" style="background-image:url('${foto}')" data-foto="${foto}" aria-label="Ver foto ${i + 1}"></button>
-  `).join('');
+  `).join('') + (p.videoUrl ? `
+    <button type="button" class="galeria-thumb galeria-thumb--video" style="background-image:url('${p.fotos[0]}')" data-video="${p.videoUrl}" aria-label="Ver vídeo do produto">
+      <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="11" fill="rgba(0,0,0,0.45)"/><path d="M10 8.5l6 3.5-6 3.5v-7z" fill="#fff"/></svg>
+    </button>
+  ` : '');
   let fotoIndexAtual = 0;
   function trocarFotoPrincipal(thumb){
-    galeriaPrincipal.style.backgroundImage = `url('${thumb.getAttribute('data-foto')}')`;
+    const video = thumb.getAttribute('data-video');
+    if (video){
+      galeriaPrincipal.style.backgroundImage = 'none';
+      galeriaPrincipal.innerHTML = `<video src="${video}" class="galeria-video" controls playsinline></video>`;
+    } else {
+      galeriaPrincipal.innerHTML = '';
+      galeriaPrincipal.style.backgroundImage = `url('${thumb.getAttribute('data-foto')}')`;
+    }
     galeriaThumbs.querySelectorAll('.galeria-thumb').forEach(t => t.classList.remove('active'));
     thumb.classList.add('active');
     fotoIndexAtual = [...galeriaThumbs.children].indexOf(thumb);
@@ -1586,7 +1638,7 @@ async function renderProdutoPage(){
   // Arrastar o dedo pro lado na foto principal troca de imagem (celular) —
   // só conta o gesto se for majoritariamente horizontal, senão o usuário
   // nem consegue rolar a página normalmente com o dedo em cima da foto.
-  if (p.fotos.length > 1){
+  if (p.fotos.length > 1 || p.videoUrl){
     let toqueInicioX = 0, toqueInicioY = 0;
     galeriaPrincipal.addEventListener('touchstart', (e) => {
       toqueInicioX = e.touches[0].clientX;
@@ -1716,6 +1768,7 @@ async function renderProdutoPage(){
         document.getElementById('banhoSelecionadoNome').textContent = banhoSelecionado;
         precoAtual = parseFloat(btn.getAttribute('data-preco'));
         atualizarPrecoExibido();
+        galeriaPrincipal.innerHTML = '';
         galeriaPrincipal.style.backgroundImage = `url('${btn.getAttribute('data-foto')}')`;
       });
     });

@@ -1538,6 +1538,9 @@
   opacity: .65;
 }
 .galeria-thumb.active{ border-color: var(--bordo); opacity:1; }
+.galeria-thumb--video{ position: relative; display:flex; align-items:center; justify-content:center; }
+.galeria-thumb--video svg{ width: 28px; height: 28px; }
+.galeria-video{ width:100%; height:100%; object-fit:cover; display:block; background: var(--creme-escuro); }
 
 .produto-info .eyebrow{ display:block; margin-bottom: 6px; }
 .produto-info h1{
