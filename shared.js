@@ -744,27 +744,20 @@ async function mostrarPopupCupomBoasVindas(){
    recebe um aviso discreto toda vez que entra (não só na primeira).
    ============================================================ */
 
-// Link com cupom embutido — salva sem sobrescrever um cupom que a pessoa
-// já esteja usando.
-(function capturarCupomDaUrl(){
-  try {
-    const codigoUrl = new URLSearchParams(location.search).get('cupom');
-    if (codigoUrl && !obterCupomAplicado()) salvarCupomAplicado(codigoUrl.trim().toUpperCase());
-  } catch {}
-})();
-
-// Descobre se o cupom salvo no navegador é válido e qual o tipo dele — sem
-// exigir compra mínima (preço de fábrica não é campanha de "gaste X",
-// validar_cupom já pula essa checagem pra esse tipo).
-let promessaInfoCupomAplicado = null;
-function obterInfoCupomAplicado(){
-  const codigo = obterCupomAplicado();
-  if (!codigo) return Promise.resolve(null);
-  if (!promessaInfoCupomAplicado){
-    promessaInfoCupomAplicado = sb.rpc('validar_cupom', { p_codigo: codigo, p_subtotal: 0 }).maybeSingle()
-      .then(({ data, error }) => (error || !data || !data.valido) ? null : { codigo, tipo: data.tipo, valor: data.valor });
+// Permissão concedida pelo admin direto na conta (tela "Clientes" do
+// admin) — sem conta logada com a permissão, não tem preço de fábrica
+// nenhum. Cacheado numa promise (não um bool) porque a primeira chamada
+// já dispara a checagem de sessão + a RPC juntas, e todo mundo que
+// perguntar de novo na mesma carga de página reaproveita o resultado.
+let promessaPermissaoFabrica = null;
+function temPermissaoFabrica(){
+  if (!promessaPermissaoFabrica){
+    promessaPermissaoFabrica = sb.auth.getSession().then(({ data }) => {
+      if (!data.session) return false;
+      return sb.rpc('tenho_permissao_fabrica').then(({ data: permitido, error }) => !error && !!permitido);
+    });
   }
-  return promessaInfoCupomAplicado;
+  return promessaPermissaoFabrica;
 }
 
 // Fração de desconto por produto (preço de fábrica ÷ preço de venda) —
@@ -772,9 +765,9 @@ function obterInfoCupomAplicado(){
 // preço mostrado (base ou de um quilate/banho específico) pra saber o
 // preço de fábrica daquele item.
 let promessaPrecosFabrica = null;
-function obterPrecosFabrica(codigo){
+function obterPrecosFabrica(){
   if (!promessaPrecosFabrica){
-    promessaPrecosFabrica = sb.rpc('precos_fabrica_ativos', { p_codigo: codigo }).then(({ data, error }) => {
+    promessaPrecosFabrica = sb.rpc('precos_fabrica_ativos').then(({ data, error }) => {
       const mapa = {};
       (error ? [] : (data || [])).forEach(r => { mapa[r.produto_id] = Number(r.fator_desconto); });
       return mapa;
@@ -789,9 +782,8 @@ function obterPrecosFabrica(codigo){
 // em momentos diferentes em cada página — assim funciona não importa a
 // ordem de chegada.
 async function aplicarPrecoFabricaNoDOM(){
-  const info = await obterInfoCupomAplicado();
-  if (!info || info.tipo !== 'preco_fabrica') return;
-  const mapa = await obterPrecosFabrica(info.codigo);
+  if (!(await temPermissaoFabrica())) return;
+  const mapa = await obterPrecosFabrica();
   document.querySelectorAll('.prod-price[data-produto-id]').forEach(el => {
     if (el.dataset.fabricaAplicado) return;
     const fator = mapa[el.dataset.produtoId];
@@ -815,8 +807,7 @@ function iniciarObservadorPrecoFabrica(){
 // site" — sessionStorage já cobre isso (reaparece em cada sessão nova,
 // não fica repetindo em toda página clicada dentro da mesma visita).
 async function mostrarPopupPrecoFabrica(){
-  const info = await obterInfoCupomAplicado();
-  if (!info || info.tipo !== 'preco_fabrica') return;
+  if (!(await temPermissaoFabrica())) return;
   try {
     if (sessionStorage.getItem('pavan_popup_fabrica_visto')) return;
   } catch {}
@@ -1405,10 +1396,13 @@ async function renderCategoryPage(){
   if (formatosDisponiveis.length){
     formatoWrap.style.display = 'block';
     formatoWrap.querySelector('.formato-pills').innerHTML = formatosDisponiveis.map(f => `
-      <button type="button" class="formato-pill" data-formato="${f}">
-        <span class="formato-icone">${fotoFormatoHTML(f)}</span>
-        <span>${f}</span>
-      </button>
+      <div class="formato-item">
+        <button type="button" class="formato-pill" data-formato="${f}">
+          <span class="formato-icone">${fotoFormatoHTML(f)}</span>
+          <span>${f}</span>
+        </button>
+        <span class="formato-bar"></span>
+      </div>
     `).join('');
     formatoWrap.querySelectorAll('.formato-pill').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -1746,11 +1740,10 @@ async function renderProdutoPage(){
   // Preço muda conforme o quilate escolhido (cada opção tem o próprio preço)
   let precoAtual = p.preco;
   const cupomDestaque = await autoAplicarCupomDestaque(); // já aplica sozinho pro carrinho/checkout baterem com o preço mostrado aqui
-  // Cupom realmente salvo agora — pode ser o de boas-vindas acima ou um
-  // pessoal de preço de fábrica (esse tem prioridade quando os dois existem).
-  const infoCupomAplicado = await obterInfoCupomAplicado();
-  const fatorFabrica = infoCupomAplicado?.tipo === 'preco_fabrica'
-    ? (await obterPrecosFabrica(infoCupomAplicado.codigo))[p.id]
+  // Preço de fábrica agora é permissão de conta (não é mais cupom) — tem
+  // prioridade sobre o cupom de boas-vindas acima quando os dois existem.
+  const fatorFabrica = (await temPermissaoFabrica())
+    ? (await obterPrecosFabrica())[p.id]
     : undefined;
 
   function atualizarPrecoExibido(){
@@ -1768,7 +1761,7 @@ async function renderProdutoPage(){
       const precoFabrica = precoAtual * fatorFabrica;
       precoEl.innerHTML = `<s class="preco-riscado">${formatarPreco(precoAtual)}</s> ${formatarPreco(precoFabrica)}`;
       cupomEl.style.display = 'block';
-      cupomEl.innerHTML = `🏭 Preço de fábrica aplicado com o cupom <strong>${infoCupomAplicado.codigo}</strong>`;
+      cupomEl.innerHTML = `🏭 Preço de fábrica ativado pra sua conta`;
       document.getElementById('produtoParcelas').textContent = `12x de ${formatarPreco(precoFabrica / 12)} sem juros`;
       return;
     }
