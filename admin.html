@@ -2770,7 +2770,7 @@ function renderBanhoOpcoes(){
         ${ehOutro ? `<input type="text" class="banho-nome-custom" placeholder="Nome da cor (ex: Ouro Champanhe)" style="max-width:200px;">` : ''}
         <div class="banho-foto-drop" data-chave="${chave}">+ Foto</div>
         <input type="file" accept="image/*" class="banho-foto-input" data-chave="${chave}" style="display:none;">
-        <input type="number" class="banho-custo" data-chave="${chave}" step="0.01" placeholder="Custo original (R$)">
+        <input type="number" class="banho-custo" data-chave="${chave}" step="0.01" min="0" placeholder="Custo EXTRA (R$) — deixe 0 se não muda o preço">
         <span class="banho-opcao-preco" data-chave="${chave}"></span>
       </div>
     </div>
@@ -2806,12 +2806,21 @@ function renderBanhoOpcoes(){
   });
 }
 
+// Prévia do banho: mostra quanto ele SOMA no preço final (não um preço
+// absoluto próprio) — o custo aqui é extra sobre o quilate/peça, não
+// substitui o custo de nada. Usa o custo da peça base como referência
+// só pra essa prévia; o valor real de cada combinação (quilate × banho)
+// é calculado certinho na hora de salvar, em calcularMatrizPrecos().
 function atualizarPrecoBanho(chave){
   const input = document.querySelector(`.banho-custo[data-chave="${chave}"]`);
   const span = document.querySelector(`.banho-opcao-preco[data-chave="${chave}"]`);
   if (!input || !span) return;
-  const custo = parseFloat(input.value);
-  span.textContent = custo ? `venda ${formatarPreco(calcularPrecoFinal(custo))}` : '';
+  if (input.value.trim() === ''){ span.textContent = ''; return; }
+  const extra = parseFloat(input.value) || 0;
+  if (extra === 0){ span.textContent = 'sem diferença de preço'; return; }
+  const custoPecaBase = parseFloat(document.getElementById('fCustoPeca').value) || 0;
+  const diferenca = calcularPrecoFinal(custoPecaBase + extra) - calcularPrecoFinal(custoPecaBase);
+  span.textContent = `+ ${formatarPreco(diferenca)} no preço final`;
 }
 
 // Roda no submit: valida (checou mas esqueceu foto/custo/nome?), sobe as
@@ -2825,10 +2834,15 @@ async function enviarBanhosEObterDados(categoria){
     const opcaoEl = chk.closest('.banho-opcao');
     const ehOutro = chave === 'outro';
     const nome = ehOutro ? opcaoEl.querySelector('.banho-nome-custom').value.trim() : chave;
-    const custo = parseFloat(opcaoEl.querySelector('.banho-custo').value);
+    // Custo EXTRA (delta) — pode ser 0 (banho sem diferença de preço),
+    // por isso a validação não pode barrar valor "falsy" como o código
+    // antigo fazia (isso, aliás, era o motivo de todo banho cadastrado
+    // até hoje ter custo copiado da peça: o form antigo exigia > 0).
+    const custoTexto = opcaoEl.querySelector('.banho-custo').value.trim();
+    const custo = custoTexto === '' ? 0 : parseFloat(custoTexto);
     const foto = banhoFotosPendentes[chave];
-    if (!nome || !custo || !foto){
-      throw new Error(`Complete a cor de banho marcada "${nome || chave}": falta ${!nome ? 'o nome' : !custo ? 'o custo' : 'a foto'}.`);
+    if (!nome || isNaN(custo) || custo < 0 || !foto){
+      throw new Error(`Complete a cor de banho marcada "${nome || chave}": falta ${!nome ? 'o nome' : (isNaN(custo) || custo < 0) ? 'um custo extra válido (pode ser 0)' : 'a foto'}.`);
     }
     let foto_url;
     if (foto.tipo === 'existente'){
@@ -2841,7 +2855,11 @@ async function enviarBanhosEObterDados(categoria){
       const { data: urlData } = sb.storage.from('produtos').getPublicUrl(nomeArquivo);
       foto_url = urlData.publicUrl;
     }
-    disponiveis.push({ nome, preco: calcularPrecoFinal(custo), foto_url });
+    // "preco" aqui é só referência/exibição (peça base + esse extra) — o
+    // preço de venda de verdade de cada combinação vem de matriz_precos,
+    // calculado em calcularMatrizPrecos() na hora de salvar o produto.
+    const custoPecaBaseRef = parseFloat(document.getElementById('fCustoPeca').value) || 0;
+    disponiveis.push({ nome, preco: calcularPrecoFinal(custoPecaBaseRef + custo), foto_url });
     custos.push({ nome, custo });
   }
   return { disponiveis, custos };
@@ -2903,6 +2921,33 @@ function calcularPrecoFinal(custo){
   const custoFrete = parseFloat(document.getElementById('fCustoFrete').value) || 0;
   const imposto = calcularImpostoImportacao(custo, cotacao, icmsPct);
   return (custo + imposto + custoFrete) * (1 + margemAtual() / 100);
+}
+
+// ============================================================
+// MATRIZ DE PREÇOS (quilate × banho) — fonte única de verdade do preço
+// de venda pra qualquer combinação de variante. Cada quilate cadastrado
+// já é um custo TOTAL (peça + pedra daquele tamanho, substitui a peça
+// base) e cada banho é um custo EXTRA (delta, soma em cima do que já
+// tá selecionado). O imposto é calculado UMA VEZ em cima do custo
+// combinado (quilate + banho), não separado por peça — assim o site
+// nunca precisa "escolher" entre o preço do quilate ou o do banho, só
+// busca a combinação certa aqui.
+function calcularMatrizPrecos(quilates, banhosCustos){
+  if (!quilates.length && !banhosCustos.length) return []; // sem variante nenhuma, usa o preço base (fPreco) direto
+  const custoPecaBase = parseFloat(document.getElementById('fCustoPeca').value) || 0;
+  const bases = quilates.length
+    ? quilates.map(q => ({ quilate: q.valor, custo: q.custo }))
+    : [{ quilate: null, custo: custoPecaBase }];
+  const extras = banhosCustos.length
+    ? banhosCustos.map(b => ({ banho: b.nome, extra: b.custo || 0 }))
+    : [{ banho: null, extra: 0 }];
+  const matriz = [];
+  for (const base of bases){
+    for (const extra of extras){
+      matriz.push({ quilate: base.quilate, banho: extra.banho, preco: calcularPrecoFinal(base.custo + extra.extra) });
+    }
+  }
+  return matriz;
 }
 
 function atualizarCalcLucro(){
@@ -3268,6 +3313,10 @@ document.getElementById('formProduto').addEventListener('submit', async (e) => {
       quilates_custos: quilatesFormAtual.map(q => ({ valor: q.valor, custo: q.custo })),
       banhos_disponiveis: banhosDisp,
       banhos_custos: banhosCustos,
+      // Preço de venda de cada combinação quilate × banho, já calculado
+      // (imposto uma vez em cima do total combinado) — é o que o site usa
+      // de verdade pra mostrar/cobrar o preço, não os campos acima.
+      matriz_precos: calcularMatrizPrecos(quilatesFormAtual, banhosCustos),
       formato_pedra: document.getElementById('fFormato').value || null,
       cravacao: document.getElementById('fCravacao').value.trim() || null,
       grau_cor: document.getElementById('fGrauCor').value || null,
