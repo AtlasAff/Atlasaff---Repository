@@ -406,6 +406,7 @@ async function initHeaderShared(){
   if (yearEl) yearEl.textContent = new Date().getFullYear();
 
   injetarSelosSeguranca();
+  injetarAvisoCookies();
   ativarRevealAoRolar();
   setTimeout(mostrarPopupCupomBoasVindas, 1800); // espera a página assentar antes de mostrar
   setTimeout(mostrarPopupPrecoFabrica, 2200); // levemente depois, pra não colidir com o de boas-vindas
@@ -803,6 +804,32 @@ async function mostrarPopupPrecoFabrica(){
    páginas (o footer é HTML repetido em cada arquivo; fazer aqui
    evita editar página por página).
    ============================================================ */
+// Aviso de cookies (LGPD) — barra fixa embaixo, some assim que a pessoa
+// clica em "Entendi" e não volta mais nesse navegador (localStorage).
+// Como o site já usa cookie/localStorage essenciais desde a primeira
+// visita (sessão, carrinho), isso é só o aviso/transparência — não
+// bloqueia nada enquanto a pessoa não responde.
+const COOKIES_ACEITOS_KEY = 'pavan_cookies_aceitos';
+function injetarAvisoCookies(){
+  try { if (localStorage.getItem(COOKIES_ACEITOS_KEY)) return; } catch { return; }
+  if (document.querySelector('.aviso-cookies')) return;
+
+  const aviso = document.createElement('div');
+  aviso.className = 'aviso-cookies';
+  aviso.innerHTML = `
+    <p>Usamos cookies para melhorar sua experiência de compra. Ao continuar navegando, você concorda com nossa <a href="privacidade.html">Política de privacidade</a>.</p>
+    <button type="button" class="aviso-cookies-btn">Entendi</button>
+  `;
+  document.body.appendChild(aviso);
+  requestAnimationFrame(() => aviso.classList.add('show'));
+
+  aviso.querySelector('.aviso-cookies-btn').addEventListener('click', () => {
+    try { localStorage.setItem(COOKIES_ACEITOS_KEY, '1'); } catch {}
+    aviso.classList.remove('show');
+    setTimeout(() => aviso.remove(), 350);
+  });
+}
+
 function injetarSelosSeguranca(){
   const footerBottom = document.querySelector('footer .footer-bottom');
   if (!footerBottom || document.querySelector('.selos-seguranca')) return;
