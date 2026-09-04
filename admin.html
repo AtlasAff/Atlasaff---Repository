@@ -1665,28 +1665,35 @@ document.getElementById('fDestaque').addEventListener('change', (e) => {
    PEDIDOS
    ============================================================ */
 let pedidosAdminCache = [];
-const STATUS_PEDIDO_LABEL = {
+// Nomeados com sufixo _ADMIN pra não colidir com STATUS_PEDIDO_LABEL /
+// STATUS_PAGAMENTO_LABEL / STATUS_PAGAMENTO_COR / FORMA_PAGAMENTO_LABEL
+// que agora moram em shared.js (usados por conta.html/rastreio.html) —
+// dois `const` de mesmo nome em scripts diferentes da mesma página é
+// SyntaxError e trava a página inteira (foi o que quebrou o login).
+// Os textos aqui são mais diretos (visão interna), os de shared.js são
+// mais "de cliente" — por isso ficaram duplicados em vez de unificados.
+const STATUS_PEDIDO_LABEL_ADMIN = {
   novo: 'Novo',
   confirmado: 'Confirmado',
   enviado: 'Enviado',
   entregue: 'Entregue',
   cancelado: 'Cancelado'
 };
-const STATUS_PAGAMENTO_LABEL = {
+const STATUS_PAGAMENTO_LABEL_ADMIN = {
   pendente: 'Pendente',
   em_analise: 'Em análise',
   aprovado: 'Aprovado',
   recusado: 'Recusado',
   estornado: 'Estornado'
 };
-const STATUS_PAGAMENTO_COR = {
+const STATUS_PAGAMENTO_COR_ADMIN = {
   pendente: 'amarelo',
   em_analise: 'amarelo',
   aprovado: 'verde',
   recusado: 'vermelho',
   estornado: 'vermelho'
 };
-const FORMA_PAGAMENTO_LABEL = { pix: 'Pix', credit_card: 'Cartão de crédito', debit_card: 'Cartão de débito', ticket: 'Boleto', account_money: 'Saldo Mercado Pago' };
+const FORMA_PAGAMENTO_LABEL_ADMIN = { pix: 'Pix', credit_card: 'Cartão de crédito', debit_card: 'Cartão de débito', ticket: 'Boleto', account_money: 'Saldo Mercado Pago' };
 
 async function carregarPedidosAdmin(){
   const { data, error } = await sb.from('pedidos').select('*').order('criado_em', { ascending: false });
@@ -1710,11 +1717,11 @@ async function renderTabelaPedidos(){
         <td>${formatarPreco(p.total)}</td>
         <td>
           <select data-acao="status" data-id="${p.id}" style="padding:5px 6px;border:1px solid var(--cinza-borda);border-radius:4px;font-size:0.8rem;">
-            ${Object.entries(STATUS_PEDIDO_LABEL).map(([valor, label]) => `<option value="${valor}" ${p.status === valor ? 'selected' : ''}>${label}</option>`).join('')}
+            ${Object.entries(STATUS_PEDIDO_LABEL_ADMIN).map(([valor, label]) => `<option value="${valor}" ${p.status === valor ? 'selected' : ''}>${label}</option>`).join('')}
           </select>
         </td>
         <td>
-          <span class="status-pill cor-${STATUS_PAGAMENTO_COR[p.status_pagamento] || 'amarelo'}" title="${p.mp_payment_id ? 'Mercado Pago #' + p.mp_payment_id : ''}">${STATUS_PAGAMENTO_LABEL[p.status_pagamento] || p.status_pagamento}</span>
+          <span class="status-pill cor-${STATUS_PAGAMENTO_COR_ADMIN[p.status_pagamento] || 'amarelo'}" title="${p.mp_payment_id ? 'Mercado Pago #' + p.mp_payment_id : ''}">${STATUS_PAGAMENTO_LABEL_ADMIN[p.status_pagamento] || p.status_pagamento}</span>
         </td>
         <td>${p.frete === 0 ? 'Grátis' : formatarPreco(p.frete)}</td>
         <td><button type="button" data-acao="detalhes" data-id="${p.id}" style="color:var(--bordo);text-decoration:underline;font-size:0.8rem;white-space:nowrap;">Detalhes</button></td>
@@ -1753,8 +1760,8 @@ function abrirDetalhesPedido(pedido){
   document.getElementById('detalhesNotaFiscalArquivo').value = '';
   document.getElementById('detalhesPedidoConteudo').innerHTML = `
     <div style="margin-bottom:14px;">
-      <span class="status-pill cor-${STATUS_PAGAMENTO_COR[pedido.status_pagamento] || 'amarelo'}">${STATUS_PAGAMENTO_LABEL[pedido.status_pagamento] || pedido.status_pagamento}</span>
-      ${pedido.forma_pagamento ? `<span style="font-size:0.82rem;color:var(--texto-suave);margin-left:8px;">via ${FORMA_PAGAMENTO_LABEL[pedido.forma_pagamento] || pedido.forma_pagamento}</span>` : ''}
+      <span class="status-pill cor-${STATUS_PAGAMENTO_COR_ADMIN[pedido.status_pagamento] || 'amarelo'}">${STATUS_PAGAMENTO_LABEL_ADMIN[pedido.status_pagamento] || pedido.status_pagamento}</span>
+      ${pedido.forma_pagamento ? `<span style="font-size:0.82rem;color:var(--texto-suave);margin-left:8px;">via ${FORMA_PAGAMENTO_LABEL_ADMIN[pedido.forma_pagamento] || pedido.forma_pagamento}</span>` : ''}
       ${pedido.mp_payment_id ? `<span style="font-size:0.76rem;color:var(--texto-suave);display:block;margin-top:4px;">Pagamento Mercado Pago #${pedido.mp_payment_id}</span>` : ''}
     </div>
     <div style="font-size:0.88rem;line-height:1.7;margin-bottom:18px;">
