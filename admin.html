@@ -281,10 +281,45 @@
   .acoes-linha button{ font-size:0.78rem; color: var(--bordo); text-decoration:underline; }
   .acoes-linha button.excluir{ color: var(--vermelho); }
 
-  @media (max-width: 900px){
+  @media (max-width: 900px) and (min-width: 641px){
     table.admin-tabela{ min-width: 620px; }
     .admin-tabela th, .admin-tabela td{ padding: 9px 10px; font-size:0.82rem; }
     .admin-thumb{ width:38px; height:38px; }
+  }
+
+  /* Celular: a tabela de PRODUTOS (só essa — pedidos e cupons continuam
+     tabela normal com scroll lateral dentro do modal) vira lista de
+     cards em vez de rolar de lado espremida (era isso que ficava
+     "péssimo" — 7 colunas forçadas numa tela de 380px). Cada <tr> vira
+     um card em grid de 2 colunas (miniatura à esquerda, resto empilhado
+     à direita); "Ações" ocupa a largura toda embaixo. Sem mexer no
+     HTML/JS que monta a tabela — só reorganiza visualmente os <td>. */
+  @media (max-width: 640px){
+    #tabelaProdutos{ min-width: 0; }
+    #tabelaProdutosWrap{ overflow-x: visible; background:none; border:none; }
+    #tabelaProdutos thead{ display:none; }
+    #tabelaProdutos, #tabelaProdutos tbody{ display:block; width:100%; }
+    #tabelaProdutos tr{
+      display:grid;
+      grid-template-columns: 52px 1fr;
+      column-gap: 12px;
+      row-gap: 4px;
+      padding: 14px;
+      margin-bottom: 10px;
+      background: var(--cinza-card);
+      border: 1px solid var(--cinza-borda);
+      border-radius: var(--radius);
+    }
+    #tabelaProdutos tr:last-child{ margin-bottom:0; }
+    #tabelaProdutos td{ padding:0; border-bottom:none; font-size:0.86rem; }
+    #tabelaProdutos td:nth-child(1){ grid-row: 1 / span 5; align-self:flex-start; }
+    #tabelaProdutos td:nth-child(2){ font-weight:700; line-height:1.35; }
+    #tabelaProdutos td:nth-child(3){ color: var(--texto-suave); font-size:0.78rem; }
+    #tabelaProdutos td:nth-child(4){ font-weight:700; color: var(--bordo); }
+    #tabelaProdutos td:nth-child(4)::before{ content:"Preço "; font-weight:400; color: var(--texto-suave); }
+    #tabelaProdutos td:nth-child(5)::before{ content:"Estoque "; color: var(--texto-suave); }
+    #tabelaProdutos td:nth-child(7){ grid-column: 1 / -1; margin-top:6px; padding-top:10px; border-top:1px dashed var(--cinza-borda); }
+    #tabelaProdutos .admin-thumb{ width:52px; height:52px; }
   }
 
   /* ---------- MODAL FORMULÁRIO ---------- */
@@ -615,8 +650,8 @@
       <button type="button" id="btnPedidos" style="display:none;"></button>
       <button type="button" id="btnMensagens" style="display:none;"><span id="badgeMensagensNaoLidas" style="display:none;"></span></button>
 
-      <div class="admin-tabela-wrap">
-        <table class="admin-tabela">
+      <div class="admin-tabela-wrap" id="tabelaProdutosWrap">
+        <table class="admin-tabela" id="tabelaProdutos">
           <thead>
             <tr>
               <th></th>
@@ -1109,6 +1144,14 @@
         <div class="fotos-drop" id="fotosDrop">Clique pra escolher fotos, ou cole um print (Ctrl+V) — arraste pra reordenar (a primeira vira a capa)</div>
         <input type="file" id="fotosInput" accept="image/*" multiple style="display:none;">
         <div class="fotos-preview" id="fotosPreview"></div>
+
+        <h3 style="margin-top:24px;">Vídeo <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--texto-suave);">(opcional — aparece como o último item da galeria, no site)</span></h3>
+        <div class="fotos-drop" id="videoDrop">Clique pra escolher um vídeo</div>
+        <input type="file" id="videoInput" accept="video/*" style="display:none;">
+        <p style="font-size:0.76rem;color:var(--texto-suave);margin-top:6px;">
+          Recomendado: até ~20MB, 15-30 segundos, gravado na horizontal ou quadrado. Vídeo não é comprimido automaticamente como as fotos — comprima antes de subir (o próprio celular costuma gravar já em MP4/H.264, formato leve).
+        </p>
+        <div id="videoPreview" style="margin-top:10px;"></div>
       </div>
 
       <div class="form-secao tab-painel" data-tab="publicacao">
@@ -1297,6 +1340,7 @@ document.querySelectorAll('.admin-tile').forEach(tile => {
 let produtosAdmin = [];
 let categoriasAdminCache = [];
 let fotosFormAtual = [];
+let videoFormAtual = null; // null | { tipo: 'existente', url } | { tipo: 'novo', file }
 let arquivosFotosNovas = []; // Arquivos reais escolhidos agora, aguardando upload no Storage ao salvar
 let tamanhosFormAtual = new Set();
 let quilatesFormAtual = [];
@@ -1365,8 +1409,9 @@ document.getElementById('trocarFotoCategoriaInput').addEventListener('change', a
   const categoriaId = e.target.dataset.categoriaId;
   if (!file || !categoriaId) return;
 
-  const nomeArquivo = `categorias/${categoriaId}-${crypto.randomUUID()}-${file.name}`;
-  const { error: erroUpload } = await sb.storage.from('produtos').upload(nomeArquivo, file);
+  const arquivoOtimizado = await otimizarImagemParaUpload(file);
+  const nomeArquivo = `categorias/${categoriaId}-${crypto.randomUUID()}-${arquivoOtimizado.name}`;
+  const { error: erroUpload } = await sb.storage.from('produtos').upload(nomeArquivo, arquivoOtimizado);
   if (erroUpload){
     alert('Erro ao enviar foto: ' + erroUpload.message);
     return;
@@ -1415,8 +1460,9 @@ document.getElementById('formNovaCategoria').addEventListener('submit', async (e
 
   let foto_url = null;
   if (novaCategoriaArquivoFoto){
-    const nomeArquivo = `categorias/${slug}-${crypto.randomUUID()}-${novaCategoriaArquivoFoto.name}`;
-    const { error: erroUpload } = await sb.storage.from('produtos').upload(nomeArquivo, novaCategoriaArquivoFoto);
+    const arquivoOtimizado = await otimizarImagemParaUpload(novaCategoriaArquivoFoto);
+    const nomeArquivo = `categorias/${slug}-${crypto.randomUUID()}-${arquivoOtimizado.name}`;
+    const { error: erroUpload } = await sb.storage.from('produtos').upload(nomeArquivo, arquivoOtimizado);
     if (erroUpload){
       alert('Erro ao enviar foto: ' + erroUpload.message);
       return;
@@ -1493,8 +1539,9 @@ document.getElementById('formHomeHero').addEventListener('submit', async (e) => 
   try {
     let foto_url = heroFotoUrlAtual;
     if (heroFotoArquivoNovo){
-      const nomeArquivo = `home/hero-${crypto.randomUUID()}-${heroFotoArquivoNovo.name}`;
-      const { error: erroUpload } = await sb.storage.from('produtos').upload(nomeArquivo, heroFotoArquivoNovo);
+      const arquivoOtimizado = await otimizarImagemParaUpload(heroFotoArquivoNovo);
+      const nomeArquivo = `home/hero-${crypto.randomUUID()}-${arquivoOtimizado.name}`;
+      const { error: erroUpload } = await sb.storage.from('produtos').upload(nomeArquivo, arquivoOtimizado);
       if (erroUpload) throw new Error('Erro ao enviar foto: ' + erroUpload.message);
       const { data: urlData } = sb.storage.from('produtos').getPublicUrl(nomeArquivo);
       foto_url = urlData.publicUrl;
@@ -1619,8 +1666,9 @@ document.getElementById('formColecao').addEventListener('submit', async (e) => {
   try {
     let foto_url = colecaoFotoUrlAtual;
     if (colecaoFotoArquivoNovo){
-      const nomeArquivo = `home/colecao-${crypto.randomUUID()}-${colecaoFotoArquivoNovo.name}`;
-      const { error: erroUpload } = await sb.storage.from('produtos').upload(nomeArquivo, colecaoFotoArquivoNovo);
+      const arquivoOtimizado = await otimizarImagemParaUpload(colecaoFotoArquivoNovo);
+      const nomeArquivo = `home/colecao-${crypto.randomUUID()}-${arquivoOtimizado.name}`;
+      const { error: erroUpload } = await sb.storage.from('produtos').upload(nomeArquivo, arquivoOtimizado);
       if (erroUpload) throw new Error('Erro ao enviar foto: ' + erroUpload.message);
       const { data: urlData } = sb.storage.from('produtos').getPublicUrl(nomeArquivo);
       foto_url = urlData.publicUrl;
@@ -2489,8 +2537,9 @@ async function enviarBanhosEObterDados(categoria){
     if (foto.tipo === 'existente'){
       foto_url = foto.url;
     } else {
-      const nomeArquivo = `${categoria}/banho-${crypto.randomUUID()}-${foto.file.name}`;
-      const { error: erroUpload } = await sb.storage.from('produtos').upload(nomeArquivo, foto.file);
+      const arquivoOtimizado = await otimizarImagemParaUpload(foto.file);
+      const nomeArquivo = `${categoria}/banho-${crypto.randomUUID()}-${arquivoOtimizado.name}`;
+      const { error: erroUpload } = await sb.storage.from('produtos').upload(nomeArquivo, arquivoOtimizado);
       if (erroUpload) throw new Error('Erro ao enviar foto do banho: ' + erroUpload.message);
       const { data: urlData } = sb.storage.from('produtos').getPublicUrl(nomeArquivo);
       foto_url = urlData.publicUrl;
@@ -2639,6 +2688,7 @@ function abrirModalProduto(produto){
   const form = document.getElementById('formProduto');
   form.reset();
   fotosFormAtual = [];
+  videoFormAtual = null;
   tamanhosFormAtual = new Set();
   quilatesFormAtual = [];
   renderQuilatesMulti();
@@ -2723,10 +2773,12 @@ function abrirModalProduto(produto){
       });
     });
     fotosFormAtual = (produto.fotos || []).map(url => ({ tipo: 'existente', url }));
+    videoFormAtual = produto.video_url ? { tipo: 'existente', url: produto.video_url } : null;
   } else {
     document.getElementById('fAtivo').checked = true;
   }
   renderFotosPreview();
+  renderVideoPreview();
   document.getElementById('fCotacaoDolarStatus').textContent = '';
   if (!document.getElementById('fCotacaoDolar').value) buscarCotacaoDolar();
   document.getElementById('modalProduto').classList.add('show');
@@ -2802,6 +2854,52 @@ function renderFotosPreview(){
   });
 }
 
+document.getElementById('videoDrop').addEventListener('click', () => document.getElementById('videoInput').click());
+document.getElementById('videoInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  const tamanhoMB = file.size / (1024 * 1024);
+  if (tamanhoMB > 60){
+    alert(`Esse vídeo tem ${tamanhoMB.toFixed(0)}MB — muito grande. Comprima antes de subir (recomendado: até ~20MB).`);
+    return;
+  }
+  videoFormAtual = { tipo: 'novo', file, previewUrl: URL.createObjectURL(file) };
+  renderVideoPreview();
+});
+
+function renderVideoPreview(){
+  const wrap = document.getElementById('videoPreview');
+  if (!videoFormAtual){
+    wrap.innerHTML = '';
+    return;
+  }
+  const src = videoFormAtual.tipo === 'existente' ? videoFormAtual.url : videoFormAtual.previewUrl;
+  wrap.innerHTML = `
+    <div class="foto-item" style="width:140px;">
+      <video src="${src}" style="width:100%;height:100%;object-fit:cover;" muted></video>
+      <button type="button" class="foto-remover" id="btnRemoverVideo" aria-label="Remover vídeo">×</button>
+    </div>
+  `;
+  document.getElementById('btnRemoverVideo').addEventListener('click', () => {
+    videoFormAtual = null;
+    renderVideoPreview();
+  });
+}
+
+// Envia o vídeo NOVO pro Supabase Storage (se houver) e devolve a URL final
+// (existente, recém-enviada, ou null se foi removido/nunca teve).
+async function enviarVideoEObterUrl(categoria){
+  if (!videoFormAtual) return null;
+  if (videoFormAtual.tipo === 'existente') return videoFormAtual.url;
+
+  const nomeArquivo = `${categoria}/video-${crypto.randomUUID()}-${videoFormAtual.file.name}`;
+  const { error: erroUpload } = await sb.storage.from('produtos').upload(nomeArquivo, videoFormAtual.file);
+  if (erroUpload) throw new Error('Erro ao enviar vídeo: ' + erroUpload.message);
+  const { data: urlData } = sb.storage.from('produtos').getPublicUrl(nomeArquivo);
+  return urlData.publicUrl;
+}
+
 // Envia as fotos NOVAS pro Supabase Storage e devolve a lista final de URLs (existentes + recém-enviadas)
 async function enviarFotosEObterUrls(categoria){
   const urlsFinal = [];
@@ -2809,8 +2907,9 @@ async function enviarFotosEObterUrls(categoria){
     if (foto.tipo === 'existente'){
       urlsFinal.push(foto.url);
     } else {
-      const nomeArquivo = `${categoria}/${crypto.randomUUID()}-${foto.file.name}`;
-      const { error: erroUpload } = await sb.storage.from('produtos').upload(nomeArquivo, foto.file);
+      const arquivoOtimizado = await otimizarImagemParaUpload(foto.file);
+      const nomeArquivo = `${categoria}/${crypto.randomUUID()}-${arquivoOtimizado.name}`;
+      const { error: erroUpload } = await sb.storage.from('produtos').upload(nomeArquivo, arquivoOtimizado);
       if (erroUpload){
         throw new Error('Erro ao enviar foto: ' + erroUpload.message);
       }
@@ -2856,6 +2955,7 @@ document.getElementById('formProduto').addEventListener('submit', async (e) => {
   try {
     const categoria = document.getElementById('fCategoria').value;
     const fotosUrls = await enviarFotosEObterUrls(categoria);
+    const videoUrl = await enviarVideoEObterUrl(categoria);
     const { disponiveis: banhosDisp, custos: banhosCustos } = await enviarBanhosEObterDados(categoria);
 
     const dados = {
@@ -2889,6 +2989,7 @@ document.getElementById('formProduto').addEventListener('submit', async (e) => {
       margem_lucro: document.getElementById('fMargemLucro').value ? parseFloat(document.getElementById('fMargemLucro').value) : null,
       link_fornecedor: document.getElementById('fLinkFornecedor').value.trim() || null,
       fotos: fotosUrls,
+      video_url: videoUrl,
       destaque: document.getElementById('fDestaque').checked,
       ativo: document.getElementById('fAtivo').checked,
       frete_gratis_sempre: document.getElementById('fFreteGratisSempre').checked,
@@ -3019,8 +3120,9 @@ document.getElementById('formNovaAvaliacao').addEventListener('submit', async (e
   try {
     const urlsFotos = [];
     for (const f of fotosAvaliacaoAtual){
-      const nomeArquivo = `avaliacoes/${produtoAvaliacoesAtual.id}/${crypto.randomUUID()}-${f.file.name}`;
-      const { error: erroUpload } = await sb.storage.from('produtos').upload(nomeArquivo, f.file);
+      const arquivoOtimizado = await otimizarImagemParaUpload(f.file);
+      const nomeArquivo = `avaliacoes/${produtoAvaliacoesAtual.id}/${crypto.randomUUID()}-${arquivoOtimizado.name}`;
+      const { error: erroUpload } = await sb.storage.from('produtos').upload(nomeArquivo, arquivoOtimizado);
       if (erroUpload) throw new Error(erroUpload.message);
       const { data: urlData } = sb.storage.from('produtos').getPublicUrl(nomeArquivo);
       urlsFotos.push(urlData.publicUrl);
