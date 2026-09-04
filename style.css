@@ -2037,6 +2037,37 @@ body.pronto .entra-com-pagina{ opacity: 1; transform: translateY(0); }
 }
 
 /* ============================================================
+   AVISO DE COOKIES (LGPD)
+   ============================================================ */
+.aviso-cookies{
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 1000;
+  background: var(--bordo);
+  color: var(--creme);
+  padding: 14px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  transform: translateY(100%);
+  transition: transform .35s ease;
+}
+.aviso-cookies.show{ transform: translateY(0); }
+.aviso-cookies p{ font-size: 0.82rem; line-height: 1.5; margin: 0; max-width: 640px; }
+.aviso-cookies a{ color: var(--creme); text-decoration: underline; }
+.aviso-cookies-btn{
+  flex-shrink: 0;
+  padding: 9px 20px;
+  background: var(--creme);
+  color: var(--bordo);
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+/* ============================================================
    POPUP DE CUPOM DE BOAS-VINDAS
    ============================================================ */
 .popup-cupom{
