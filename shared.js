@@ -299,7 +299,7 @@ async function carregarCategorias(){
 // link_fornecedor (uso interno do admin/dropshipping) — se colocar '*' aqui,
 // esse link vaza no JSON da resposta (visível no Network do navegador)
 // mesmo que a tela não mostre ele em lugar nenhum.
-const COLUNAS_PRODUTO_PUBLICO = 'id, nome, categoria, descricao, material_aro, pedra_central, banho, banhos_disponiveis, quilate_pedra, quilates_disponiveis, pedra_lateral, formato_pedra, cravacao, grau_cor, grau_clareza, grau_corte, largura_mm, tamanhos_disponiveis, preco, estoque, fotos, video_url, destaque, ativo, criado_em, frete_gratis_sempre';
+const COLUNAS_PRODUTO_PUBLICO = 'id, nome, categoria, descricao, material_aro, pedra_central, banho, banhos_disponiveis, quilate_pedra, quilates_disponiveis, pedra_lateral, formato_pedra, cravacao, grau_cor, grau_clareza, grau_corte, largura_mm, tamanhos_disponiveis, preco, estoque, fotos, video_url, destaque, ativo, criado_em, frete_gratis_sempre, matriz_precos';
 
 function mapProduto(row){
   const pedra = row.pedra_central || "Sem pedra";
@@ -317,6 +317,11 @@ function mapProduto(row){
     quilate: row.quilate_pedra || "",
     quilates: row.quilates_disponiveis || [],
     banhos: row.banhos_disponiveis || [],
+    // Preço final de cada combinação quilate × banho, já pronto (calculado
+    // no admin com imposto sobre o custo combinado) — fonte única de
+    // verdade do preço de variante, pra quilate e banho nunca "brigarem"
+    // pelo preço mostrado. Ver resolverPrecoVariante().
+    matrizPrecos: row.matriz_precos || [],
     formato: row.formato_pedra || "",
     cravacao: row.cravacao || "",
     grauCor: row.grau_cor || "",
@@ -333,6 +338,28 @@ function mapProduto(row){
     ativo: row.ativo !== false,
     freteGratisSempre: !!row.frete_gratis_sempre
   };
+}
+
+// Acha o preço certo pra uma combinação de variante (quilate e/ou banho)
+// na matriz pré-calculada — nunca deixa uma dimensão "vencer" a outra
+// isoladamente (esse era o bug: escolher o banho jogava o preço pro
+// valor do banho sozinho, ignorando o quilate escolhido antes). Sem
+// matriz (produto sem variante nenhuma) ou sem combinação encontrada,
+// cai no preço base do produto.
+function resolverPrecoVariante(p, quilate, banho){
+  if (!p.matrizPrecos || !p.matrizPrecos.length) return p.preco;
+  const exato = p.matrizPrecos.find(m => (m.quilate || null) === (quilate || null) && (m.banho || null) === (banho || null));
+  if (exato) return Number(exato.preco);
+  // Produto tem as duas dimensões (quilate e banho) mas a pessoa só
+  // escolheu uma até agora — sem isso o preço "voltaria" pro valor base
+  // do nada assim que ela escolhe o quilate, parecendo bug. Mostra uma
+  // prévia com o que já foi escolhido (o valor final de verdade só bate
+  // quando as duas estiverem selecionadas).
+  const porQuilate = quilate && p.matrizPrecos.find(m => (m.quilate || null) === quilate);
+  if (porQuilate) return Number(porQuilate.preco);
+  const porBanho = banho && p.matrizPrecos.find(m => (m.banho || null) === banho);
+  if (porBanho) return Number(porBanho.preco);
+  return p.preco;
 }
 
 async function carregarProdutosPorCategoria(categoriaChave){
@@ -1145,12 +1172,15 @@ function adicionarAoCarrinhoCard(btn){
   try { quilates = JSON.parse(decodeURIComponent(btn.dataset.quilates || '[]')); } catch { quilates = []; }
   let banhos = [];
   try { banhos = JSON.parse(decodeURIComponent(btn.dataset.banhos || '[]')); } catch { banhos = []; }
+  let matrizPrecos = [];
+  try { matrizPrecos = JSON.parse(decodeURIComponent(btn.dataset.matriz || '[]')); } catch { matrizPrecos = []; }
   const produto = {
     id: btn.dataset.id,
     nome: btn.dataset.nome,
     preco: parseFloat(btn.dataset.preco),
     imagem: btn.dataset.imagem,
-    freteGratisSempre: btn.dataset.freteGratis === 'true'
+    freteGratisSempre: btn.dataset.freteGratis === 'true',
+    matrizPrecos
   };
 
   // Peça com aro, quilate e/ou banho cadastrado: não dá pra adicionar sem
@@ -1249,14 +1279,16 @@ function abrirVarianteModal(produto, { tamanhos, quilates, banhos = [] }){
   quilateSecao.style.display = quilates.length ? 'block' : 'none';
   if (quilates.length){
     document.getElementById('varianteModalQuilatePills').innerHTML = quilates.map(q => `
-      <button type="button" class="tamanho-pill" data-quilate="${q.valor}" data-preco="${q.preco}">${q.valor} — ${formatarPreco(q.preco)}</button>
+      <button type="button" class="tamanho-pill" data-quilate="${q.valor}">${q.valor} — ${formatarPreco(q.preco)}</button>
     `).join('');
     document.querySelectorAll('#varianteModalQuilatePills .tamanho-pill').forEach(pill => {
       pill.addEventListener('click', () => {
         document.querySelectorAll('#varianteModalQuilatePills .tamanho-pill').forEach(b => b.classList.remove('active'));
         pill.classList.add('active');
         produtoAguardandoVariante.quilate = pill.getAttribute('data-quilate');
-        produtoAguardandoVariante.preco = parseFloat(pill.getAttribute('data-preco'));
+        // Combina com o banho já escolhido (se tiver) — não é o preço do
+        // quilate sozinho, senão o banho apaga ele de novo na hora de somar.
+        produtoAguardandoVariante.preco = resolverPrecoVariante(produto, produtoAguardandoVariante.quilate, produtoAguardandoVariante.banho);
         verificarCompleto();
       });
     });
@@ -1266,14 +1298,16 @@ function abrirVarianteModal(produto, { tamanhos, quilates, banhos = [] }){
   banhoSecao.style.display = banhos.length ? 'block' : 'none';
   if (banhos.length){
     document.getElementById('varianteModalBanhoSwatches').innerHTML = banhos.map(b => `
-      <button type="button" class="banho-swatch" data-banho="${b.nome}" data-preco="${b.preco}" title="${b.nome}" style="background-image:url('${b.foto_url}')"></button>
+      <button type="button" class="banho-swatch" data-banho="${b.nome}" title="${b.nome}" style="background-image:url('${b.foto_url}')"></button>
     `).join('');
     document.querySelectorAll('#varianteModalBanhoSwatches .banho-swatch').forEach(swatch => {
       swatch.addEventListener('click', () => {
         document.querySelectorAll('#varianteModalBanhoSwatches .banho-swatch').forEach(b => b.classList.remove('active'));
         swatch.classList.add('active');
         produtoAguardandoVariante.banho = swatch.getAttribute('data-banho');
-        produtoAguardandoVariante.preco = parseFloat(swatch.getAttribute('data-preco'));
+        // Combina com o quilate já escolhido (se tiver) — mesma lógica do
+        // quilate acima, só invertida.
+        produtoAguardandoVariante.preco = resolverPrecoVariante(produto, produtoAguardandoVariante.quilate, produtoAguardandoVariante.banho);
         verificarCompleto();
       });
     });
@@ -1360,6 +1394,7 @@ function cardProdutoHTML(p){
               data-tamanhos="${(p.tamanhos || []).join(',')}"
               data-quilates="${encodeURIComponent(JSON.stringify(p.quilates || []))}"
               data-banhos="${encodeURIComponent(JSON.stringify(p.banhos || []))}"
+              data-matriz="${encodeURIComponent(JSON.stringify(p.matrizPrecos || []))}"
               data-frete-gratis="${!!p.freteGratisSempre}"
               onclick="adicionarAoCarrinhoCard(this)">Adicionar ao carrinho</button>`}
       </div>
@@ -1842,14 +1877,16 @@ async function renderProdutoPage(){
   if (p.quilates.length){
     quilateWrap.style.display = 'block';
     quilateWrap.querySelector('.tamanho-pills').innerHTML = p.quilates.map(q => `
-      <button type="button" class="tamanho-pill" data-quilate="${q.valor}" data-preco="${q.preco}">${q.valor}</button>
+      <button type="button" class="tamanho-pill" data-quilate="${q.valor}">${q.valor}</button>
     `).join('');
     quilateWrap.querySelectorAll('.tamanho-pill').forEach(btn => {
       btn.addEventListener('click', () => {
         quilateWrap.querySelectorAll('.tamanho-pill').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         quilateSelecionado = btn.getAttribute('data-quilate');
-        precoAtual = parseFloat(btn.getAttribute('data-preco'));
+        // Recalcula combinando com o banho já escolhido (se tiver) — não
+        // é o preço do quilate sozinho, senão o banho "apaga" ele de novo.
+        precoAtual = resolverPrecoVariante(p, quilateSelecionado, banhoSelecionado);
         atualizarPrecoExibido();
       });
     });
@@ -1866,7 +1903,7 @@ async function renderProdutoPage(){
     banhoWrap.style.display = 'block';
     document.getElementById('banhoSelecionadoNome').textContent = 'escolha abaixo';
     banhoWrap.querySelector('.banho-swatches').innerHTML = p.banhos.map(b => `
-      <button type="button" class="banho-swatch" data-banho="${b.nome}" data-preco="${b.preco}" data-foto="${b.foto_url}" title="${b.nome}" style="background-image:url('${b.foto_url}')"></button>
+      <button type="button" class="banho-swatch" data-banho="${b.nome}" data-foto="${b.foto_url}" title="${b.nome}" style="background-image:url('${b.foto_url}')"></button>
     `).join('');
     banhoWrap.querySelectorAll('.banho-swatch').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -1874,7 +1911,9 @@ async function renderProdutoPage(){
         btn.classList.add('active');
         banhoSelecionado = btn.getAttribute('data-banho');
         document.getElementById('banhoSelecionadoNome').textContent = banhoSelecionado;
-        precoAtual = parseFloat(btn.getAttribute('data-preco'));
+        // Recalcula combinando com o quilate já escolhido (se tiver) — não
+        // é o preço do banho sozinho, senão ele "apaga" o quilate escolhido.
+        precoAtual = resolverPrecoVariante(p, quilateSelecionado, banhoSelecionado);
         atualizarPrecoExibido();
         galeriaPrincipal.innerHTML = '';
         galeriaPrincipal.style.backgroundImage = `url('${btn.getAttribute('data-foto')}')`;
