@@ -2128,7 +2128,7 @@ body.pronto .entra-com-pagina{ opacity: 1; transform: translateY(0); }
   padding: 22px 20px;
   transform: translateY(24px);
   opacity: 0;
-  transition: transform .35s ease, opacity .35s ease;
+  transition: transform .35s ease, opacity .35s ease, bottom .3s ease;
 }
 .popup-cupom.show{ transform: translateY(0); opacity: 1; }
 .popup-cupom-fechar{
@@ -2154,22 +2154,20 @@ body.pronto .entra-com-pagina{ opacity: 1; transform: translateY(0); }
   margin-bottom: 8px;
 }
 .popup-cupom p{ font-size: 0.82rem; color: var(--texto-suave); margin-bottom: 14px; line-height: 1.5; }
-.popup-cupom-codigo{
+.popup-cupom-resgatar{
   width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 14px;
-  border: 1px dashed var(--bordo);
+  padding: 11px 14px;
+  background: var(--bordo);
+  color: var(--creme);
   border-radius: var(--radius);
-  font-family: var(--sans);
+  font-size: 0.82rem;
   font-weight: 700;
-  letter-spacing: 0.03em;
-  color: var(--bordo);
+  letter-spacing: 0.02em;
+  text-align: center;
+  transition: background .2s ease, opacity .2s ease;
 }
-.popup-cupom-codigo:hover{ background: var(--creme); }
-.popup-cupom-copiar{ font-size: 0.72rem; font-weight: 600; text-decoration: underline; }
+.popup-cupom-resgatar:hover{ background: var(--bordo-suave); }
+.popup-cupom-resgatar:disabled{ opacity: 0.7; cursor: default; }
 
 @media (max-width: 480px){
   .popup-cupom{ left: 14px; right: 14px; max-width: none; bottom: 14px; }
@@ -2183,4 +2181,14 @@ body.pronto .entra-com-pagina{ opacity: 1; transform: translateY(0); }
 .popup-cupom--fabrica .popup-cupom-eyebrow{ color: var(--bordo); font-weight: 700; }
 @media (max-width: 480px){
   .popup-cupom--fabrica{ bottom: 124px; }
+}
+
+/* Enquanto a barra de cookies (LGPD) ainda não foi aceita, ela cobre o
+   canto inferior — sobe os popups de cupom pra não ficarem atrás dela
+   (senão o botão "Resgatar" fica inclicável nessa janela). */
+body.tem-aviso-cookies .popup-cupom{ bottom: 78px; }
+body.tem-aviso-cookies .popup-cupom--fabrica{ bottom: 192px; }
+@media (max-width: 480px){
+  body.tem-aviso-cookies .popup-cupom{ bottom: 96px; }
+  body.tem-aviso-cookies .popup-cupom--fabrica{ bottom: 202px; }
 }

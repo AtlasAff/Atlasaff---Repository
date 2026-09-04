@@ -452,6 +452,7 @@ async function initHeaderShared(){
   setTimeout(mostrarPopupCupomBoasVindas, 1800); // espera a página assentar antes de mostrar
   setTimeout(mostrarPopupPrecoFabrica, 2200); // levemente depois, pra não colidir com o de boas-vindas
   iniciarObservadorPrecoFabrica();
+  iniciarObservadorPrecoCupomDestaque();
   document.body.classList.add('pronto'); // dispara o fade-in inicial da página
 }
 
@@ -683,19 +684,32 @@ function calcularPrecoComCupom(preco, cupom){
   return Math.max(0, preco - desconto);
 }
 
-// Se existe um cupom em destaque e o cliente ainda não tem nenhum cupom
-// aplicado, guarda ele sozinho — assim o preço com desconto que aparece na
-// página do produto bate certinho com o que é cobrado no carrinho/checkout,
-// sem precisar copiar/colar código nenhum.
+// Diferente do preço de fábrica (permissão direto na conta), o cupom de
+// boas-vindas é público — mas só fica ativo depois que a pessoa clica em
+// "Resgatar" no popup. Antes disso ele existe mas não desconta nada em
+// lugar nenhum do site (sem popup = sem desconto escondido).
+const CUPOM_DESTAQUE_RESGATADO_KEY = 'pavan_cupom_destaque_resgatado';
+function obterCupomDestaqueResgatado(){
+  try { return localStorage.getItem(CUPOM_DESTAQUE_RESGATADO_KEY) || null; } catch { return null; }
+}
+function marcarCupomDestaqueResgatado(codigo){
+  try { localStorage.setItem(CUPOM_DESTAQUE_RESGATADO_KEY, codigo); } catch {}
+}
+
+// Só devolve o cupom (e só guarda ele pro carrinho/checkout baterem) se a
+// pessoa já resgatou esse código específico. Se o admin trocar o cupom em
+// destaque depois, o resgate antigo não vale mais pro novo código.
 async function autoAplicarCupomDestaque(){
   const cupom = await obterCupomDestaque();
-  if (cupom && !obterCupomAplicado()) salvarCupomAplicado(cupom.codigo);
+  if (!cupom || obterCupomDestaqueResgatado() !== cupom.codigo) return null;
+  if (!obterCupomAplicado()) salvarCupomAplicado(cupom.codigo);
   return cupom;
 }
 
 async function mostrarPopupCupomBoasVindas(){
-  const data = await autoAplicarCupomDestaque();
+  const data = await obterCupomDestaque();
   if (!data) return;
+  if (obterCupomDestaqueResgatado() === data.codigo) return; // já resgatou, não mostra de novo
   try {
     if (sessionStorage.getItem('pavan_popup_cupom_visto')) return;
   } catch {}
@@ -714,23 +728,23 @@ async function mostrarPopupCupomBoasVindas(){
     </button>
     <span class="popup-cupom-eyebrow">Presente de boas-vindas 🎁</span>
     <strong class="popup-cupom-desconto">${desconto}</strong>
-    <p>Use o cupom abaixo${minimoTexto} e garanta seu desconto.</p>
-    <button type="button" class="popup-cupom-codigo" data-codigo="${data.codigo}">
-      ${data.codigo}
-      <span class="popup-cupom-copiar">Copiar</span>
-    </button>
+    <p>Resgate agora${minimoTexto} — o desconto já fica aplicado em toda a loja (preço riscado + novo preço), sem precisar copiar código.</p>
+    <button type="button" class="popup-cupom-resgatar" data-codigo="${data.codigo}">Resgatar desconto</button>
   `;
   document.body.appendChild(popup);
   requestAnimationFrame(() => popup.classList.add('show'));
 
   const fechar = () => { popup.classList.remove('show'); setTimeout(() => popup.remove(), 300); };
   popup.querySelector('.popup-cupom-fechar').addEventListener('click', fechar);
-  popup.querySelector('.popup-cupom-codigo').addEventListener('click', async (e) => {
+  popup.querySelector('.popup-cupom-resgatar').addEventListener('click', (e) => {
     const codigo = e.currentTarget.getAttribute('data-codigo');
-    try { await navigator.clipboard.writeText(codigo); } catch {}
-    e.currentTarget.querySelector('.popup-cupom-copiar').textContent = 'Copiado ✓';
-    mostrarToast(`Cupom ${codigo} copiado — cole no carrinho!`);
-    setTimeout(fechar, 1400);
+    marcarCupomDestaqueResgatado(codigo);
+    salvarCupomAplicado(codigo);
+    e.currentTarget.textContent = 'Resgatado ✓';
+    e.currentTarget.disabled = true;
+    mostrarToast(`Cupom ${codigo} resgatado — desconto já aplicado em toda a loja! 🎁`);
+    aplicarPrecoCupomDestaqueNoDOM();
+    setTimeout(fechar, 1200);
   });
 }
 
@@ -802,6 +816,31 @@ function iniciarObservadorPrecoFabrica(){
   new MutationObserver(() => aplicarPrecoFabricaNoDOM()).observe(document.body, { childList: true, subtree: true });
 }
 
+// Mesma ideia do preço de fábrica acima, mas pro cupom de boas-vindas
+// (geral) — só risca o preço nos cards depois que a pessoa resgatou no
+// popup. Preço de fábrica tem prioridade quando os dois coexistem (pula
+// o card que a função de fábrica já marcou).
+async function aplicarPrecoCupomDestaqueNoDOM(){
+  const cupom = await autoAplicarCupomDestaque(); // só volta cupom se já resgatado
+  if (!cupom) return;
+  document.querySelectorAll('.prod-price[data-produto-id]').forEach(el => {
+    if (el.dataset.fabricaAplicado || el.dataset.cupomAplicado) return;
+    const precoOriginal = parseFloat(el.dataset.precoOriginal);
+    if (!precoOriginal) return;
+    const precoComCupom = calcularPrecoComCupom(precoOriginal, cupom);
+    if (precoComCupom === null) return; // não bateu o valor mínimo do cupom
+    el.dataset.cupomAplicado = '1';
+    el.innerHTML = `<s class="preco-riscado">${formatarPreco(precoOriginal)}</s> ${formatarPreco(precoComCupom)}`;
+  });
+}
+let observadorPrecoCupomDestaqueIniciado = false;
+function iniciarObservadorPrecoCupomDestaque(){
+  if (observadorPrecoCupomDestaqueIniciado) return;
+  observadorPrecoCupomDestaqueIniciado = true;
+  aplicarPrecoCupomDestaqueNoDOM();
+  new MutationObserver(() => aplicarPrecoCupomDestaqueNoDOM()).observe(document.body, { childList: true, subtree: true });
+}
+
 // Aviso pessoal — ao contrário do popup de boas-vindas (uma vez por
 // sessão, pra qualquer um), esse é "toda vez que ESSA pessoa entra no
 // site" — sessionStorage já cobre isso (reaparece em cada sessão nova,
@@ -854,10 +893,15 @@ function injetarAvisoCookies(){
   `;
   document.body.appendChild(aviso);
   requestAnimationFrame(() => aviso.classList.add('show'));
+  // Sobe os popups de cupom (bem-vindo/fábrica) pra não ficarem escondidos
+  // atrás dessa barra — importante porque quem ainda não aceitou cookies é
+  // exatamente quem mais recebe o popup de boas-vindas (visita nova).
+  document.body.classList.add('tem-aviso-cookies');
 
   aviso.querySelector('.aviso-cookies-btn').addEventListener('click', () => {
     try { localStorage.setItem(COOKIES_ACEITOS_KEY, '1'); } catch {}
     aviso.classList.remove('show');
+    document.body.classList.remove('tem-aviso-cookies');
     setTimeout(() => aviso.remove(), 350);
   });
 }
