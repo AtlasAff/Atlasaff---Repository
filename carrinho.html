@@ -237,7 +237,7 @@ async function calcularFreteCarrinho(){
           <span class="transportadora">${freteEscolhidoCarrinho.transportadora} — ${freteEscolhidoCarrinho.servico}</span>
           <span class="prazo">${freteEscolhidoCarrinho.prazoConfeccaoDias} dias de confecção + ${freteEscolhidoCarrinho.prazoEntregaDiasMin} a ${freteEscolhidoCarrinho.prazoEntregaDias} dias úteis de entrega</span>
         </div>
-        <span class="preco">${gratis ? 'Grátis' : formatarPreco(freteEscolhidoCarrinho.preco)}</span>
+        <span class="preco">${gratis ? seloFreteGratisHTML() : formatarPreco(freteEscolhidoCarrinho.preco)}</span>
       </div>
     `;
     atualizarTotaisCarrinho();

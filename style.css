@@ -1598,6 +1598,31 @@
   border-radius: 20px;
   z-index:2;
 }
+
+/* Selo "Frete grátis" — retângulo escuro (quase preto) com ícone de
+   caminhão branco. Mesmo visual em 3 lugares: sobre a foto do card no
+   catálogo, no resultado do cálculo de frete e perto do preço na página
+   do produto — só muda o posicionamento (modificador --foto). */
+.selo-frete-gratis{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding: 5px 10px;
+  background: var(--texto);
+  color: var(--creme);
+  font-family: var(--sans);
+  font-size: 0.68rem;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.03em;
+  border-radius: 4px;
+  white-space:nowrap;
+}
+.selo-frete-gratis svg{ width:13px; height:13px; flex-shrink:0; }
+.prod-card .selo-frete-gratis--foto{
+  position:absolute; top:10px; left:10px;
+  z-index:2;
+}
 .produto-parcelas{
   font-size: 0.84rem;
   color: var(--texto-suave);

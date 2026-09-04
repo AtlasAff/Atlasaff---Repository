@@ -658,6 +658,15 @@ function freteGratisBarraHTML(itens){
   `;
 }
 
+// Selo "Frete grátis" — retângulo escuro com ícone de caminhão branco.
+// Mesmo visual reaproveitado em 3 lugares: sobre a foto do card no
+// catálogo, no resultado do cálculo de frete (carrinho/checkout/produto)
+// e perto do preço na página do produto. classeExtra: modificador extra
+// de posicionamento (ex.: "selo-frete-gratis--foto" pra ficar sobre a foto).
+function seloFreteGratisHTML(classeExtra){
+  return `<span class="selo-frete-gratis${classeExtra ? ' ' + classeExtra : ''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="18" cy="18" r="1.6"/></svg>Frete grátis</span>`;
+}
+
 /* ============================================================
    POPUP DE CUPOM DE BOAS-VINDAS — aparece uma vez por sessão (não
    incomoda em toda página) se o admin tiver marcado algum cupom
@@ -1314,9 +1323,14 @@ if (!document.getElementById('painelAdmin')){
    ============================================================ */
 function cardProdutoHTML(p){
   const esgotado = (p.estoque ?? 0) <= 0;
+  // Só destaca frete grátis em peça disponível (esgotado já ocupa o
+  // mesmo cantinho da foto, e não faz sentido vender frete de algo
+  // que não dá pra comprar agora).
+  const temFreteGratis = !esgotado && (p.preco >= FRETE_GRATIS_MINIMO || p.freteGratisSempre);
   return `
     <div class="prod-card reveal ${esgotado ? 'esgotado' : ''}">
       ${esgotado ? '<span class="badge-esgotado-card">Esgotado</span>' : ''}
+      ${temFreteGratis ? seloFreteGratisHTML('selo-frete-gratis--foto') : ''}
       <a href="produto.html?id=${p.id}" class="prod-card-link" aria-label="Ver ${p.nome}">
         <div class="prod-img" style="background-image:url('${p.image}')"></div>
         <div class="prod-name">${p.nome}</div>
@@ -1801,6 +1815,14 @@ async function renderProdutoPage(){
     void precoEl.offsetWidth;
     precoEl.classList.add('pulso-preco');
 
+    // Selo de frete grátis perto do preço — recalcula a cada troca de
+    // quilate/banho, já que o preço (e por tabela o limiar de R$399)
+    // muda junto.
+    const seloFreteWrap = document.getElementById('produtoSeloFreteGratisWrap');
+    seloFreteWrap.innerHTML = (precoAtual >= FRETE_GRATIS_MINIMO || p.freteGratisSempre)
+      ? seloFreteGratisHTML()
+      : '';
+
     if (fatorFabrica !== undefined){
       const precoFabrica = precoAtual * fatorFabrica;
       precoEl.innerHTML = `<s class="preco-riscado">${formatarPreco(precoAtual)}</s> ${formatarPreco(precoFabrica)}`;
@@ -1980,7 +2002,7 @@ async function renderProdutoPage(){
             <span class="transportadora">${o.transportadora}${o.servico ? ' — ' + o.servico : ''}</span>
             <span class="prazo">${o.prazoConfeccaoDias} dia${o.prazoConfeccaoDias == 1 ? '' : 's'} de confecção + ${o.prazoEntregaDiasMin} a ${o.prazoEntregaDias} dias úteis de entrega</span>
           </div>
-          <span class="preco">${gratis ? 'Grátis' : formatarPreco(o.preco)}</span>
+          <span class="preco">${gratis ? seloFreteGratisHTML() : formatarPreco(o.preco)}</span>
         </div>
       `).join('')
         + (gratis ? `<div class="frete-gratis" style="margin-top:10px;">🎉 Essa peça tem frete grátis (compras acima de R$399)</div>` : '');
