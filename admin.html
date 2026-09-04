@@ -754,6 +754,10 @@
         Trocas/devoluções
         <span class="nav-badge" id="tileBadgeTrocas" style="display:none;"></span>
       </button>
+      <button type="button" class="admin-nav-item" data-pagina="clientes">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6.5 6.5-6.5s6.5 2.9 6.5 6.5"/><path d="M16.5 8.5a3 3 0 1 1 2 5.3"/><path d="M18.5 13.5c2 .4 3.5 2 3.5 4"/></svg>
+        Clientes
+      </button>
 
       <div class="admin-nav-grupo-titulo">Loja</div>
       <button type="button" class="admin-nav-item" data-pagina="loja">
@@ -810,6 +814,27 @@
         </div>
 
         <!-- ============ LOJA (configurações) ============ -->
+        <!-- ============ CLIENTES ============ -->
+        <div class="admin-pagina" id="paginaClientes" data-pagina="clientes" style="display:none;">
+          <div class="admin-page-titulo"><div><h1>Clientes</h1><p>Contas cadastradas no site. Conceda "preço de fábrica" só pra quem você confia — fica ligado à conta, não a um código que pode vazar.</p></div></div>
+          <div class="admin-toolbar">
+            <input type="text" id="buscaClientes" placeholder="Buscar por nome ou e-mail...">
+          </div>
+          <div class="admin-tabela-wrap">
+            <table class="admin-tabela">
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th>Cadastro</th>
+                  <th>Último acesso</th>
+                  <th>Preço de fábrica</th>
+                </tr>
+              </thead>
+              <tbody id="corpoTabelaClientes"></tbody>
+            </table>
+          </div>
+        </div>
+
         <div class="admin-pagina" id="paginaLoja" data-pagina="loja" style="display:none;">
           <div class="admin-page-titulo"><div><h1>Loja</h1><p>Configurações gerais — não muda com frequência.</p></div></div>
           <div class="stat-grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));">
@@ -873,13 +898,13 @@
                   <select id="cupomTipo">
                     <option value="percentual">Percentual (%)</option>
                     <option value="fixo">Valor fixo (R$)</option>
-                    <option value="preco_fabrica">Preço de fábrica</option>
                   </select>
                 </div>
               </div>
-              <p id="cupomFabricaAviso" style="display:none;font-size:0.78rem;color:var(--texto-suave);background:var(--creme);padding:10px 12px;border-radius:4px;margin-bottom:16px;">
-                🏭 Esse tipo aplica, em <strong>qualquer produto</strong>, o preço de custo real da peça (sem margem de lucro) — calculado automaticamente por produto, não usa o campo "Valor" nem "Compra mínima". Não aparece no popup público de boas-vindas: é pra quem já tem o código (ex: família), e some sozinho.
+              <p style="font-size:0.78rem;color:var(--texto-suave);background:var(--creme);padding:10px 12px;border-radius:4px;margin-bottom:16px;">
+                🏭 Preço de fábrica pra alguém específico (ex: família)? Isso agora fica em <strong>Clientes</strong>, ligado à conta da pessoa — não é mais cupom, pra nunca vazar por link nem ficar público sem querer.
               </p>
+              <p id="cupomFabricaAviso" style="display:none;font-size:0.78rem;color:var(--texto-suave);background:var(--creme);padding:10px 12px;border-radius:4px;margin-bottom:16px;"></p>
               <div class="form-linha cols-3">
                 <div class="form-campo" id="cupomValorCampo">
                   <label for="cupomValor">Valor *</label>
@@ -1464,6 +1489,7 @@ const CARREGADORES_PAGINA_ADMIN = {
   cupons: () => { renderTabelaCupons(); atualizarCamposCupomPorTipo(); },
   avaliacoes: () => renderAvaliacoesPendentes(),
   trocas: () => renderTrocas(),
+  clientes: () => renderTabelaClientes(),
   loja: () => {}
 };
 
@@ -2455,6 +2481,70 @@ async function atualizarBadgeTrocas(){
   const badge = document.getElementById('tileBadgeTrocas');
   if (count > 0){ badge.textContent = count; badge.style.display = 'flex'; }
   else badge.style.display = 'none';
+}
+
+/* ============================================================
+   CLIENTES — lista de contas cadastradas + concede/revoga "preço de
+   fábrica" pela CONTA da pessoa, não por um código de cupom (era assim
+   antes — um código digitado em qualquer navegador ativava, e uma vez
+   quase vazou pra todo mundo pelo popup público sem querer). Ligado à
+   conta, só você concede aqui, e é impossível vazar por link.
+   ============================================================ */
+let clientesAdminCache = [];
+
+async function renderTabelaClientes(){
+  const { data, error } = await sb.rpc('listar_clientes_admin');
+  const corpo = document.getElementById('corpoTabelaClientes');
+  if (error){
+    corpo.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:30px;color:var(--texto-suave);">Erro ao carregar clientes.</td></tr>`;
+    return;
+  }
+  clientesAdminCache = data || [];
+  renderLinhasClientes();
+  document.getElementById('buscaClientes').oninput = renderLinhasClientes;
+}
+
+function renderLinhasClientes(){
+  const termo = (document.getElementById('buscaClientes').value || '').toLowerCase();
+  const lista = clientesAdminCache.filter(c =>
+    (c.nome || '').toLowerCase().includes(termo) || (c.email || '').toLowerCase().includes(termo)
+  );
+  const corpo = document.getElementById('corpoTabelaClientes');
+  corpo.innerHTML = lista.length ? lista.map(c => `
+    <tr>
+      <td>
+        <strong>${escaparHtml(c.nome) || '<span style="color:var(--texto-fraco);font-weight:400;">Sem nome cadastrado</span>'}</strong>
+        <div style="font-size:0.78rem;color:var(--texto-suave);">${escaparHtml(c.email)}</div>
+      </td>
+      <td>${new Date(c.criado_em).toLocaleDateString('pt-BR')}</td>
+      <td>${c.ultimo_login ? new Date(c.ultimo_login).toLocaleDateString('pt-BR') : '—'}</td>
+      <td>
+        ${c.tem_permissao_fabrica
+          ? `<span class="status-pill status-ativo">✓ Concedida</span> <button type="button" data-acao="revogar-fabrica" data-id="${c.user_id}" style="font-size:0.78rem;color:var(--vermelho);text-decoration:underline;margin-left:8px;">Revogar</button>`
+          : `<button type="button" class="btn-admin btn-admin-outline" data-acao="conceder-fabrica" data-id="${c.user_id}" style="padding:6px 12px;font-size:0.78rem;">Conceder</button>`}
+      </td>
+    </tr>
+  `).join('') : `<tr><td colspan="4" style="text-align:center;padding:30px;color:var(--texto-suave);">Nenhum cliente encontrado.</td></tr>`;
+
+  corpo.querySelectorAll('button[data-acao="conceder-fabrica"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      const { error } = await sb.rpc('conceder_permissao_fabrica', { p_user_id: btn.getAttribute('data-id') });
+      if (error){ alert('Erro: ' + error.message); btn.disabled = false; return; }
+      mostrarToastAdmin('Preço de fábrica concedido ✓');
+      await renderTabelaClientes();
+    });
+  });
+  corpo.querySelectorAll('button[data-acao="revogar-fabrica"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Revogar o preço de fábrica dessa conta?')) return;
+      btn.disabled = true;
+      const { error } = await sb.rpc('revogar_permissao_fabrica', { p_user_id: btn.getAttribute('data-id') });
+      if (error){ alert('Erro: ' + error.message); btn.disabled = false; return; }
+      mostrarToastAdmin('Preço de fábrica revogado');
+      await renderTabelaClientes();
+    });
+  });
 }
 
 /* ============================================================
