@@ -31,35 +31,47 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=Lato:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    /* Mesma paleta do site público (style.css) — bordô, creme — mais o
-       petróleo como cor de apoio, só do admin, pra diferenciar do site. */
-    --cinza-bg: #F7F2E8;
+    /* Mesma família de cor do site público (bordô/creme), mas repensada
+       pra painel de trabalho: fundo mais neutro (menos "loja", mais
+       "mesa de trabalho"), bordas bem mais discretas que antes (eram
+       bordô a 16% de opacidade em TUDO, o que deixava a tela cansativa),
+       e sombra suave em vez de linha pesada pra separar cartão do fundo. */
+    --bg: #F3F0E9;
+    --cinza-bg: #F3F0E9;
     --cinza-card: #FFFFFF;
-    --cinza-borda: rgba(107,15,26,0.16);
-    --texto: #2B211F;
+    --superficie-alt: #FAF8F2;
+    --cinza-borda: rgba(43,33,31,0.10);
+    --borda-forte: rgba(43,33,31,0.18);
+    --texto: #241B19;
     --texto-suave: #6E6259;
+    --texto-fraco: #9C9086;
     --bordo: #6B0F1A;
     --bordo-escuro: #4A0A13;
+    --bordo-bg: #F6E9E7;
     --petroleo: #1F4B4E;
     --petroleo-escuro: #143234;
     --petroleo-bg: #E9F0EF;
-    --bordo-bg: #F3E6E3;
     --verde: #2C6E37;
     --verde-bg: #E8F3E9;
     --amarelo: #8A6116;
     --amarelo-bg: #FBF1DE;
     --vermelho: #A8281D;
     --vermelho-bg: #FBEAE9;
-    --radius: 3px;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --sombra: 0 1px 2px rgba(36,27,25,0.04), 0 8px 24px -12px rgba(36,27,25,0.12);
+    --sombra-lg: 0 24px 60px -20px rgba(20,15,14,0.35);
     --serif: 'Playfair Display', Georgia, serif;
     --sans: 'Lato', -apple-system, sans-serif;
+    --sidebar-w: 236px;
   }
   *{ box-sizing:border-box; margin:0; padding:0; }
-  body{ background: var(--cinza-bg); color: var(--texto); font-family: var(--sans); line-height:1.5; }
+  body{ background: var(--bg); color: var(--texto); font-family: var(--sans); line-height:1.5; -webkit-font-smoothing:antialiased; }
   button{ font-family:inherit; cursor:pointer; border:none; background:none; }
   input, select, textarea{ font-family:inherit; }
   ul{ list-style:none; }
   img{ max-width:100%; display:block; }
+  ::selection{ background: var(--bordo); color:#fff; }
 
   /* ---------- LOGIN (mesma linguagem visual do conta.html do site) ---------- */
   #telaLogin{
@@ -116,85 +128,194 @@
   .login-erro{ color: var(--vermelho); font-size:0.82rem; margin-top:10px; display:none; }
   .login-erro.show{ display:block; }
 
-  /* ---------- LAYOUT ADMIN ---------- */
+  /* ---------- LAYOUT ADMIN — topbar fina + sidebar fixa + conteúdo
+     (era um grid de "tiles" que abria modal por cima de tudo; agora é
+     navegação persistente, igual painel de loja de verdade — Shopify,
+     Stripe etc. — sempre visível qual seção você tá, sem "voltar"). ---------- */
   #painelAdmin{ display:none; min-height:100vh; }
-  #painelAdmin.show{ display:block; }
+  #painelAdmin.show{ display:flex; flex-direction:column; }
 
   .admin-topbar{
-    background: var(--petroleo);
-    color:#fff;
-    padding: 14px 20px;
+    background: var(--cinza-card);
+    border-bottom: 1px solid var(--cinza-borda);
+    color: var(--texto);
+    padding: 0 20px;
+    height: 56px;
     display:flex;
     align-items:center;
-    justify-content:space-between;
-    gap: 12px;
+    gap: 14px;
     position: sticky;
     top: 0;
-    z-index: 50;
+    z-index: 60;
   }
-  .admin-topbar .marca{ display:flex; align-items:center; gap:10px; font-family: var(--serif); font-style:italic; font-size:1.05rem; }
-  .admin-topbar .marca img{ height:24px; width:auto; filter:brightness(0) invert(1); opacity:.92; }
-  .admin-topbar button, .admin-topbar a{ color:#fff; font-size:0.82rem; text-decoration:underline; white-space:nowrap; }
+  .admin-topbar .marca{ display:flex; align-items:center; gap:9px; font-family: var(--serif); font-style:italic; font-size:1.05rem; color: var(--bordo); }
+  .admin-topbar .marca img{ height:22px; width:auto; }
+  .admin-topbar-direita{ display:flex; align-items:center; gap:18px; margin-left:auto; }
+  .admin-topbar-direita a, .admin-topbar-direita button{ color: var(--texto-suave); font-size:0.82rem; font-weight:600; white-space:nowrap; }
+  .admin-topbar-direita a:hover, .admin-topbar-direita button:hover{ color: var(--bordo); }
+  .admin-hamburger{ display:none; width:32px; height:32px; align-items:center; justify-content:center; color: var(--texto); flex-shrink:0; }
+  .admin-hamburger svg{ width:22px; height:22px; }
 
-  .admin-wrap{ max-width: 1240px; margin: 0 auto; padding: 22px 16px 80px; }
+  .admin-corpo{ display:flex; flex:1; min-height:0; }
+
+  /* Sidebar — logo já tá na topbar, então aqui só a navegação. */
+  .admin-sidebar{
+    width: var(--sidebar-w);
+    flex-shrink:0;
+    background: var(--cinza-card);
+    border-right: 1px solid var(--cinza-borda);
+    padding: 18px 12px;
+    position: sticky;
+    top: 56px;
+    height: calc(100vh - 56px);
+    overflow-y: auto;
+  }
+  .admin-nav-grupo-titulo{
+    font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;
+    color: var(--texto-fraco); padding: 14px 12px 6px;
+  }
+  .admin-nav-grupo-titulo:first-child{ padding-top:4px; }
+  .admin-nav-item{
+    display:flex; align-items:center; gap:11px;
+    width:100%; padding: 9px 12px;
+    border-radius: var(--radius-sm);
+    font-size:0.87rem; font-weight:600; color: var(--texto-suave);
+    position:relative;
+    transition: background .14s ease, color .14s ease;
+  }
+  .admin-nav-item svg{ width:19px; height:19px; flex-shrink:0; color: currentColor; opacity:.8; }
+  .admin-nav-item:hover{ background: var(--superficie-alt); color: var(--texto); }
+  .admin-nav-item.ativo{ background: var(--bordo-bg); color: var(--bordo); }
+  .admin-nav-item.ativo svg{ opacity:1; }
+  .admin-nav-item .nav-badge{
+    margin-left:auto; background: var(--bordo); color:#fff;
+    min-width:18px; height:18px; padding:0 5px; border-radius:20px;
+    font-size:0.68rem; font-weight:700; display:flex; align-items:center; justify-content:center;
+  }
+  .admin-nav-item.ativo .nav-badge{ background: var(--bordo); }
+
+  .admin-sidebar-overlay{ display:none; }
+
+  .admin-main{ flex:1; min-width:0; }
+  .admin-wrap{ max-width: 1180px; margin: 0 auto; padding: 26px 24px 80px; }
+
+  .admin-page-titulo{
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;
+    margin-bottom: 22px;
+  }
+  .admin-page-titulo h1{ font-family: var(--serif); font-size:1.5rem; font-weight:600; }
+  .admin-page-titulo p{ font-size:0.84rem; color: var(--texto-suave); margin-top:2px; }
 
   .admin-toolbar{
     display:flex;
     flex-wrap:wrap;
     gap: 10px;
-    margin-bottom: 20px;
+    margin-bottom: 18px;
     align-items:center;
   }
   .admin-toolbar input, .admin-toolbar select{
-    padding: 10px 12px;
+    padding: 10px 13px;
     border:1px solid var(--cinza-borda);
-    border-radius: var(--radius);
+    border-radius: var(--radius-sm);
     font-size:0.88rem;
     background: var(--cinza-card);
+    color: var(--texto);
   }
+  .admin-toolbar input:focus, .admin-toolbar select:focus{ outline:none; border-color: var(--bordo); }
   .admin-toolbar input{ flex:1; min-width:180px; }
   .btn-admin{
     padding: 10px 18px;
-    border-radius: var(--radius);
+    border-radius: var(--radius-sm);
     font-size:0.85rem;
-    font-weight:600;
+    font-weight:700;
     white-space:nowrap;
+    transition: background .15s ease, border-color .15s ease, transform .1s ease;
   }
+  .btn-admin:active{ transform: scale(0.98); }
   .btn-admin-primary{ background: var(--bordo); color:#fff; }
   .btn-admin-primary:hover{ background: var(--bordo-escuro); }
   .btn-admin-outline{ border:1px solid var(--cinza-borda); background:#fff; color: var(--texto); }
-  .btn-admin-outline:hover{ background: var(--cinza-bg); }
+  .btn-admin-outline:hover{ background: var(--superficie-alt); border-color: var(--borda-forte); }
 
   @media (max-width: 640px){
     .admin-toolbar{ flex-direction:column; align-items:stretch; }
     .admin-toolbar input, .admin-toolbar select, .admin-toolbar .btn-admin{ width:100%; }
   }
 
-  /* ---------- PAINEL (tela inicial em cards, estilo dashboard) ---------- */
-  .admin-dash-grid{
-    display:grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 18px;
-    margin: 8px 0 40px;
+  /* Sidebar vira gaveta deslizante no celular/tablet estreito */
+  @media (max-width: 900px){
+    .admin-hamburger{ display:flex; }
+    .admin-sidebar{
+      position: fixed; top:0; left:0; height:100vh;
+      padding-top: 70px;
+      transform: translateX(-100%);
+      transition: transform .22s ease;
+      z-index: 90;
+      box-shadow: var(--sombra-lg);
+    }
+    .admin-sidebar.aberta{ transform: translateX(0); }
+    .admin-sidebar-overlay{
+      display:none; position:fixed; inset:0; background:rgba(20,15,14,0.4); z-index:80;
+    }
+    .admin-sidebar-overlay.show{ display:block; }
+    .admin-wrap{ padding: 20px 16px 70px; }
   }
+
+  /* ---------- DASHBOARD (tela inicial: números reais, não uma grade de
+     botões pra clicar — pra isso já existe a sidebar agora) ---------- */
+  .stat-grid{
+    display:grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  @media (min-width: 720px){ .stat-grid{ grid-template-columns: repeat(3, 1fr); } }
+  .stat-card{
+    background: var(--cinza-card);
+    border: 1px solid var(--cinza-borda);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    box-shadow: var(--sombra);
+  }
+  .stat-card-topo{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .stat-card-label{ font-size:0.78rem; color: var(--texto-suave); font-weight:600; }
+  .stat-card svg{ width:17px; height:17px; color: var(--texto-fraco); }
+  .stat-card-valor{ font-family: var(--serif); font-size:1.9rem; font-weight:600; line-height:1; font-variant-numeric: tabular-nums; }
+  .stat-card-valor.cor-alerta{ color: var(--vermelho); }
+  .stat-card-sub{ font-size:0.76rem; color: var(--texto-fraco); margin-top:6px; }
+  .stat-card.clicavel{ cursor:pointer; transition: border-color .15s ease, transform .12s ease; }
+  .stat-card.clicavel:hover{ border-color: var(--bordo); transform: translateY(-2px); }
+
+  .dash-secao-titulo{ font-size:1rem; font-weight:700; margin: 28px 0 12px; }
+  .dash-lista-card{
+    background: var(--cinza-card); border:1px solid var(--cinza-borda); border-radius: var(--radius);
+    box-shadow: var(--sombra);
+    overflow:hidden;
+  }
+  .dash-lista-item{
+    display:flex; align-items:center; gap:12px;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--cinza-borda);
+    font-size:0.86rem;
+  }
+  .dash-lista-item:last-child{ border-bottom:none; }
+  .dash-lista-item strong{ font-weight:700; }
+  .dash-lista-vazio{ padding: 26px 18px; text-align:center; color: var(--texto-fraco); font-size:0.85rem; }
+
+  /* Classe legada — algumas telas antigas ainda referenciam .admin-tile
+     como botão simples (ex: dentro de modais de configuração da loja). */
   .admin-tile{
     position:relative;
-    aspect-ratio: 1 / 0.9;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap: 12px;
+    gap: 10px;
     background: var(--cinza-card);
     border: 1px solid var(--cinza-borda);
     border-radius: var(--radius);
     padding: 18px;
-    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease, background .18s ease;
+    transition: border-color .15s ease, box-shadow .15s ease;
   }
-  .admin-tile:hover{
-    transform: translateY(-5px);
-    border-color: var(--bordo);
-    background: var(--bordo-bg);
-    box-shadow: 0 16px 32px rgba(107,15,26,0.14);
-  }
-  .admin-tile svg{ width:32px; height:32px; color: var(--petroleo); transition: color .18s ease; flex-shrink:0; }
+  .admin-tile:hover{ border-color: var(--bordo); box-shadow: var(--sombra); }
+  .admin-tile svg{ width:26px; height:26px; color: var(--petroleo); flex-shrink:0; }
   .admin-tile:hover svg{ color: var(--bordo); }
   .admin-tile .tile-label{ font-size:0.86rem; font-weight:700; color: var(--texto); text-align:center; }
   .admin-tile .tile-badge{
@@ -217,6 +338,7 @@
     background: var(--cinza-card);
     border: 1px solid var(--cinza-borda);
     border-radius: var(--radius);
+    box-shadow: var(--sombra);
     overflow-x:auto;
   }
   table.admin-tabela{ width:100%; border-collapse:collapse; min-width: 720px; }
@@ -296,7 +418,7 @@
      HTML/JS que monta a tabela — só reorganiza visualmente os <td>. */
   @media (max-width: 640px){
     #tabelaProdutos{ min-width: 0; }
-    #tabelaProdutosWrap{ overflow-x: visible; background:none; border:none; }
+    #tabelaProdutosWrap{ overflow-x: visible; background:none; border:none; box-shadow:none; }
     #tabelaProdutos thead{ display:none; }
     #tabelaProdutos, #tabelaProdutos tbody{ display:block; width:100%; }
     #tabelaProdutos tr{
@@ -578,93 +700,236 @@
 
 <div id="painelAdmin">
   <div class="admin-topbar">
-    <span class="marca">Admin</span>
-    <div style="display:flex; align-items:center; gap:18px;">
-      <a href="index.html" id="btnVoltarSite">← Voltar pro site</a>
+    <button type="button" class="admin-hamburger" id="btnAbrirSidebar" aria-label="Abrir menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+    </button>
+    <span class="marca"><img src="apple-touch-icon.png" alt=""> Pavan &amp; Co.</span>
+    <div class="admin-topbar-direita">
+      <a href="index.html" id="btnVoltarSite">Ver loja</a>
       <button type="button" id="btnSair">Sair</button>
     </div>
   </div>
 
-  <div class="admin-wrap">
+  <div class="admin-corpo">
+    <div class="admin-sidebar-overlay" id="sidebarOverlay"></div>
+    <nav class="admin-sidebar" id="adminSidebar">
+      <div class="admin-nav-grupo-titulo">Visão geral</div>
+      <button type="button" class="admin-nav-item" data-pagina="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        Painel
+      </button>
 
-    <!-- ============ PAINEL (tela inicial, estilo dashboard) ============ -->
-    <div id="adminDashboard">
-      <div class="admin-dash-grid">
-        <button type="button" class="admin-tile" data-secao="produtos">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 8l-9-5-9 5 9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
-          <span class="tile-label">Produtos</span>
-          <span class="tile-badge" id="tileBadgeEstoqueBaixo" style="display:none;background:var(--amarelo);" title="Peças com estoque baixo"></span>
-        </button>
-        <button type="button" class="admin-tile" data-secao="categorias">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg>
-          <span class="tile-label">Categorias</span>
-        </button>
-        <button type="button" class="admin-tile" data-secao="pagina-inicial">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/></svg>
-          <span class="tile-label">Página inicial</span>
-        </button>
-        <button type="button" class="admin-tile" data-secao="pedidos">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 8V6a6 6 0 0 1 12 0v2"/><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M9 12h6"/></svg>
-          <span class="tile-label">Pedidos</span>
-          <span class="tile-badge" id="tileBadgeNovosPedidos" style="display:none;"></span>
-        </button>
-        <button type="button" class="admin-tile" data-secao="mensagens">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
-          <span class="tile-label">Mensagens</span>
-          <span class="tile-badge" id="tileBadgeMensagens" style="display:none;"></span>
-        </button>
-        <button type="button" class="admin-tile" data-secao="promocoes">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20.6 12.6 12 21.2 2.8 12 12 2.8h8.6z" transform="rotate(45 12 12)"/><circle cx="9" cy="9" r="1.4" fill="currentColor" stroke="none"/><path d="m8.5 15.5 7-7"/></svg>
-          <span class="tile-label">Cupons</span>
-        </button>
-        <button type="button" class="admin-tile" data-secao="avaliacoes-pendentes">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9"/></svg>
-          <span class="tile-label">Avaliações pendentes</span>
-          <span class="tile-badge" id="tileBadgeAvaliacoes" style="display:none;"></span>
-        </button>
-        <button type="button" class="admin-tile" data-secao="trocas">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>
-          <span class="tile-label">Trocas/devoluções</span>
-          <span class="tile-badge" id="tileBadgeTrocas" style="display:none;"></span>
-        </button>
-      </div>
-    </div>
+      <div class="admin-nav-grupo-titulo">Vendas</div>
+      <button type="button" class="admin-nav-item" data-pagina="produtos">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 8l-9-5-9 5 9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
+        Produtos
+        <span class="nav-badge" id="tileBadgeEstoqueBaixo" style="display:none;background:var(--amarelo);" title="Peças com estoque baixo"></span>
+      </button>
+      <button type="button" class="admin-nav-item" data-pagina="pedidos">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 8V6a6 6 0 0 1 12 0v2"/><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M9 12h6"/></svg>
+        Pedidos
+        <span class="nav-badge" id="tileBadgeNovosPedidos" style="display:none;"></span>
+      </button>
+      <button type="button" class="admin-nav-item" data-pagina="cupons">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.6 12.6 12 21.2 2.8 12 12 2.8h8.6z" transform="rotate(45 12 12)"/><circle cx="9" cy="9" r="1.4" fill="currentColor" stroke="none"/><path d="m8.5 15.5 7-7"/></svg>
+        Cupons
+      </button>
 
-    <!-- ============ SEÇÃO: PRODUTOS ============ -->
-    <div id="adminProdutosView" style="display:none;">
-      <button type="button" class="admin-voltar-painel" id="btnVoltarPainel">← Painel</button>
+      <div class="admin-nav-grupo-titulo">Atendimento</div>
+      <button type="button" class="admin-nav-item" data-pagina="mensagens">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+        Mensagens
+        <span class="nav-badge" id="tileBadgeMensagens" style="display:none;"></span>
+      </button>
+      <button type="button" class="admin-nav-item" data-pagina="avaliacoes">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9"/></svg>
+        Avaliações
+        <span class="nav-badge" id="tileBadgeAvaliacoes" style="display:none;"></span>
+      </button>
+      <button type="button" class="admin-nav-item" data-pagina="trocas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>
+        Trocas/devoluções
+        <span class="nav-badge" id="tileBadgeTrocas" style="display:none;"></span>
+      </button>
 
-      <div class="admin-toolbar">
-        <input type="text" id="buscaAdmin" placeholder="Buscar por nome...">
-        <select id="filtroCategoriaAdmin">
-          <option value="">Todas as categorias</option>
-        </select>
-        <button type="button" class="btn-admin btn-admin-primary" id="btnNovoProduto">+ Novo produto</button>
-      </div>
+      <div class="admin-nav-grupo-titulo">Loja</div>
+      <button type="button" class="admin-nav-item" data-pagina="loja">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/></svg>
+        Configurações
+      </button>
+    </nav>
 
-      <!-- Botões originais dessas seções continuam existindo (escondidos)
-           pra não duplicar toda a lógica de abrir cada modal — os cards
-           do painel só "clicam" neles por baixo dos panos. -->
-      <button type="button" id="btnGerenciarCategorias" style="display:none;"></button>
-      <button type="button" id="btnPaginaInicial" style="display:none;"></button>
-      <button type="button" id="btnPedidos" style="display:none;"></button>
-      <button type="button" id="btnMensagens" style="display:none;"><span id="badgeMensagensNaoLidas" style="display:none;"></span></button>
+    <div class="admin-main">
+      <div class="admin-wrap">
 
-      <div class="admin-tabela-wrap" id="tabelaProdutosWrap">
-        <table class="admin-tabela" id="tabelaProdutos">
-          <thead>
-            <tr>
-              <th></th>
-              <th>Nome</th>
-              <th>Categoria</th>
-              <th>Preço</th>
-              <th>Estoque</th>
-            <th>Status</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody id="corpoTabelaAdmin"></tbody>
-      </table>
+        <!-- ============ DASHBOARD ============ -->
+        <div class="admin-pagina" id="paginaDashboard" data-pagina="dashboard">
+          <div class="admin-page-titulo">
+            <div>
+              <h1>Painel</h1>
+              <p id="dashSaudacao">Um resumo rápido da loja hoje.</p>
+            </div>
+          </div>
+          <div class="stat-grid" id="dashStatGrid"></div>
+          <div class="dash-secao-titulo">Últimos pedidos</div>
+          <div class="dash-lista-card" id="dashUltimosPedidos"><div class="dash-lista-vazio">Carregando…</div></div>
+        </div>
+
+        <!-- ============ PRODUTOS ============ -->
+        <div class="admin-pagina" id="adminProdutosView" data-pagina="produtos" style="display:none;">
+          <div class="admin-page-titulo"><div><h1>Produtos</h1><p>Catálogo completo da loja.</p></div></div>
+
+          <div class="admin-toolbar">
+            <input type="text" id="buscaAdmin" placeholder="Buscar por nome...">
+            <select id="filtroCategoriaAdmin">
+              <option value="">Todas as categorias</option>
+            </select>
+            <button type="button" class="btn-admin btn-admin-primary" id="btnNovoProduto">+ Novo produto</button>
+          </div>
+
+          <div class="admin-tabela-wrap" id="tabelaProdutosWrap">
+            <table class="admin-tabela" id="tabelaProdutos">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Nome</th>
+                  <th>Categoria</th>
+                  <th>Preço</th>
+                  <th>Estoque</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="corpoTabelaAdmin"></tbody>
+          </table>
+          </div>
+        </div>
+
+        <!-- ============ LOJA (configurações) ============ -->
+        <div class="admin-pagina" id="paginaLoja" data-pagina="loja" style="display:none;">
+          <div class="admin-page-titulo"><div><h1>Loja</h1><p>Configurações gerais — não muda com frequência.</p></div></div>
+          <div class="stat-grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));">
+            <button type="button" class="admin-tile" id="btnGerenciarCategorias" style="align-items:flex-start;text-align:left;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg>
+              <span class="tile-label">Categorias</span>
+              <span style="font-size:0.78rem;color:var(--texto-suave);">Criar, reordenar e trocar foto das categorias do menu.</span>
+            </button>
+            <button type="button" class="admin-tile" id="btnPaginaInicial" style="align-items:flex-start;text-align:left;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/></svg>
+              <span class="tile-label">Página inicial</span>
+              <span style="font-size:0.78rem;color:var(--texto-suave);">Banner de destaque e coleções em vitrine na home.</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- ============ PEDIDOS ============ -->
+        <div class="admin-pagina" id="modalPedidos" data-pagina="pedidos" style="display:none;">
+          <div class="admin-page-titulo"><div><h1>Pedidos</h1><p>Todos os pedidos já feitos na loja.</p></div></div>
+          <div class="admin-tabela-wrap">
+            <table class="admin-tabela">
+              <thead>
+                <tr>
+                  <th>Nº</th>
+                  <th>Data</th>
+                  <th>Cliente</th>
+                  <th>Itens</th>
+                  <th>Total</th>
+                  <th>Status</th>
+                  <th>Pagamento</th>
+                  <th>Frete</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="corpoTabelaPedidos"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ============ CUPONS ============ -->
+        <div class="admin-pagina" id="modalCupons" data-pagina="cupons" style="display:none;">
+          <div class="admin-page-titulo"><div><h1>Cupons de desconto</h1><p>Códigos promocionais e o "preço de fábrica" pessoal.</p></div></div>
+          <div class="admin-tabela-wrap" style="margin-bottom:26px;">
+            <table class="admin-tabela">
+              <thead>
+                <tr><th>Código</th><th>Desconto</th><th>Mín.</th><th>Usos</th><th>Status</th><th></th></tr>
+              </thead>
+              <tbody id="corpoTabelaCupons"></tbody>
+            </table>
+          </div>
+          <div class="dash-lista-card" style="padding:22px;">
+            <h3 style="margin:0 0 14px;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--texto-suave);">Novo cupom</h3>
+            <form id="formNovoCupom">
+              <div class="form-linha cols-2">
+                <div class="form-campo">
+                  <label for="cupomCodigo">Código *</label>
+                  <input type="text" id="cupomCodigo" required placeholder="Ex: BEMVINDA10" style="text-transform:uppercase;">
+                </div>
+                <div class="form-campo">
+                  <label for="cupomTipo">Tipo *</label>
+                  <select id="cupomTipo">
+                    <option value="percentual">Percentual (%)</option>
+                    <option value="fixo">Valor fixo (R$)</option>
+                    <option value="preco_fabrica">Preço de fábrica</option>
+                  </select>
+                </div>
+              </div>
+              <p id="cupomFabricaAviso" style="display:none;font-size:0.78rem;color:var(--texto-suave);background:var(--creme);padding:10px 12px;border-radius:4px;margin-bottom:16px;">
+                🏭 Esse tipo aplica, em <strong>qualquer produto</strong>, o preço de custo real da peça (sem margem de lucro) — calculado automaticamente por produto, não usa o campo "Valor" nem "Compra mínima". Não aparece no popup público de boas-vindas: é pra quem já tem o código (ex: família), e some sozinho.
+              </p>
+              <div class="form-linha cols-3">
+                <div class="form-campo" id="cupomValorCampo">
+                  <label for="cupomValor">Valor *</label>
+                  <input type="number" id="cupomValor" step="0.01" required placeholder="Ex: 10">
+                </div>
+                <div class="form-campo" id="cupomMinimoCampo">
+                  <label for="cupomMinimo">Compra mínima (R$)</label>
+                  <input type="number" id="cupomMinimo" step="0.01" placeholder="0">
+                </div>
+                <div class="form-campo">
+                  <label for="cupomUsoMaximo">Limite de usos</label>
+                  <input type="number" id="cupomUsoMaximo" placeholder="Sem limite">
+                </div>
+              </div>
+              <div class="form-campo">
+                <label for="cupomValidade">Validade (opcional)</label>
+                <input type="date" id="cupomValidade">
+              </div>
+              <label class="checkbox-linha" id="cupomExibirPopupLinha">
+                <input type="checkbox" id="cupomExibirPopup">
+                Mostrar num popup de boas-vindas pra quem visita o site <span style="font-weight:400;color:var(--texto-suave);">(só 1 cupom por vez — marcar este desmarca outro que já esteja em destaque)</span>
+              </label>
+              <button type="submit" class="btn-admin btn-admin-primary" style="margin-top:6px;">Criar cupom</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- ============ AVALIAÇÕES ============ -->
+        <div class="admin-pagina" id="modalAvaliacoesPendentes" data-pagina="avaliacoes" style="display:none;">
+          <div class="admin-page-titulo"><div><h1>Avaliações</h1><p>Enviadas pelos próprios clientes depois da entrega — aprove pra aparecer na página do produto.</p></div></div>
+          <div id="listaAvaliacoesPendentes"></div>
+        </div>
+
+        <!-- ============ TROCAS ============ -->
+        <div class="admin-pagina" id="modalTrocas" data-pagina="trocas" style="display:none;">
+          <div class="admin-page-titulo"><div><h1>Trocas e devoluções</h1><p>Solicitações abertas pelos clientes.</p></div></div>
+          <div id="listaTrocas"></div>
+        </div>
+
+        <!-- ============ MENSAGENS ============ -->
+        <div class="admin-pagina" id="modalMensagens" data-pagina="mensagens" style="display:none;">
+          <div class="admin-page-titulo"><div><h1>Mensagens</h1><p>Fale conosco e assinantes da newsletter.</p></div></div>
+
+          <h3 style="margin:0 0 12px;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--texto-suave);">Fale conosco</h3>
+          <div id="listaMensagensContato"></div>
+
+          <hr style="margin:24px 0;border:none;border-top:1px solid var(--cinza-borda);">
+
+          <h3 style="margin:0 0 12px;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--texto-suave);">
+            Newsletter <span id="contagemAssinantes" style="text-transform:none;letter-spacing:0;"></span>
+          </h3>
+          <div id="listaNewsletter"></div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -767,33 +1032,6 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="modalPedidos">
-  <div class="modal-card" style="max-width:980px;">
-    <h2>Pedidos</h2>
-    <div class="admin-tabela-wrap" style="border:1px solid var(--cinza-borda);">
-      <table class="admin-tabela">
-        <thead>
-          <tr>
-            <th>Nº</th>
-            <th>Data</th>
-            <th>Cliente</th>
-            <th>Itens</th>
-            <th>Total</th>
-            <th>Status</th>
-            <th>Pagamento</th>
-            <th>Frete</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="corpoTabelaPedidos"></tbody>
-      </table>
-    </div>
-    <div class="modal-footer">
-      <button type="button" class="btn-admin btn-admin-outline" id="btnFecharPedidos">Fechar</button>
-    </div>
-  </div>
-</div>
-
 <div class="modal-overlay" id="modalDetalhesPedido">
   <div class="modal-card" style="max-width:520px;">
     <h2>Pedido <span id="detalhesPedidoNumero"></span></h2>
@@ -824,109 +1062,6 @@
 
     <div class="modal-footer">
       <button type="button" class="btn-admin btn-admin-outline" id="btnFecharDetalhesPedido">Fechar</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="modalCupons">
-  <div class="modal-card" style="max-width:640px;">
-    <h2>Cupons de desconto</h2>
-    <div class="admin-tabela-wrap" style="border:1px solid var(--cinza-borda);margin-bottom:22px;">
-      <table class="admin-tabela">
-        <thead>
-          <tr><th>Código</th><th>Desconto</th><th>Mín.</th><th>Usos</th><th>Status</th><th></th></tr>
-        </thead>
-        <tbody id="corpoTabelaCupons"></tbody>
-      </table>
-    </div>
-    <h3 style="margin:0 0 12px;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--texto-suave);">Novo cupom</h3>
-    <form id="formNovoCupom">
-      <div class="form-linha cols-2">
-        <div class="form-campo">
-          <label for="cupomCodigo">Código *</label>
-          <input type="text" id="cupomCodigo" required placeholder="Ex: BEMVINDA10" style="text-transform:uppercase;">
-        </div>
-        <div class="form-campo">
-          <label for="cupomTipo">Tipo *</label>
-          <select id="cupomTipo">
-            <option value="percentual">Percentual (%)</option>
-            <option value="fixo">Valor fixo (R$)</option>
-            <option value="preco_fabrica">Preço de fábrica</option>
-          </select>
-        </div>
-      </div>
-      <p id="cupomFabricaAviso" style="display:none;font-size:0.78rem;color:var(--texto-suave);background:var(--creme);padding:10px 12px;border-radius:4px;margin-bottom:16px;">
-        🏭 Esse tipo aplica, em <strong>qualquer produto</strong>, o preço de custo real da peça (sem margem de lucro) — calculado automaticamente por produto, não usa o campo "Valor" nem "Compra mínima". Não aparece no popup público de boas-vindas: é pra quem já tem o código (ex: família), e some sozinho.
-      </p>
-      <div class="form-linha cols-3">
-        <div class="form-campo" id="cupomValorCampo">
-          <label for="cupomValor">Valor *</label>
-          <input type="number" id="cupomValor" step="0.01" required placeholder="Ex: 10">
-        </div>
-        <div class="form-campo" id="cupomMinimoCampo">
-          <label for="cupomMinimo">Compra mínima (R$)</label>
-          <input type="number" id="cupomMinimo" step="0.01" placeholder="0">
-        </div>
-        <div class="form-campo">
-          <label for="cupomUsoMaximo">Limite de usos</label>
-          <input type="number" id="cupomUsoMaximo" placeholder="Sem limite">
-        </div>
-      </div>
-      <div class="form-campo">
-        <label for="cupomValidade">Validade (opcional)</label>
-        <input type="date" id="cupomValidade">
-      </div>
-      <label class="checkbox-linha" id="cupomExibirPopupLinha">
-        <input type="checkbox" id="cupomExibirPopup">
-        Mostrar num popup de boas-vindas pra quem visita o site <span style="font-weight:400;color:var(--texto-suave);">(só 1 cupom por vez — marcar este desmarca outro que já esteja em destaque)</span>
-      </label>
-      <div class="modal-footer" style="justify-content:flex-start;">
-        <button type="submit" class="btn-admin btn-admin-primary">Criar cupom</button>
-      </div>
-    </form>
-    <div class="modal-footer">
-      <button type="button" class="btn-admin btn-admin-outline" id="btnFecharCupons">Fechar</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="modalAvaliacoesPendentes">
-  <div class="modal-card" style="max-width:640px;">
-    <h2>Avaliações pendentes</h2>
-    <p style="font-size:0.82rem;color:var(--texto-suave);margin-bottom:16px;">Avaliações enviadas pelos próprios clientes depois da entrega — aprove pra elas aparecerem na página do produto.</p>
-    <div id="listaAvaliacoesPendentes"></div>
-    <div class="modal-footer">
-      <button type="button" class="btn-admin btn-admin-outline" id="btnFecharAvaliacoesPendentes">Fechar</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="modalTrocas">
-  <div class="modal-card" style="max-width:720px;">
-    <h2>Trocas, devoluções e problemas</h2>
-    <div id="listaTrocas"></div>
-    <div class="modal-footer">
-      <button type="button" class="btn-admin btn-admin-outline" id="btnFecharTrocas">Fechar</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="modalMensagens">
-  <div class="modal-card" style="max-width:760px;">
-    <h2>Mensagens</h2>
-
-    <h3 style="margin:0 0 12px;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--texto-suave);">Fale conosco</h3>
-    <div id="listaMensagensContato"></div>
-
-    <hr style="margin:24px 0;border:none;border-top:1px solid var(--cinza-borda);">
-
-    <h3 style="margin:0 0 12px;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--texto-suave);">
-      Newsletter <span id="contagemAssinantes" style="text-transform:none;letter-spacing:0;"></span>
-    </h3>
-    <div id="listaNewsletter"></div>
-
-    <div class="modal-footer">
-      <button type="button" class="btn-admin btn-admin-outline" id="btnFecharMensagens">Fechar</button>
     </div>
   </div>
 </div>
@@ -1259,10 +1394,7 @@ async function confirmarAcessoAdmin(){
   document.getElementById('painelAdmin').classList.add('show');
   await carregarCategoriasAdmin();
   popularSelectsDeCategoria();
-  atualizarBadgeMensagens();
-  atualizarBadgeAvaliacoesPendentes();
-  atualizarBadgeTrocas();
-  atualizarBadgeEstoqueBaixo();
+  mostrarPaginaAdmin('dashboard');
   ativarNotificacaoNovoPedido();
   return true;
 }
@@ -1305,37 +1437,132 @@ document.getElementById('btnSair').addEventListener('click', async () => {
    NAVEGAÇÃO DO PAINEL (cards -> seção)
    ============================================================ */
 let produtosCarregadosUmaVez = false;
+let paginaAdminAtual = 'dashboard';
 
-function abrirSecaoProdutos(){
-  document.getElementById('adminDashboard').style.display = 'none';
-  document.getElementById('adminProdutosView').style.display = 'block';
-  if (!produtosCarregadosUmaVez){
-    produtosCarregadosUmaVez = true;
-    renderTabela();
-  }
+// Cada página da sidebar sabe carregar seus próprios dados quando é
+// mostrada — pedidos/mensagens/cupons/avaliações/trocas recarregam toda
+// vez (é rápido e garante dado fresco); produtos só na primeira vez
+// (lista grande, e o próprio admin já atualiza a linha depois de editar).
+const CARREGADORES_PAGINA_ADMIN = {
+  dashboard: () => carregarDashboardAdmin(),
+  produtos: () => {
+    if (!produtosCarregadosUmaVez){
+      produtosCarregadosUmaVez = true;
+      renderTabela();
+    }
+  },
+  pedidos: () => {
+    renderTabelaPedidos();
+    contagemPedidosNovos = 0;
+    document.getElementById('tileBadgeNovosPedidos').style.display = 'none';
+  },
+  mensagens: () => { renderMensagensContato(); renderNewsletter(); },
+  cupons: () => { renderTabelaCupons(); atualizarCamposCupomPorTipo(); },
+  avaliacoes: () => renderAvaliacoesPendentes(),
+  trocas: () => renderTrocas(),
+  loja: () => {}
+};
+
+// Ponto único de navegação: esconde toda .admin-pagina e mostra só a
+// escolhida, marca o item ativo na sidebar, e atualiza os badges (do
+// jeito antigo, cada seção só recontava o próprio badge ao fechar —
+// aqui é mais simples e mais correto recontar todos a cada troca de
+// página, já que essas contagens são baratas).
+function mostrarPaginaAdmin(nome){
+  paginaAdminAtual = nome;
+  document.querySelectorAll('.admin-pagina').forEach(el => {
+    el.style.display = el.dataset.pagina === nome ? 'block' : 'none';
+  });
+  document.querySelectorAll('.admin-nav-item').forEach(item => {
+    item.classList.toggle('ativo', item.getAttribute('data-pagina') === nome);
+  });
+  fecharSidebarMobile();
+  (CARREGADORES_PAGINA_ADMIN[nome] || (() => {}))();
+  atualizarBadgeMensagens();
+  atualizarBadgeEstoqueBaixo();
+  atualizarBadgeAvaliacoesPendentes();
+  atualizarBadgeTrocas();
 }
 
-document.getElementById('btnVoltarPainel').addEventListener('click', () => {
-  document.getElementById('adminProdutosView').style.display = 'none';
-  document.getElementById('adminDashboard').style.display = 'block';
+document.querySelectorAll('.admin-nav-item[data-pagina]').forEach(item => {
+  item.addEventListener('click', () => mostrarPaginaAdmin(item.getAttribute('data-pagina')));
 });
 
-document.querySelectorAll('.admin-tile').forEach(tile => {
-  tile.addEventListener('click', () => {
-    const secao = tile.getAttribute('data-secao');
-    // Categorias/Página inicial/Pedidos/Mensagens reaproveitam os botões
-    // originais (escondidos) — clicar no card só aciona o clique deles,
-    // sem duplicar a lógica de abrir cada modal.
-    if (secao === 'produtos') abrirSecaoProdutos();
-    else if (secao === 'categorias') document.getElementById('btnGerenciarCategorias').click();
-    else if (secao === 'pagina-inicial') document.getElementById('btnPaginaInicial').click();
-    else if (secao === 'pedidos') document.getElementById('btnPedidos').click();
-    else if (secao === 'mensagens') document.getElementById('btnMensagens').click();
-    else if (secao === 'promocoes') abrirModalCupons();
-    else if (secao === 'avaliacoes-pendentes') abrirModalAvaliacoesPendentes();
-    else if (secao === 'trocas') abrirModalTrocas();
+// Sidebar vira gaveta deslizante no celular/tablet estreito.
+const adminSidebar = document.getElementById('adminSidebar');
+const sidebarOverlay = document.getElementById('sidebarOverlay');
+function abrirSidebarMobile(){ adminSidebar.classList.add('aberta'); sidebarOverlay.classList.add('show'); }
+function fecharSidebarMobile(){ adminSidebar.classList.remove('aberta'); sidebarOverlay.classList.remove('show'); }
+document.getElementById('btnAbrirSidebar').addEventListener('click', abrirSidebarMobile);
+sidebarOverlay.addEventListener('click', fecharSidebarMobile);
+
+// ---------- DASHBOARD: números reais em vez de uma grade de botões ----------
+function pillClasseStatusPedido(status){
+  if (status === 'cancelado') return 'cor-vermelho';
+  if (['confirmado', 'enviado', 'entregue'].includes(status)) return 'cor-verde';
+  return 'cor-amarelo'; // novo
+}
+
+async function carregarDashboardAdmin(){
+  const grid = document.getElementById('dashStatGrid');
+  const listaEl = document.getElementById('dashUltimosPedidos');
+
+  const inicioMes = new Date();
+  inicioMes.setDate(1);
+  inicioMes.setHours(0, 0, 0, 0);
+
+  const [pedidosRes, produtosRes, mensagensRes, avaliacoesRes] = await Promise.all([
+    sb.from('pedidos').select('id, nome_cliente, total, status, status_pagamento, criado_em').order('criado_em', { ascending: false }).limit(80),
+    sb.rpc('produtos_admin').select('estoque, estoque_minimo, ativo'),
+    sb.from('mensagens_contato').select('id', { count: 'exact', head: true }).eq('lida', false),
+    sb.from('avaliacoes').select('id', { count: 'exact', head: true }).eq('aprovado', false)
+  ]);
+
+  const pedidos = pedidosRes.data || [];
+  const produtosAtivos = (produtosRes.data || []).filter(p => p.ativo);
+  const estoqueBaixo = produtosAtivos.filter(p => (p.estoque ?? 0) <= (p.estoque_minimo ?? 5)).length;
+  const pedidosNovos = pedidos.filter(p => ['novo', 'confirmado'].includes(p.status)).length;
+  const receitaMes = pedidos
+    .filter(p => p.status_pagamento === 'aprovado' && new Date(p.criado_em) >= inicioMes)
+    .reduce((soma, p) => soma + Number(p.total || 0), 0);
+
+  const stats = [
+    { label: 'Pedidos novos', valor: pedidosNovos, alerta: pedidosNovos > 0, pagina: 'pedidos',
+      icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 8V6a6 6 0 0 1 12 0v2"/><rect x="3" y="8" width="18" height="13" rx="2"/></svg>' },
+    { label: 'Receita do mês', valor: formatarPreco(receitaMes), pagina: 'pedidos',
+      icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 9.5c0-1.4 1.3-2.5 3-2.5s3 1 3 2.2c0 2.8-6 1.3-6 4 0 1.3 1.3 2.3 3 2.3s3-1 3-2.3"/></svg>' },
+    { label: 'Produtos ativos', valor: produtosAtivos.length, pagina: 'produtos',
+      icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 8l-9-5-9 5 9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8"/></svg>' },
+    { label: 'Estoque baixo', valor: estoqueBaixo, alerta: estoqueBaixo > 0, pagina: 'produtos',
+      icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3 2 20h20L12 3Z"/><line x1="12" y1="10" x2="12" y2="14"/><circle cx="12" cy="17" r="0.6" fill="currentColor"/></svg>' },
+    { label: 'Mensagens', valor: mensagensRes.count || 0, pagina: 'mensagens',
+      icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>' },
+    { label: 'Avaliações pendentes', valor: avaliacoesRes.count || 0, pagina: 'avaliacoes',
+      icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9"/></svg>' }
+  ];
+
+  grid.innerHTML = stats.map(s => `
+    <div class="stat-card clicavel" data-ir="${s.pagina}">
+      <div class="stat-card-topo"><span class="stat-card-label">${s.label}</span>${s.icone}</div>
+      <div class="stat-card-valor ${s.alerta ? 'cor-alerta' : ''}">${s.valor}</div>
+    </div>
+  `).join('');
+  grid.querySelectorAll('.stat-card[data-ir]').forEach(card => {
+    card.addEventListener('click', () => mostrarPaginaAdmin(card.getAttribute('data-ir')));
   });
-});
+
+  const ultimos = pedidos.slice(0, 6);
+  listaEl.innerHTML = ultimos.length ? ultimos.map(p => `
+    <div class="dash-lista-item">
+      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+        <strong>${escaparHtml(p.nome_cliente)}</strong>
+        <span style="color:var(--texto-fraco);"> · #${String(p.id).slice(0, 8).toUpperCase()}</span>
+      </span>
+      <span class="status-pill ${pillClasseStatusPedido(p.status)}">${STATUS_PEDIDO_LABEL_ADMIN[p.status] || p.status}</span>
+      <span style="font-weight:700;min-width:78px;text-align:right;">${formatarPreco(p.total)}</span>
+    </div>
+  `).join('') : '<div class="dash-lista-vazio">Nenhum pedido ainda.</div>';
+}
 
 let produtosAdmin = [];
 let categoriasAdminCache = [];
@@ -1840,13 +2067,6 @@ function abrirDetalhesPedido(pedido){
   document.getElementById('modalDetalhesPedido').classList.add('show');
 }
 
-document.getElementById('btnPedidos').addEventListener('click', () => {
-  renderTabelaPedidos();
-  document.getElementById('modalPedidos').classList.add('show');
-});
-document.getElementById('btnFecharPedidos').addEventListener('click', () => {
-  document.getElementById('modalPedidos').classList.remove('show');
-});
 document.getElementById('btnFecharDetalhesPedido').addEventListener('click', () => {
   document.getElementById('modalDetalhesPedido').classList.remove('show');
 });
@@ -1948,14 +2168,13 @@ function mostrarToastAdmin(mensagem){
    ============================================================ */
 async function atualizarBadgeMensagens(){
   const { count } = await sb.from('mensagens_contato').select('id', { count: 'exact', head: true }).eq('lida', false);
-  [document.getElementById('badgeMensagensNaoLidas'), document.getElementById('tileBadgeMensagens')].forEach(badge => {
-    if (count > 0){
-      badge.textContent = count;
-      badge.style.display = 'flex';
-    } else {
-      badge.style.display = 'none';
-    }
-  });
+  const badge = document.getElementById('tileBadgeMensagens');
+  if (count > 0){
+    badge.textContent = count;
+    badge.style.display = 'flex';
+  } else {
+    badge.style.display = 'none';
+  }
 }
 
 async function renderMensagensContato(){
@@ -2015,15 +2234,6 @@ async function renderNewsletter(){
   });
 }
 
-document.getElementById('btnMensagens').addEventListener('click', () => {
-  renderMensagensContato();
-  renderNewsletter();
-  document.getElementById('modalMensagens').classList.add('show');
-});
-document.getElementById('btnFecharMensagens').addEventListener('click', () => {
-  document.getElementById('modalMensagens').classList.remove('show');
-  atualizarBadgeMensagens();
-});
 
 /* ============================================================
    CUPONS DE DESCONTO
@@ -2090,14 +2300,6 @@ function atualizarCamposCupomPorTipo(){
 }
 document.getElementById('cupomTipo').addEventListener('change', atualizarCamposCupomPorTipo);
 
-function abrirModalCupons(){
-  renderTabelaCupons();
-  atualizarCamposCupomPorTipo();
-  document.getElementById('modalCupons').classList.add('show');
-}
-document.getElementById('btnFecharCupons').addEventListener('click', () => {
-  document.getElementById('modalCupons').classList.remove('show');
-});
 document.getElementById('formNovoCupom').addEventListener('submit', async (e) => {
   e.preventDefault();
   const botao = e.target.querySelector('button[type="submit"]');
@@ -2182,15 +2384,6 @@ async function renderAvaliacoesPendentes(){
   });
 }
 
-function abrirModalAvaliacoesPendentes(){
-  renderAvaliacoesPendentes();
-  document.getElementById('modalAvaliacoesPendentes').classList.add('show');
-}
-document.getElementById('btnFecharAvaliacoesPendentes').addEventListener('click', () => {
-  document.getElementById('modalAvaliacoesPendentes').classList.remove('show');
-  atualizarBadgeAvaliacoesPendentes();
-});
-
 async function atualizarBadgeAvaliacoesPendentes(){
   const { count } = await sb.from('avaliacoes').select('id', { count: 'exact', head: true }).eq('aprovado', false);
   const badge = document.getElementById('tileBadgeAvaliacoes');
@@ -2253,14 +2446,6 @@ async function renderTrocas(){
   });
 }
 
-function abrirModalTrocas(){
-  renderTrocas();
-  document.getElementById('modalTrocas').classList.add('show');
-}
-document.getElementById('btnFecharTrocas').addEventListener('click', () => {
-  document.getElementById('modalTrocas').classList.remove('show');
-});
-
 async function atualizarBadgeTrocas(){
   const { count } = await sb.from('solicitacoes_troca').select('id', { count: 'exact', head: true }).eq('status', 'aberta');
   const badge = document.getElementById('tileBadgeTrocas');
@@ -2315,10 +2500,6 @@ function ativarNotificacaoNovoPedido(){
     })
     .subscribe();
 }
-document.getElementById('btnPedidos').addEventListener('click', () => {
-  contagemPedidosNovos = 0;
-  document.getElementById('tileBadgeNovosPedidos').style.display = 'none';
-});
 
 const CATEGORIA_LABEL = { aliancas: "Alianças", aneis: "Anéis", brincos: "Brincos", colares: "Colares", pulseiras: "Pulseiras", joias: "Joias" };
 
