@@ -197,10 +197,11 @@ function renderCarrinho(){
     cupomInput.value = cupomSalvo;
     aplicarCupomCarrinho(cupomSalvo, true);
   } else {
-    // Sem cupom salvo ainda — confere se existe um cupom de boas-vindas em
-    // destaque (não espera o popup aparecer, pra já vir aplicado de cara).
+    // Sem cupom salvo ainda — só reaplica sozinho o cupom de boas-vindas
+    // se a pessoa já clicou em "Resgatar" no popup (senão não é pra
+    // descontar nada escondido, mesmo com o cupom em destaque existindo).
     obterCupomDestaque().then(cupom => {
-      if (!cupom || obterCupomAplicado()) return;
+      if (!cupom || obterCupomAplicado() || obterCupomDestaqueResgatado() !== cupom.codigo) return;
       cupomInput.value = cupom.codigo;
       aplicarCupomCarrinho(cupom.codigo, true);
     });
