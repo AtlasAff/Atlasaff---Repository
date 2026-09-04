@@ -590,7 +590,7 @@ function renderOpcoesFrete(){
         <span class="transportadora">${o.transportadora} — ${o.servico}</span>
         <span class="prazo">${o.prazoConfeccaoDias} dias de confecção + ${o.prazoEntregaDiasMin} a ${o.prazoEntregaDias} dias úteis de entrega</span>
       </div>
-      <span class="preco">${gratis ? 'Grátis' : formatarPreco(o.preco)}</span>
+      <span class="preco">${gratis ? seloFreteGratisHTML() : formatarPreco(o.preco)}</span>
     </label>
   `).join('');
   document.querySelectorAll('input[name="freteOpcao"]').forEach(radio => {
