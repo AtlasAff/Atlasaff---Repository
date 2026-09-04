@@ -1554,12 +1554,17 @@
   margin-top: 10px;
   font-variant-numeric: lining-nums tabular-nums;
 }
+/* Preço riscado (cupom de boas-vindas ou preço de fábrica ativo) sempre
+   cinza, nunca bordô — inclusive dentro dos cards de produto (.prod-price),
+   onde sem isso herdava a mesma cor bordô do preço novo ao lado. */
+.preco-riscado{
+  color: var(--texto-suave);
+  text-decoration: line-through;
+  font-weight: 400;
+}
 .produto-preco .preco-riscado{
   font-family: var(--sans);
   font-size: 1rem;
-  font-weight: 400;
-  color: var(--texto-suave);
-  text-decoration: line-through;
   margin-right: 8px;
 }
 .produto-preco-cupom{
