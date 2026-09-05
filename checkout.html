@@ -89,6 +89,11 @@
         <label for="ckEmail">E-mail *</label>
         <input type="email" id="ckEmail" required>
       </div>
+      <div class="checkout-campo" id="ckSenhaWrap">
+        <label for="ckSenha">Crie uma senha *</label>
+        <input type="password" id="ckSenha" minlength="6" autocomplete="new-password">
+        <span class="checkout-campo-aviso">Sua conta é criada com esses dados ao confirmar o pedido — assim você acompanha a compra a qualquer momento em "Minha conta".</span>
+      </div>
     </div>
 
     <div class="checkout-secao">
@@ -467,11 +472,26 @@ async function aplicarCupomCheckout(codigo, silencioso){
   renderResumo();
 }
 
-// Cliente logado: preenche o formulário com o que já foi salvo em "Meus
-// dados" (conta.html), pra não precisar digitar tudo de novo toda vez.
+// Fica true assim que confirmamos (ou criamos) uma sessão — usado no
+// envio do pedido pra saber se ainda precisa criar a conta ou não.
+let jaTemContaLogada = false;
+
+// Cliente logado: esconde o campo de senha (a conta já existe) e preenche
+// o formulário com o que já foi salvo em "Meus dados" (conta.html), pra
+// não precisar digitar tudo de novo toda vez. Cliente NÃO logado: exige
+// senha aqui mesmo — a conta é criada junto com o pedido, ninguém mais
+// compra como convidado (facilita acompanhar pedido, histórico, etc.).
 async function preencherComPerfilSalvo(){
   const { data } = await sb.auth.getSession();
-  if (!data.session) return;
+  const senhaInput = document.getElementById('ckSenha');
+  if (!data.session){
+    senhaInput.required = true;
+    return;
+  }
+
+  jaTemContaLogada = true;
+  document.getElementById('ckSenhaWrap').style.display = 'none';
+  senhaInput.required = false;
 
   document.getElementById('ckEmail').value = data.session.user.email;
 
@@ -614,13 +634,38 @@ document.getElementById('formCheckout').addEventListener('submit', async (e) => 
   botao.textContent = 'Enviando...';
   const restaurarBotao = () => { botao.disabled = false; botao.textContent = 'Ir para o pagamento'; };
 
+  const nomeCliente = document.getElementById('ckNome').value.trim();
+  const emailCliente = document.getElementById('ckEmail').value.trim();
+
+  // Ninguém compra mais como convidado — se ainda não tem sessão, a conta
+  // é criada aqui mesmo, com os dados já preenchidos, antes de gravar o
+  // pedido (assim o pedido já nasce ligado ao user_id de verdade, não
+  // fica "solto" pra alguém reivindicar depois).
+  let contaRecemCriada = false;
+  if (!jaTemContaLogada){
+    const { error: erroCadastro } = await sb.auth.signUp({
+      email: emailCliente,
+      password: document.getElementById('ckSenha').value,
+      options: { data: { nome: nomeCliente } }
+    });
+    if (erroCadastro){
+      alert(erroCadastro.message.includes('already registered')
+        ? 'Já existe uma conta com esse e-mail. Entre na sua conta (ícone no topo da página) antes de finalizar a compra — seu carrinho continua salvo.'
+        : 'Não foi possível criar sua conta: ' + erroCadastro.message);
+      restaurarBotao();
+      return;
+    }
+    contaRecemCriada = true;
+    jaTemContaLogada = true;
+  }
+
   const subtotal = subtotalCarrinho();
   const gratis = carrinhoTemFreteGratis(itensCarrinho);
   const freteFinal = gratis ? 0 : freteEscolhido.preco;
 
   const pedido = {
-    nome_cliente: document.getElementById('ckNome').value.trim(),
-    email_cliente: document.getElementById('ckEmail').value.trim(),
+    nome_cliente: nomeCliente,
+    email_cliente: emailCliente,
     telefone_cliente: document.getElementById('ckTelefone').value.trim(),
     cep: ckCep.value.replace(/\D/g, ''),
     endereco: document.getElementById('ckEndereco').value.trim(),
@@ -647,6 +692,9 @@ document.getElementById('formCheckout').addEventListener('submit', async (e) => 
     // best-effort (.catch vazio: se e-mail falhar, o pedido já tá gravado
     // e o checkout não pode travar por causa disso).
     sb.functions.invoke('notificar-status-pedido', { body: { pedido_id: data.id, novo_status: 'novo' } }).catch(() => {});
+    if (contaRecemCriada){
+      sb.functions.invoke('notificar-conta-criada', { body: { nome: nomeCliente, email: emailCliente } }).catch(() => {});
+    }
 
     // Carrinho já foi convertido em pedido (os itens ficam salvos no
     // próprio pedido) — some com ele mesmo que o pagamento ainda não

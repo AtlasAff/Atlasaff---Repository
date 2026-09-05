@@ -897,8 +897,8 @@ async function mostrarPopupPrecoFabrica(){
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
     </button>
     <span class="popup-cupom-eyebrow">Preço de fábrica 🏭</span>
-    <strong class="popup-cupom-desconto">Ativado pra você</strong>
-    <p>Todo produto do site já está com o seu preço especial — não precisa fazer nada, já vem aplicado sozinho.</p>
+    <strong class="popup-cupom-desconto">Ativo na sua conta</strong>
+    <p>Você tem acesso ao preço de fábrica em toda a loja. O desconto é aplicado automaticamente em cada peça, sem necessidade de nenhuma ação adicional.</p>
   `;
   document.body.appendChild(popup);
   requestAnimationFrame(() => popup.classList.add('show'));
