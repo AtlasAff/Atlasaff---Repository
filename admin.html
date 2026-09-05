@@ -828,6 +828,7 @@
                   <th>Cadastro</th>
                   <th>Último acesso</th>
                   <th>Preço de fábrica</th>
+                  <th>Contato</th>
                 </tr>
               </thead>
               <tbody id="corpoTabelaClientes"></tbody>
@@ -1091,6 +1092,26 @@
 
     <div class="modal-footer">
       <button type="button" class="btn-admin btn-admin-outline" id="btnFecharDetalhesPedido">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalEmailCliente">
+  <div class="modal-card" style="max-width:480px;">
+    <h2>Enviar e-mail</h2>
+    <p style="font-size:0.84rem;color:var(--texto-suave);margin-bottom:16px;">Para: <strong id="emailClienteDestino"></strong></p>
+    <div class="form-campo">
+      <label for="emailClienteAssunto">Assunto</label>
+      <input type="text" id="emailClienteAssunto" placeholder="Ex: Sobre o seu pedido">
+    </div>
+    <div class="form-campo">
+      <label for="emailClienteMensagem">Mensagem</label>
+      <textarea id="emailClienteMensagem" rows="7" placeholder="Escreva a mensagem que a pessoa vai receber..."></textarea>
+    </div>
+    <p style="font-size:0.76rem;color:var(--texto-suave);margin-top:-8px;margin-bottom:4px;">Vai no template padrão da Pavan &amp; Co. (com seu domínio), só o assunto e a mensagem mudam.</p>
+    <div class="modal-footer">
+      <button type="button" class="btn-admin btn-admin-outline" id="btnCancelarEmailCliente">Cancelar</button>
+      <button type="button" class="btn-admin btn-admin-primary" id="btnEnviarEmailCliente">Enviar</button>
     </div>
   </div>
 </div>
@@ -2496,7 +2517,7 @@ async function renderTabelaClientes(){
   const { data, error } = await sb.rpc('listar_clientes_admin');
   const corpo = document.getElementById('corpoTabelaClientes');
   if (error){
-    corpo.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:30px;color:var(--texto-suave);">Erro ao carregar clientes.</td></tr>`;
+    corpo.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--texto-suave);">Erro ao carregar clientes.</td></tr>`;
     return;
   }
   clientesAdminCache = data || [];
@@ -2523,8 +2544,11 @@ function renderLinhasClientes(){
           ? `<span class="status-pill status-ativo">✓ Concedida</span> <button type="button" data-acao="revogar-fabrica" data-id="${c.user_id}" style="font-size:0.78rem;color:var(--vermelho);text-decoration:underline;margin-left:8px;">Revogar</button>`
           : `<button type="button" class="btn-admin btn-admin-outline" data-acao="conceder-fabrica" data-id="${c.user_id}" style="padding:6px 12px;font-size:0.78rem;">Conceder</button>`}
       </td>
+      <td>
+        <button type="button" class="btn-admin btn-admin-outline" data-acao="enviar-email" data-email="${escaparHtml(c.email)}" data-nome="${escaparHtml(c.nome || '')}" style="padding:6px 12px;font-size:0.78rem;">✉️ Enviar e-mail</button>
+      </td>
     </tr>
-  `).join('') : `<tr><td colspan="4" style="text-align:center;padding:30px;color:var(--texto-suave);">Nenhum cliente encontrado.</td></tr>`;
+  `).join('') : `<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--texto-suave);">Nenhum cliente encontrado.</td></tr>`;
 
   corpo.querySelectorAll('button[data-acao="conceder-fabrica"]').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -2545,7 +2569,49 @@ function renderLinhasClientes(){
       await renderTabelaClientes();
     });
   });
+  corpo.querySelectorAll('button[data-acao="enviar-email"]').forEach(btn => {
+    btn.addEventListener('click', () => abrirModalEmailCliente(btn.getAttribute('data-email'), btn.getAttribute('data-nome')));
+  });
 }
+
+/* ============================================================
+   ENVIAR E-MAIL PRA UM CLIENTE — mesmo template padrão da marca
+   (identidade visual dos e-mails automáticos), mas com assunto e
+   mensagem escritos na hora, escolhendo a conta na tela de Clientes.
+   ============================================================ */
+let clienteEmailDestino = null; // { email, nome }
+function abrirModalEmailCliente(email, nome){
+  clienteEmailDestino = { email, nome };
+  document.getElementById('emailClienteDestino').textContent = nome ? `${nome} <${email}>` : email;
+  document.getElementById('emailClienteAssunto').value = '';
+  document.getElementById('emailClienteMensagem').value = '';
+  document.getElementById('modalEmailCliente').classList.add('show');
+}
+document.getElementById('btnCancelarEmailCliente').addEventListener('click', () => {
+  document.getElementById('modalEmailCliente').classList.remove('show');
+});
+document.getElementById('btnEnviarEmailCliente').addEventListener('click', async () => {
+  const assunto = document.getElementById('emailClienteAssunto').value.trim();
+  const mensagem = document.getElementById('emailClienteMensagem').value.trim();
+  if (!assunto || !mensagem){
+    alert('Preencha o assunto e a mensagem antes de enviar.');
+    return;
+  }
+  const btn = document.getElementById('btnEnviarEmailCliente');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+  const { data, error } = await sb.functions.invoke('notificar-mensagem-admin', {
+    body: { destinatario_email: clienteEmailDestino.email, destinatario_nome: clienteEmailDestino.nome, assunto, mensagem }
+  });
+  btn.disabled = false;
+  btn.textContent = 'Enviar';
+  if (error || data?.error){
+    alert('Não foi possível enviar: ' + (data?.error || error?.message || 'erro desconhecido.'));
+    return;
+  }
+  mostrarToastAdmin('E-mail enviado ✓');
+  document.getElementById('modalEmailCliente').classList.remove('show');
+});
 
 /* ============================================================
    ESTOQUE BAIXO
