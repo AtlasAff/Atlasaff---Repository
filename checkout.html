@@ -321,10 +321,12 @@ function mostrarCarregandoResultado(){
 function renderResultadoPedido(pedido, dicaUrl){
   const numero = `#${String(pedido.id).slice(0, 8).toUpperCase()}`;
 
+  const avisoSpam = ' Se não achar o e-mail em alguns minutos, dá uma olhada na caixa de spam/lixo eletrônico.';
+
   if (pedido.status_pagamento === 'aprovado'){
     mostrarResultado({
       tipo: 'verde', icone: '✓', titulo: 'Pagamento aprovado!',
-      texto: 'Seu pedido já está confirmado — nossa equipe começa a preparar sua peça com todo cuidado. Você também recebe a confirmação por e-mail.',
+      texto: 'Seu pedido já está confirmado — nossa equipe começa a preparar sua peça com todo cuidado. Você também recebe a confirmação por e-mail.' + avisoSpam,
       numero
     });
   } else if (pedido.status_pagamento === 'recusado'){
@@ -338,9 +340,9 @@ function renderResultadoPedido(pedido, dicaUrl){
     // Pendente / em análise — normal em Pix recém-gerado, boleto, ou cartão em análise
     mostrarResultado({
       tipo: 'amarelo', icone: '⏳', titulo: 'Pagamento em análise',
-      texto: dicaUrl === 'pending'
+      texto: (dicaUrl === 'pending'
         ? 'Recebemos seu pedido e estamos aguardando a confirmação do pagamento (comum em boleto ou Pix). Assim que confirmar, te avisamos por e-mail.'
-        : 'Ainda estamos confirmando seu pagamento com o Mercado Pago. Pode levar alguns minutos — atualize esta página daqui a pouco pra ver a confirmação.',
+        : 'Ainda estamos confirmando seu pagamento com o Mercado Pago. Pode levar alguns minutos — atualize esta página daqui a pouco pra ver a confirmação.') + avisoSpam,
       numero,
       acaoPrincipal: { texto: 'Atualizar status', onClick: () => location.reload() }
     });
