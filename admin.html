@@ -1352,7 +1352,7 @@
           <p class="calc-lucro-titulo">Calculadora de preço <span>(uso interno — o cliente nunca vê isso)</span></p>
           <div class="form-linha cols-3">
             <div class="form-campo">
-              <label for="fCustoPeca">Custo da peça (R$)</label>
+              <label for="fCustoPeca">Custo da peça (R$) <span id="fCustoPecaAviso" style="display:none;font-weight:400;color:var(--texto-suave);">(com quilate cadastrado, quem manda no preço real é o custo de cada quilate ali embaixo — isso aqui só ajuda a estimar lucro no Financeiro)</span></label>
               <input type="number" id="fCustoPeca" step="0.01" placeholder="Ex: 25.00">
             </div>
             <div class="form-campo">
@@ -1392,7 +1392,7 @@
 
         <div class="form-linha cols-2">
           <div class="form-campo">
-            <label for="fPreco">Preço de venda (R$) * <span style="font-weight:400;color:var(--texto-suave);">(calculado sozinho acima — pode editar na mão também)</span></label>
+            <label for="fPreco">Preço de venda (R$) * <span id="fPrecoNota" style="font-weight:400;color:var(--texto-suave);">(calculado sozinho acima — pode editar na mão também)</span></label>
             <input type="number" id="fPreco" step="0.01" required placeholder="Ex: 589.00">
           </div>
           <div class="form-campo">
@@ -3101,6 +3101,33 @@ function renderQuilatesMulti(){
       renderQuilatesMulti();
     });
   });
+  atualizarCampoPrecoBase();
+}
+
+// Com quilate cadastrado, cada tamanho já tem seu próprio custo e preço
+// de venda (calculado acima, na lista de quilates) — o preço final de
+// verdade nunca vem do "Custo da peça" nesse caso (ver calcularMatrizPrecos).
+// Só falta o site ter ALGUM preço pra mostrar na vitrine antes da pessoa
+// escolher o tamanho — por isso "Preço de venda" trava automaticamente no
+// valor do quilate mais barato, em vez de deixar o admin digitar um valor
+// solto que poderia não bater com nenhum tamanho de verdade (e por tabela
+// aparecer errado num cupom mostrado antes de escolher o tamanho).
+function atualizarCampoPrecoBase(){
+  const avisoCustoPeca = document.getElementById('fCustoPecaAviso');
+  const precoInput = document.getElementById('fPreco');
+  const precoNota = document.getElementById('fPrecoNota');
+
+  if (quilatesFormAtual.length){
+    avisoCustoPeca.style.display = 'inline';
+    const maisBarato = Math.min(...quilatesFormAtual.map(q => q.preco));
+    precoInput.value = maisBarato.toFixed(2);
+    precoInput.readOnly = true;
+    precoNota.textContent = '(travado no preço do quilate mais barato — é o que aparece na vitrine antes da pessoa escolher o tamanho)';
+  } else {
+    avisoCustoPeca.style.display = 'none';
+    precoInput.readOnly = false;
+    precoNota.textContent = '(calculado sozinho acima — pode editar na mão também)';
+  }
 }
 function adicionarQuilate(){
   const inputValor = document.getElementById('fQuilateNovo');
