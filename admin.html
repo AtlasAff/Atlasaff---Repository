@@ -1153,6 +1153,16 @@
     <h2>Pedido <span id="detalhesPedidoNumero"></span></h2>
     <div id="detalhesPedidoConteudo"></div>
 
+    <div id="blocoPrevisaoInternacional" style="display:none;margin-top:18px;padding-top:16px;border-top:1px solid var(--cinza-borda);">
+      <h3 style="font-size:0.82rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--texto-suave);margin-bottom:10px;">Previsão de chegada (fornecedor internacional)</h3>
+      <div class="form-campo">
+        <label for="detalhesPrevisaoInternacional">Data estimada</label>
+        <input type="date" id="detalhesPrevisaoInternacional">
+      </div>
+      <button type="button" class="btn-admin btn-admin-primary" id="btnSalvarPrevisaoInternacional" style="margin-top:6px;">Salvar previsão</button>
+      <p style="font-size:0.76rem;color:var(--texto-suave);margin-top:6px;">Aparece pro cliente na aba "Meus pedidos" e na página de rastreio — deixe em branco se ainda não souber.</p>
+    </div>
+
     <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--cinza-borda);">
       <h3 style="font-size:0.82rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--texto-suave);margin-bottom:10px;">Rastreio</h3>
       <div class="form-linha cols-2">
@@ -2234,6 +2244,8 @@ function abrirDetalhesPedido(pedido){
   document.getElementById('detalhesPedidoNumero').textContent = `#${numero}`;
   document.getElementById('detalhesTransportadora').value = pedido.transportadora_rastreio || '';
   document.getElementById('detalhesCodigoRastreio').value = pedido.codigo_rastreio || '';
+  document.getElementById('blocoPrevisaoInternacional').style.display = pedido.status === 'em_transito_internacional' ? 'block' : 'none';
+  document.getElementById('detalhesPrevisaoInternacional').value = pedido.previsao_chegada_internacional || '';
   document.getElementById('detalhesNotaFiscalStatus').textContent = pedido.nota_fiscal_path
     ? '✓ Nota fiscal anexada — subir outro PDF substitui a atual e reenvia o e-mail.'
     : 'Nenhuma nota fiscal anexada ainda.';
@@ -2334,6 +2346,24 @@ document.getElementById('btnSalvarRastreio').addEventListener('click', async () 
     // status (ex: já entregue) — avisa sem fingir que "acabou de enviar".
     sb.functions.invoke('notificar-status-pedido', { body: { pedido_id: pedidoDetalhesAtual.id, novo_status: 'rastreio_atualizado' } }).catch(() => {});
   }
+  renderTabelaPedidos();
+});
+
+document.getElementById('btnSalvarPrevisaoInternacional').addEventListener('click', async () => {
+  if (!pedidoDetalhesAtual) return;
+  const botao = document.getElementById('btnSalvarPrevisaoInternacional');
+  botao.disabled = true;
+  botao.textContent = 'Salvando...';
+
+  const previsao = document.getElementById('detalhesPrevisaoInternacional').value || null;
+  const { error } = await sb.from('pedidos').update({ previsao_chegada_internacional: previsao }).eq('id', pedidoDetalhesAtual.id);
+
+  botao.disabled = false;
+  botao.textContent = 'Salvar previsão';
+
+  if (error){ alert('Erro ao salvar previsão: ' + error.message); return; }
+  pedidoDetalhesAtual.previsao_chegada_internacional = previsao;
+  mostrarToastAdmin('Previsão salva ✓');
   renderTabelaPedidos();
 });
 
