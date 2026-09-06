@@ -84,9 +84,13 @@ function timelinePedidoHtml(status){
 }
 
 // Previsão simples: data do pedido + prazo (confecção + entrega) escolhido
-// no checkout. Só faz sentido mostrar enquanto o pedido ainda não chegou.
+// no checkout. Só faz sentido mostrar enquanto o pedido ainda não chegou —
+// e não enquanto a peça ainda tá em trânsito internacional (nesse caso o
+// prazo de entrega nacional nem começou a contar de verdade ainda; ver
+// previsaoChegadaInternacionalHtml(), que mostra a previsão certa pra essa
+// etapa, pra não aparecerem dois prazos diferentes ao mesmo tempo).
 function previsaoEntregaHtml(p){
-  if (!p.frete_prazo_dias || ['entregue', 'cancelado'].includes(p.status)) return '';
+  if (!p.frete_prazo_dias || ['entregue', 'cancelado', 'em_transito_internacional'].includes(p.status)) return '';
   const previsao = new Date(p.criado_em);
   previsao.setDate(previsao.getDate() + Number(p.frete_prazo_dias));
   return `<span class="pedido-meta-item">📅 Previsão de entrega: <strong>${previsao.toLocaleDateString('pt-BR')}</strong></span>`;
