@@ -85,7 +85,11 @@
       </div>
       <div>
         <label for="cadSenha">Senha</label>
-        <input type="password" id="cadSenha" required minlength="6" placeholder="Mínimo 6 caracteres">
+        <input type="password" id="cadSenha" required minlength="8" placeholder="Mínimo 8 caracteres">
+      </div>
+      <div>
+        <label for="cadSenhaConfirmar">Confirmar senha</label>
+        <input type="password" id="cadSenhaConfirmar" required minlength="8" placeholder="Repita a senha">
       </div>
       <button type="submit" class="btn btn-primary">Criar minha conta</button>
     </form>
@@ -176,11 +180,11 @@
             <div class="conta-linha-2">
               <div>
                 <label for="inputNovaSenha">Nova senha</label>
-                <input type="password" id="inputNovaSenha" minlength="6" placeholder="Mínimo 6 caracteres" required>
+                <input type="password" id="inputNovaSenha" minlength="8" placeholder="Mínimo 8 caracteres" required>
               </div>
               <div>
                 <label for="inputConfirmaSenha">Confirmar nova senha</label>
-                <input type="password" id="inputConfirmaSenha" minlength="6" placeholder="Repita a senha" required>
+                <input type="password" id="inputConfirmaSenha" minlength="8" placeholder="Repita a senha" required>
               </div>
             </div>
             <button type="submit" class="btn btn-primary">Atualizar senha</button>
@@ -358,13 +362,20 @@ function mostrarMsgConta(mensagem, tipo){
 // ---------- Criar conta ----------
 document.getElementById('formCriar').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const botao = e.target.querySelector('button[type="submit"]');
-  botao.disabled = true;
-  botao.textContent = 'Criando...';
 
   const nome = document.getElementById('cadNome').value.trim();
   const email = document.getElementById('cadEmail').value.trim();
   const senha = document.getElementById('cadSenha').value;
+  const senhaConfirmar = document.getElementById('cadSenhaConfirmar').value;
+
+  if (senha !== senhaConfirmar){
+    mostrarMsgConta('As senhas digitadas são diferentes.', 'erro');
+    return;
+  }
+
+  const botao = e.target.querySelector('button[type="submit"]');
+  botao.disabled = true;
+  botao.textContent = 'Criando...';
 
   const { data, error } = await sb.auth.signUp({
     email, password: senha,

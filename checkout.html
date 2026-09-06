@@ -89,11 +89,17 @@
         <label for="ckEmail">E-mail *</label>
         <input type="email" id="ckEmail" required>
       </div>
-      <div class="checkout-campo" id="ckSenhaWrap">
-        <label for="ckSenha">Crie uma senha *</label>
-        <input type="password" id="ckSenha" minlength="6" autocomplete="new-password">
-        <span class="checkout-campo-aviso">Sua conta é criada com esses dados ao confirmar o pedido — assim você acompanha a compra a qualquer momento em "Minha conta".</span>
+      <div class="checkout-linha cols-2" id="ckSenhaWrap">
+        <div class="checkout-campo">
+          <label for="ckSenha">Crie uma senha *</label>
+          <input type="password" id="ckSenha" minlength="8" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+        </div>
+        <div class="checkout-campo">
+          <label for="ckSenhaConfirmar">Confirme a senha *</label>
+          <input type="password" id="ckSenhaConfirmar" minlength="8" placeholder="Repita a senha" autocomplete="new-password">
+        </div>
       </div>
+      <p class="checkout-campo-aviso" id="ckSenhaAviso" style="margin-top:-6px;">Sua conta é criada com esses dados ao confirmar o pedido — assim você acompanha a compra a qualquer momento em "Minha conta".</p>
     </div>
 
     <div class="checkout-secao">
@@ -484,14 +490,18 @@ let jaTemContaLogada = false;
 async function preencherComPerfilSalvo(){
   const { data } = await sb.auth.getSession();
   const senhaInput = document.getElementById('ckSenha');
+  const senhaConfirmarInput = document.getElementById('ckSenhaConfirmar');
   if (!data.session){
     senhaInput.required = true;
+    senhaConfirmarInput.required = true;
     return;
   }
 
   jaTemContaLogada = true;
   document.getElementById('ckSenhaWrap').style.display = 'none';
+  document.getElementById('ckSenhaAviso').style.display = 'none';
   senhaInput.required = false;
+  senhaConfirmarInput.required = false;
 
   document.getElementById('ckEmail').value = data.session.user.email;
 
@@ -643,6 +653,11 @@ document.getElementById('formCheckout').addEventListener('submit', async (e) => 
   // fica "solto" pra alguém reivindicar depois).
   let contaRecemCriada = false;
   if (!jaTemContaLogada){
+    if (document.getElementById('ckSenha').value !== document.getElementById('ckSenhaConfirmar').value){
+      alert('As senhas digitadas são diferentes.');
+      restaurarBotao();
+      return;
+    }
     const { error: erroCadastro } = await sb.auth.signUp({
       email: emailCliente,
       password: document.getElementById('ckSenha').value,
