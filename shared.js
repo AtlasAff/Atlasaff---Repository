@@ -278,9 +278,21 @@ async function otimizarImagemParaUpload(file, { maxLado = 1600, qualidade = 0.82
 /* ============================================================
    DESTAQUE PRINCIPAL (banner do topo da home) — editável no admin
    ============================================================ */
-async function carregarHomeHero(){
+// Às vezes a primeira consulta logo que a página abre falha ou volta vazia
+// (rede lenta, servidor ainda "acordando" depois de um tempo parado) — sem
+// tentar de novo, o banner principal simplesmente não aparecia até a
+// pessoa recarregar a página na mão. Tenta mais duas vezes, com uma
+// pausa curta entre elas, antes de desistir de verdade.
+async function carregarHomeHero(tentativa = 1){
   const { data, error } = await sb.from('home_hero').select('*').limit(1).maybeSingle();
-  if (error || !data){ console.error('Erro ao carregar destaque principal:', error); return null; }
+  if (error || !data){
+    console.error(`Erro ao carregar destaque principal (tentativa ${tentativa}):`, error);
+    if (tentativa < 3){
+      await new Promise(resolve => setTimeout(resolve, 500 * tentativa));
+      return carregarHomeHero(tentativa + 1);
+    }
+    return null;
+  }
   return data;
 }
 
