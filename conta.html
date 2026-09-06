@@ -84,6 +84,10 @@
         <input type="email" id="cadEmail" required placeholder="seu@email.com">
       </div>
       <div>
+        <label for="cadCelular">Celular / WhatsApp</label>
+        <input type="tel" id="cadCelular" required placeholder="(00) 00000-0000">
+      </div>
+      <div>
         <label for="cadSenha">Senha</label>
         <input type="password" id="cadSenha" required minlength="8" placeholder="Mínimo 8 caracteres">
       </div>
@@ -367,6 +371,7 @@ document.getElementById('formCriar').addEventListener('submit', async (e) => {
 
   const nome = document.getElementById('cadNome').value.trim();
   const email = document.getElementById('cadEmail').value.trim();
+  const celular = document.getElementById('cadCelular').value.trim();
   const senha = document.getElementById('cadSenha').value;
   const senhaConfirmar = document.getElementById('cadSenhaConfirmar').value;
 
@@ -384,13 +389,22 @@ document.getElementById('formCriar').addEventListener('submit', async (e) => {
     options: { data: { nome } }
   });
 
-  botao.disabled = false;
-  botao.textContent = 'Criar minha conta';
-
   if (error){
+    botao.disabled = false;
+    botao.textContent = 'Criar minha conta';
     mostrarMsgConta(error.message.includes('already registered') ? 'Já existe uma conta com esse e-mail — tenta entrar.' : error.message, 'erro');
     return;
   }
+
+  // O celular já entra salvo no perfil desde a criação da conta — assim
+  // não fica faltando na primeira compra nem precisa pedir de novo. Só dá
+  // pra gravar agora se já existe sessão (RLS de perfis exige estar logado).
+  if (data.session){
+    await sb.from('perfis').upsert({ user_id: data.user.id, nome, telefone: celular });
+  }
+
+  botao.disabled = false;
+  botao.textContent = 'Criar minha conta';
 
   if (data.session){
     // Confirmação de e-mail desativada no projeto: já entra direto
