@@ -626,7 +626,7 @@ function pedidoParaHtml(p, solicitacoes, avaliadosSet){
   const corPedido = STATUS_PEDIDO_COR[p.status] || 'amarelo';
   const corPagamento = STATUS_PAGAMENTO_COR[p.status_pagamento] || 'amarelo';
   const formaPagamento = FORMA_PAGAMENTO_LABEL[p.forma_pagamento] || p.forma_pagamento;
-  const podeCancelar = ['novo', 'confirmado'].includes(p.status);
+  const podeCancelar = ['novo', 'confirmado', 'em_transito_internacional'].includes(p.status);
   const podeAvaliar = p.status === 'entregue';
   const resumo = resumoItensPedido(p.itens);
 
@@ -657,6 +657,7 @@ function pedidoParaHtml(p, solicitacoes, avaliadosSet){
           <span class="pedido-meta-item">Feito em <strong>${dataFormatada}</strong></span>
           ${previsaoEntregaHtml(p)}
         </div>
+        ${previsaoChegadaInternacionalHtml(p)}
         <div style="margin-bottom:14px;">
           ${(p.itens || []).map(item => `
             <div style="display:flex;justify-content:space-between;gap:10px;font-size:0.85rem;margin-bottom:8px;">
