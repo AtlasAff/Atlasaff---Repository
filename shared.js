@@ -268,6 +268,56 @@ async function carregarHomeHero(){
 }
 
 /* ============================================================
+   CONFIGURAÇÕES GERAIS DO SITE (WhatsApp, redes sociais) —
+   editável no admin, usado em toda parte pra não precisar mexer
+   em código quando o número/link mudar.
+   ============================================================ */
+async function carregarConfigSite(){
+  if (window.CONFIG_SITE) return window.CONFIG_SITE;
+  const { data, error } = await sb.from('config_site').select('whatsapp_numero, instagram_url, tiktok_url').eq('id', 1).maybeSingle();
+  if (error){ console.error('Erro ao carregar config do site:', error); }
+  window.CONFIG_SITE = data || {};
+  return window.CONFIG_SITE;
+}
+
+// Monta o link do WhatsApp a partir da config carregada, com uma mensagem opcional.
+function linkWhatsappSite(mensagem){
+  const numero = window.CONFIG_SITE && window.CONFIG_SITE.whatsapp_numero;
+  if (!numero) return '#';
+  return `https://wa.me/${numero}${mensagem ? '?text=' + encodeURIComponent(mensagem) : ''}`;
+}
+
+// Formata "5511941104553" como "(11) 94110-4553" pra exibir na tela de contato.
+function formatarTelefoneBR(numero){
+  if (!numero) return '';
+  let digitos = String(numero).replace(/\D/g, '');
+  if (digitos.length > 11 && digitos.startsWith('55')) digitos = digitos.slice(2); // tira o 55 do país
+  if (digitos.length === 11) return `(${digitos.slice(0,2)}) ${digitos.slice(2,7)}-${digitos.slice(7)}`;
+  if (digitos.length === 10) return `(${digitos.slice(0,2)}) ${digitos.slice(2,6)}-${digitos.slice(6)}`;
+  return numero;
+}
+
+// Preenche os links de redes sociais do rodapé (repetido em cada página) com a config atual.
+// Cada link começa escondido no HTML pra nunca mostrar um "#" morto.
+function preencherRedesSociaisRodape(config){
+  const linkInsta = document.getElementById('linkInstagram');
+  const linkTiktok = document.getElementById('linkTiktok');
+  const linkWhats = document.getElementById('linkWhatsapp');
+  if (linkInsta && config.instagram_url){
+    linkInsta.href = config.instagram_url;
+    linkInsta.style.display = '';
+  }
+  if (linkTiktok && config.tiktok_url){
+    linkTiktok.href = config.tiktok_url;
+    linkTiktok.style.display = '';
+  }
+  if (linkWhats && config.whatsapp_numero){
+    linkWhats.href = linkWhatsappSite();
+    linkWhats.style.display = '';
+  }
+}
+
+/* ============================================================
    COLEÇÕES EM DESTAQUE (grade "vitrine") — até 3, editável no admin
    ============================================================ */
 async function carregarHomeColecoes(){
@@ -472,6 +522,10 @@ async function initHeaderShared(){
 
   const yearEl = document.getElementById('year');
   if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+  const configSite = await carregarConfigSite();
+  preencherRedesSociaisRodape(configSite);
+  document.dispatchEvent(new CustomEvent('configSiteCarregada', { detail: configSite }));
 
   injetarSelosSeguranca();
   injetarAvisoCookies();
@@ -1736,6 +1790,10 @@ async function renderProdutoPage(){
   document.getElementById('breadcrumbCat').href = catInfo ? catInfo.href : '#';
   document.getElementById('breadcrumbNome').textContent = p.nome;
   document.title = `${p.nome} | Pavan & Co.`;
+
+  const configSite = await carregarConfigSite();
+  const linkWhatsProduto = document.getElementById('linkWhatsappProduto');
+  if (linkWhatsProduto) linkWhatsProduto.href = linkWhatsappSite(`Oi! Tenho uma dúvida sobre a peça "${p.nome}".`);
 
   const galeriaPrincipal = document.getElementById('galeriaPrincipal');
   const galeriaThumbs = document.getElementById('galeriaThumbs');

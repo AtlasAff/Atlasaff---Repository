@@ -905,6 +905,11 @@
               <span class="tile-label">Página inicial</span>
               <span style="font-size:0.78rem;color:var(--texto-suave);">Banner de destaque e coleções em vitrine na home.</span>
             </button>
+            <button type="button" class="admin-tile" id="btnContatoConfig" style="align-items:flex-start;text-align:left;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 11.5a8.5 8.5 0 1 1-3.6-6.9L21 3l-1.2 4A8.4 8.4 0 0 1 21 11.5Z"/><path d="M8 10c.5 2.5 2.5 4.5 5 5"/></svg>
+              <span class="tile-label">Contato &amp; redes sociais</span>
+              <span style="font-size:0.78rem;color:var(--texto-suave);">Número do WhatsApp, Instagram e TikTok usados no site inteiro.</span>
+            </button>
           </div>
         </div>
 
@@ -1114,6 +1119,31 @@
 
     <div class="modal-footer">
       <button type="button" class="btn-admin btn-admin-outline" id="btnFecharHomeConfig">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalContatoConfig">
+  <div class="modal-card" style="max-width:460px;">
+    <h2>Contato &amp; redes sociais</h2>
+    <p style="font-size:0.8rem;color:var(--texto-suave);margin-top:-8px;">Usado em toda parte do site: botões de WhatsApp, rodapé, etc. Deixe um campo em branco pra esconder aquele link/botão no site.</p>
+    <form id="formContatoConfig" style="display:flex;flex-direction:column;gap:10px;">
+      <div class="form-campo">
+        <label for="cfgWhatsapp">Número do WhatsApp</label>
+        <input type="text" id="cfgWhatsapp" placeholder="Ex: 5511941104553 (DDI+DDD+número, só dígitos)">
+      </div>
+      <div class="form-campo">
+        <label for="cfgInstagram">Link do Instagram</label>
+        <input type="url" id="cfgInstagram" placeholder="Ex: https://instagram.com/pavanoficial">
+      </div>
+      <div class="form-campo">
+        <label for="cfgTiktok">Link do TikTok</label>
+        <input type="url" id="cfgTiktok" placeholder="Ex: https://tiktok.com/@pavanoficial">
+      </div>
+      <button type="submit" class="btn-admin btn-admin-primary">Salvar</button>
+    </form>
+    <div class="modal-footer">
+      <button type="button" class="btn-admin btn-admin-outline" id="btnFecharContatoConfig">Fechar</button>
     </div>
   </div>
 </div>
@@ -1856,6 +1886,48 @@ async function abrirModalHomeConfig(){
 document.getElementById('btnPaginaInicial').addEventListener('click', abrirModalHomeConfig);
 document.getElementById('btnFecharHomeConfig').addEventListener('click', () => {
   document.getElementById('modalHomeConfig').classList.remove('show');
+});
+
+/* ============================================================
+   CONTATO & REDES SOCIAIS — config_site (WhatsApp, Instagram, TikTok)
+   ============================================================ */
+async function abrirModalContatoConfig(){
+  const { data, error } = await sb.from('config_site').select('*').eq('id', 1).maybeSingle();
+  if (error){ alert('Erro ao carregar configurações: ' + error.message); return; }
+  document.getElementById('cfgWhatsapp').value = (data && data.whatsapp_numero) || '';
+  document.getElementById('cfgInstagram').value = (data && data.instagram_url) || '';
+  document.getElementById('cfgTiktok').value = (data && data.tiktok_url) || '';
+  document.getElementById('modalContatoConfig').classList.add('show');
+}
+
+document.getElementById('btnContatoConfig').addEventListener('click', abrirModalContatoConfig);
+document.getElementById('btnFecharContatoConfig').addEventListener('click', () => {
+  document.getElementById('modalContatoConfig').classList.remove('show');
+});
+
+document.getElementById('formContatoConfig').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const botao = e.target.querySelector('button[type="submit"]');
+  botao.disabled = true;
+  botao.textContent = 'Salvando...';
+
+  const dados = {
+    whatsapp_numero: document.getElementById('cfgWhatsapp').value.trim().replace(/\D/g, '') || null,
+    instagram_url: document.getElementById('cfgInstagram').value.trim() || null,
+    tiktok_url: document.getElementById('cfgTiktok').value.trim() || null,
+    atualizado_em: new Date().toISOString()
+  };
+
+  const { error } = await sb.from('config_site').update(dados).eq('id', 1);
+
+  botao.disabled = false;
+  if (error){
+    alert('Erro ao salvar: ' + error.message);
+    botao.textContent = 'Salvar';
+    return;
+  }
+  botao.textContent = 'Salvo ✓';
+  setTimeout(() => { botao.textContent = 'Salvar'; }, 1800);
 });
 
 document.getElementById('heroFotoDrop').addEventListener('click', () => document.getElementById('heroFotoInput').click());

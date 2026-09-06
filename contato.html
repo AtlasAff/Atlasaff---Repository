@@ -84,9 +84,9 @@
   <div class="contato-info">
     <h3>Outros canais</h3>
     <p>📩 contato@pavanoficial.com.br</p>
-    <p>📞 (11) 94110-4553</p>
+    <p id="textoTelefoneContato">📞 —</p>
     <p>🕐 Seg a sex, 9h às 18h</p>
-    <a href="https://wa.me/5511941104553" target="_blank" rel="noopener" class="btn btn-primary" style="margin-top:14px;justify-content:center;width:100%;">Chamar no WhatsApp</a>
+    <a href="#" id="linkWhatsappContato" target="_blank" rel="noopener" class="btn btn-primary" style="margin-top:14px;justify-content:center;width:100%;">Chamar no WhatsApp</a>
   </div>
 </div>
 <footer>
@@ -113,8 +113,9 @@
       <div class="footer-col">
         <h4>Redes sociais</h4>
         <div class="social-row">
-          <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg></a>
-          <a href="#" aria-label="WhatsApp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 11.5a8.5 8.5 0 1 1-3.6-6.9L21 3l-1.2 4A8.4 8.4 0 0 1 21 11.5Z"/><path d="M8 10c.5 2.5 2.5 4.5 5 5"/></svg></a>
+          <a href="#" aria-label="Instagram" id="linkInstagram" target="_blank" rel="noopener" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg></a>
+          <a href="#" aria-label="TikTok" id="linkTiktok" target="_blank" rel="noopener" style="display:none"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M16.6 3h-3.2v12.4c0 1.5-1.2 2.7-2.7 2.7s-2.7-1.2-2.7-2.7 1.2-2.7 2.7-2.7c.3 0 .5 0 .8.1V9.6a5.9 5.9 0 0 0-.8-.1C7.9 9.5 5.5 12 5.5 15s2.4 5.5 5.4 5.5 5.4-2.5 5.4-5.5V8.9a7.6 7.6 0 0 0 4.2 1.3V7c-1.6 0-3-.7-3.9-1.9-.6-.7-1-1.6-1-2.6V3Z"/></svg></a>
+          <a href="#" aria-label="WhatsApp" id="linkWhatsapp" target="_blank" rel="noopener" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 11.5a8.5 8.5 0 1 1-3.6-6.9L21 3l-1.2 4A8.4 8.4 0 0 1 21 11.5Z"/><path d="M8 10c.5 2.5 2.5 4.5 5 5"/></svg></a>
         </div>
       </div>
     </div>
@@ -126,6 +127,18 @@
 <script src="shared.js"></script>
 <script>
 initBuscaForm('searchFormHeader', true);
+
+document.addEventListener('configSiteCarregada', (e) => {
+  const config = e.detail || {};
+  const textoTel = document.getElementById('textoTelefoneContato');
+  const linkWhats = document.getElementById('linkWhatsappContato');
+  if (config.whatsapp_numero){
+    if (textoTel) textoTel.textContent = `📞 ${formatarTelefoneBR(config.whatsapp_numero)}`;
+    if (linkWhats) linkWhats.href = linkWhatsappSite('Oi! Vim pelo site e preciso de ajuda.');
+  } else if (textoTel){
+    textoTel.style.display = 'none';
+  }
+});
 
 document.getElementById('formContato').addEventListener('submit', async (e) => {
   e.preventDefault();
