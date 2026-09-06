@@ -2398,14 +2398,23 @@ async function renderMensagensContato(){
       </div>
       <div class="mensagem-assunto">${escaparHtml(m.assunto)}</div>
       <div class="mensagem-corpo">${escaparHtml(m.mensagem)}</div>
+      ${m.respondida ? `
+        <div class="mensagem-corpo" style="background:var(--creme);margin-top:8px;padding:10px 12px;border-radius:4px;">
+          <strong style="font-size:0.78rem;color:var(--texto-suave);text-transform:uppercase;letter-spacing:0.03em;">Sua resposta${m.respondida_em ? ' · ' + new Date(m.respondida_em).toLocaleString('pt-BR') : ''}</strong>
+          <div style="margin-top:4px;">${escaparHtml(m.resposta_texto || '')}</div>
+        </div>
+      ` : ''}
       <div class="mensagem-acoes">
-        <a href="mailto:${encodeURIComponent(m.email)}?subject=Re: ${encodeURIComponent(m.assunto)}">Responder por e-mail</a>
+        <button type="button" data-acao="responder-mensagem" data-id="${m.id}">${m.respondida ? 'Responder de novo' : 'Responder por e-mail'}</button>
         ${!m.lida ? `<button type="button" data-acao="marcar-lida" data-id="${m.id}">Marcar como lida</button>` : ''}
         <button type="button" data-acao="excluir-mensagem" data-id="${m.id}">Excluir</button>
       </div>
     </div>
   `).join('') || `<p style="color:var(--texto-suave);font-size:0.85rem;">Nenhuma mensagem ainda.</p>`;
 
+  document.querySelectorAll('#listaMensagensContato button[data-acao="responder-mensagem"]').forEach(btn => {
+    btn.addEventListener('click', () => abrirModalResponderMensagem(data.find(m => m.id === btn.getAttribute('data-id'))));
+  });
   document.querySelectorAll('#listaMensagensContato button[data-acao="marcar-lida"]').forEach(btn => {
     btn.addEventListener('click', async () => {
       await sb.from('mensagens_contato').update({ lida: true }).eq('id', btn.getAttribute('data-id'));
@@ -2824,13 +2833,30 @@ function renderLinhasClientes(){
    mensagem escritos na hora, escolhendo a conta na tela de Clientes.
    ============================================================ */
 let clienteEmailDestino = null; // { email, nome }
+let mensagemContatoRespondendo = null; // mensagem de contato sendo respondida (null = envio avulso da tela Clientes)
 function abrirModalEmailCliente(email, nome){
   clienteEmailDestino = { email, nome };
+  mensagemContatoRespondendo = null;
   document.getElementById('emailClienteDestino').textContent = nome ? `${nome} <${email}>` : email;
   document.getElementById('emailClienteAssunto').value = '';
   document.getElementById('emailClienteMensagem').value = '';
   document.getElementById('modalEmailCliente').classList.add('show');
 }
+
+// Responder uma mensagem da página de contato: mesma janela de e-mail,
+// mas já vem com o destinatário e o assunto ("Re: ...") preenchidos, e
+// ao enviar marca a mensagem como respondida (com a resposta salva) pra
+// aparecer na área "Minha conta" do cliente.
+function abrirModalResponderMensagem(msg){
+  if (!msg) return;
+  clienteEmailDestino = { email: msg.email, nome: msg.nome };
+  mensagemContatoRespondendo = msg;
+  document.getElementById('emailClienteDestino').textContent = `${msg.nome} <${msg.email}>`;
+  document.getElementById('emailClienteAssunto').value = `Re: ${msg.assunto}`;
+  document.getElementById('emailClienteMensagem').value = '';
+  document.getElementById('modalEmailCliente').classList.add('show');
+}
+
 document.getElementById('btnCancelarEmailCliente').addEventListener('click', () => {
   document.getElementById('modalEmailCliente').classList.remove('show');
 });
@@ -2853,6 +2879,19 @@ document.getElementById('btnEnviarEmailCliente').addEventListener('click', async
     alert('Não foi possível enviar: ' + (data?.error || error?.message || 'erro desconhecido.'));
     return;
   }
+
+  if (mensagemContatoRespondendo){
+    await sb.from('mensagens_contato').update({
+      respondida: true,
+      resposta_texto: mensagem,
+      respondida_em: new Date().toISOString(),
+      lida: true
+    }).eq('id', mensagemContatoRespondendo.id);
+    mensagemContatoRespondendo = null;
+    renderMensagensContato();
+    atualizarBadgeMensagens();
+  }
+
   mostrarToastAdmin('E-mail enviado ✓');
   document.getElementById('modalEmailCliente').classList.remove('show');
 });

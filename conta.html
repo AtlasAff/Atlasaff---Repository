@@ -105,6 +105,7 @@
         <div class="perfil-tabs">
           <button type="button" class="active" data-painel="pedidos">Meus pedidos</button>
           <button type="button" data-painel="favoritos">Favoritos</button>
+          <button type="button" data-painel="mensagens">Minhas mensagens</button>
           <button type="button" data-painel="config">Configurações</button>
         </div>
 
@@ -114,6 +115,10 @@
 
         <div class="perfil-painel" data-painel="favoritos">
           <div id="contaFavoritos"></div>
+        </div>
+
+        <div class="perfil-painel" data-painel="mensagens">
+          <div id="contaMensagens"></div>
         </div>
 
         <div class="perfil-painel" data-painel="config">
@@ -578,6 +583,7 @@ async function mostrarConta(){
   const { data: pedidos, error } = await sb.from('pedidos').select('*').eq('user_id', sessao.user.id).order('criado_em', { ascending: false });
 
   renderFavoritos();
+  renderContaMensagens(sessao.user.id);
 
   document.getElementById('statPedidos').textContent = pedidos ? pedidos.length : 0;
 
@@ -888,6 +894,44 @@ async function renderFavoritos(){
     ? `<div class="prod-grid">${produtos.map(cardProdutoHTML).join('')}</div>`
     : `<p class="suave" style="color:var(--texto-suave);font-size:0.85rem;">Você ainda não favoritou nenhuma peça — clique no coração ♥ na página de um produto.</p>`;
   revelarNovosElementos();
+}
+
+/* ============================================================
+   MINHAS MENSAGENS — mensagens enviadas em "Fale conosco" e se já
+   foram respondidas (só aparecem as enviadas estando logado).
+   ============================================================ */
+async function renderContaMensagens(userId){
+  const wrap = document.getElementById('contaMensagens');
+  wrap.innerHTML = `<p class="suave" style="color:var(--texto-suave);font-size:0.85rem;">Carregando mensagens...</p>`;
+
+  const { data: mensagens, error } = await sb.from('mensagens_contato')
+    .select('id, criado_em, assunto, mensagem, respondida, resposta_texto, respondida_em')
+    .eq('user_id', userId)
+    .order('criado_em', { ascending: false });
+
+  if (error || !mensagens || !mensagens.length){
+    wrap.innerHTML = `<p class="suave" style="color:var(--texto-suave);font-size:0.85rem;">Você ainda não enviou nenhuma mensagem pela página de <a href="contato.html" style="text-decoration:underline;color:var(--bordo);">Fale conosco</a> estando logado.</p>`;
+    return;
+  }
+
+  wrap.innerHTML = mensagens.map(m => `
+    <div style="border:1px solid var(--borda);border-radius:4px;padding:16px 18px;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;">
+        <div>
+          <strong>${escaparHtml(m.assunto)}</strong>
+          <p class="suave" style="margin:2px 0 0;font-size:0.8rem;color:var(--texto-suave);">${new Date(m.criado_em).toLocaleString('pt-BR')}</p>
+        </div>
+        <span class="badge-status badge-status--${m.respondida ? 'verde' : 'amarelo'}">${m.respondida ? 'Respondido' : 'Aguardando resposta'}</span>
+      </div>
+      <p style="margin:12px 0 0;font-size:0.9rem;">${escaparHtml(m.mensagem)}</p>
+      ${m.respondida ? `
+        <div style="margin-top:12px;padding:12px 14px;background:var(--creme);border-radius:4px;">
+          <strong style="font-size:0.78rem;color:var(--texto-suave);text-transform:uppercase;letter-spacing:0.03em;">Resposta${m.respondida_em ? ' · ' + new Date(m.respondida_em).toLocaleString('pt-BR') : ''}</strong>
+          <p style="margin:4px 0 0;font-size:0.9rem;">${escaparHtml(m.resposta_texto || '')}</p>
+        </div>
+      ` : ''}
+    </div>
+  `).join('');
 }
 
 // ---------- Busca endereço automático pelo CEP (igual ao checkout) ----------
