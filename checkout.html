@@ -702,9 +702,10 @@ document.getElementById('formCheckout').addEventListener('submit', async (e) => 
     const { data, error } = await sb.rpc('criar_pedido', { payload: pedido }).single();
     if (error) throw new Error(error.message);
 
-    // Confirmação de compra pro cliente + aviso de pedido novo pra loja —
-    // best-effort (.catch vazio: se e-mail falhar, o pedido já tá gravado
-    // e o checkout não pode travar por causa disso).
+    // Aviso de pedido novo pra loja — best-effort (.catch vazio: se e-mail
+    // falhar, o pedido já tá gravado e o checkout não pode travar por
+    // causa disso). O cliente só recebe e-mail depois, quando o
+    // pagamento é de fato confirmado (mp-webhook dispara isso sozinho).
     sb.functions.invoke('notificar-status-pedido', { body: { pedido_id: data.id, novo_status: 'novo' } }).catch(() => {});
     if (contaRecemCriada){
       sb.functions.invoke('notificar-conta-criada', { body: { nome: nomeCliente, email: emailCliente } }).catch(() => {});

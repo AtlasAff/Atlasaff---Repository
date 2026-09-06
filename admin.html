@@ -1176,7 +1176,8 @@
       <p style="font-size:0.76rem;color:var(--texto-suave);margin-top:6px;">Só PDF. Assim que anexar, o cliente já recebe um e-mail com o link pra baixar.</p>
     </div>
 
-    <div class="modal-footer">
+    <div class="modal-footer" style="justify-content:space-between;">
+      <button type="button" class="btn-admin" id="btnExcluirPedido" style="color:var(--vermelho);">Excluir pedido</button>
       <button type="button" class="btn-admin btn-admin-outline" id="btnFecharDetalhesPedido">Fechar</button>
     </div>
   </div>
@@ -2254,6 +2255,29 @@ function abrirDetalhesPedido(pedido){
 
 document.getElementById('btnFecharDetalhesPedido').addEventListener('click', () => {
   document.getElementById('modalDetalhesPedido').classList.remove('show');
+});
+
+document.getElementById('btnExcluirPedido').addEventListener('click', async () => {
+  if (!pedidoDetalhesAtual) return;
+  const numero = pedidoDetalhesAtual.id.slice(0, 8).toUpperCase();
+  if (!confirm(`Excluir o pedido #${numero} definitivamente? Isso não pode ser desfeito.`)) return;
+
+  const botao = document.getElementById('btnExcluirPedido');
+  botao.disabled = true;
+  botao.textContent = 'Excluindo...';
+
+  const { error } = await sb.from('pedidos').delete().eq('id', pedidoDetalhesAtual.id);
+
+  botao.disabled = false;
+  botao.textContent = 'Excluir pedido';
+
+  if (error){ alert('Erro ao excluir pedido: ' + error.message); return; }
+
+  document.getElementById('modalDetalhesPedido').classList.remove('show');
+  pedidosAdminCache = pedidosAdminCache.filter(p => p.id !== pedidoDetalhesAtual.id);
+  pedidoDetalhesAtual = null;
+  renderTabelaPedidos();
+  mostrarToastAdmin('Pedido excluído ✓');
 });
 
 document.getElementById('btnSalvarRastreio').addEventListener('click', async () => {
