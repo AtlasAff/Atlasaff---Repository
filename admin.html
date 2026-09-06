@@ -534,6 +534,36 @@
   }
   .form-campo textarea{ resize:vertical; }
 
+  /* Editor simples de descrição (negrito/itálico/lista) — contenteditable
+     em vez de textarea puro, porque textarea nunca guarda formatação
+     nenhuma (nem quando você cola um texto que já veio em negrito de
+     outro lugar, ela sempre vira texto plano). */
+  .editor-toolbar{
+    display:flex; gap:4px; margin-bottom:6px;
+  }
+  .editor-toolbar button{
+    width:30px; height:30px;
+    border:1px solid var(--cinza-borda); border-radius:6px;
+    background:var(--cinza-card); font-size:0.86rem;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .editor-toolbar button:hover{ background:var(--superficie-alt); }
+  .editor-descricao{
+    width:100%; min-height:150px;
+    padding:10px 12px;
+    border:1px solid var(--cinza-borda);
+    border-radius:var(--radius);
+    font-size:0.88rem;
+    font-family:inherit;
+    line-height:1.5;
+    overflow-y:auto;
+  }
+  .editor-descricao:empty::before{
+    content: attr(data-placeholder);
+    color: var(--texto-suave);
+  }
+  .editor-descricao ul{ margin:0; padding-left:22px; }
+
   @media (min-width: 640px){
     .form-linha.cols-2{ grid-template-columns: 1fr 1fr; }
     .form-linha.cols-3{ grid-template-columns: 1fr 1fr 1fr; }
@@ -708,7 +738,7 @@
     </button>
     <span class="marca"><img src="apple-touch-icon.png" alt=""> Pavan &amp; Co.</span>
     <div class="admin-topbar-direita">
-      <a href="index.html" id="btnVoltarSite">Ver loja</a>
+      <a href="/" id="btnVoltarSite">Ver loja</a>
       <button type="button" id="btnSair">Sair</button>
     </div>
   </div>
@@ -1171,7 +1201,12 @@
         </div>
         <div class="form-campo">
           <label for="fDescricao">Descrição</label>
-          <textarea id="fDescricao" rows="8" style="resize:vertical;" placeholder="Descrição de venda, estilo editorial..."></textarea>
+          <div class="editor-toolbar">
+            <button type="button" data-cmd="bold" title="Negrito"><b>N</b></button>
+            <button type="button" data-cmd="italic" title="Itálico"><i>I</i></button>
+            <button type="button" data-cmd="insertUnorderedList" title="Lista">•</button>
+          </div>
+          <div id="fDescricao" class="editor-descricao" contenteditable="true" data-placeholder="Descrição de venda, estilo editorial... (cola texto com negrito direto, ou usa os botões acima)"></div>
         </div>
       </div>
 
@@ -3205,9 +3240,23 @@ document.querySelectorAll('.produto-tab').forEach(btn => {
   btn.addEventListener('click', () => ativarAbaProduto(btn.dataset.tab));
 });
 
+// Toolbar de formatação da descrição (negrito/itálico/lista) — usa
+// mousedown + preventDefault em vez de click, senão o clique no botão
+// tira o foco/seleção do texto ANTES do execCommand rodar, e o comando
+// perde de vista o que devia formatar.
+document.querySelectorAll('.editor-toolbar button').forEach(btn => {
+  btn.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    document.execCommand(btn.dataset.cmd, false, null);
+  });
+});
+
 function abrirModalProduto(produto){
   const form = document.getElementById('formProduto');
   form.reset();
+  // contenteditable não é campo de formulário de verdade — form.reset()
+  // não limpa ele sozinho, precisa zerar na mão.
+  document.getElementById('fDescricao').innerHTML = '';
   fotosFormAtual = [];
   videoFormAtual = null;
   tamanhosFormAtual = new Set();
@@ -3229,7 +3278,7 @@ function abrirModalProduto(produto){
   if (produto){
     document.getElementById('fNome').value = produto.nome || '';
     document.getElementById('fCategoria').value = produto.categoria || 'aneis';
-    document.getElementById('fDescricao').value = produto.descricao || '';
+    document.getElementById('fDescricao').innerHTML = produto.descricao || '';
     document.getElementById('fMaterial').value = produto.material_aro || 'Prata 925';
     document.getElementById('fPedra').value = produto.pedra_central || 'Sem pedra';
     document.getElementById('fBanho').value = produto.banho || 'Sem banho';
@@ -3482,7 +3531,11 @@ document.getElementById('formProduto').addEventListener('submit', async (e) => {
     const dados = {
       nome: document.getElementById('fNome').value.trim(),
       categoria: categoria,
-      descricao: document.getElementById('fDescricao').value.trim(),
+      // Se não sobrou texto nenhum (só uma tag <br> vazia que o navegador
+      // às vezes deixa pra trás), salva vazio mesmo — senão o site público
+      // mostraria uma descrição "em branco" em vez do aviso de "sem
+      // descrição cadastrada ainda".
+      descricao: document.getElementById('fDescricao').textContent.trim() ? document.getElementById('fDescricao').innerHTML.trim() : '',
       material_aro: document.getElementById('fMaterial').value,
       pedra_central: document.getElementById('fPedra').value,
       banho: document.getElementById('fBanho').value,
