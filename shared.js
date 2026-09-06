@@ -877,33 +877,56 @@ function temPermissaoFabrica(){
   return promessaPermissaoFabrica;
 }
 
-// Fração de desconto por produto (preço de fábrica ÷ preço de venda) —
-// nunca os valores de custo em si, só essa fração final. Multiplica pelo
-// preço mostrado (base ou de um quilate/banho específico) pra saber o
-// preço de fábrica daquele item.
+// Fração de desconto por COMBINAÇÃO de quilate/banho (preço de fábrica ÷
+// preço de venda daquela combinação específica) — nunca os valores de
+// custo em si, só essa fração final. Cada produto tem uma LISTA de
+// combinações (mapa[produto_id] = [{quilate, banho, fator}, ...]), porque
+// cada tamanho/cor pode ter um custo diferente — nunca um fator só que
+// "serve" pra qualquer tamanho (isso já foi bug: aplicava o fator do
+// tamanho mais barato em qualquer tamanho escolhido).
 let promessaPrecosFabrica = null;
 function obterPrecosFabrica(){
   if (!promessaPrecosFabrica){
     promessaPrecosFabrica = sb.rpc('precos_fabrica_ativos').then(({ data, error }) => {
       const mapa = {};
-      (error ? [] : (data || [])).forEach(r => { mapa[r.produto_id] = Number(r.fator_desconto); });
+      (error ? [] : (data || [])).forEach(r => {
+        if (!mapa[r.produto_id]) mapa[r.produto_id] = [];
+        mapa[r.produto_id].push({ quilate: r.quilate, banho: r.banho, fator: Number(r.fator_desconto) });
+      });
       return mapa;
     });
   }
   return promessaPrecosFabrica;
 }
 
+// Acha o fator certo pra uma combinação de quilate/banho — mesma lógica
+// (e mesma ordem de prioridade) de resolverPrecoVariante(), pra nunca
+// mostrar um desconto de fábrica que não bate com o preço realmente
+// cobrado daquele tamanho/cor.
+function resolverFatorFabrica(combos, quilate, banho){
+  if (!combos || !combos.length) return undefined;
+  const exato = combos.find(c => (c.quilate || null) === (quilate || null) && (c.banho || null) === (banho || null));
+  if (exato) return exato.fator;
+  const porQuilate = quilate && combos.find(c => (c.quilate || null) === quilate);
+  if (porQuilate) return porQuilate.fator;
+  const porBanho = banho && combos.find(c => (c.banho || null) === banho);
+  if (porBanho) return porBanho.fator;
+  const base = combos.find(c => !c.quilate && !c.banho);
+  return base ? base.fator : undefined;
+}
+
 // Risca o preço original e mostra o de fábrica em qualquer card de
 // produto (index, categoria, busca, favoritos...). Usa um
 // MutationObserver porque os cards são renderizados de forma assíncrona,
 // em momentos diferentes em cada página — assim funciona não importa a
-// ordem de chegada.
+// ordem de chegada. Cards não têm variante selecionada ainda, então usa
+// sempre a combinação-resumo (a mais barata, ver precos_fabrica_ativos()).
 async function aplicarPrecoFabricaNoDOM(){
   if (!(await temPermissaoFabrica())) return;
   const mapa = await obterPrecosFabrica();
   document.querySelectorAll('.prod-price[data-produto-id]').forEach(el => {
     if (el.dataset.fabricaAplicado) return;
-    const fator = mapa[el.dataset.produtoId];
+    const fator = resolverFatorFabrica(mapa[el.dataset.produtoId], null, null);
     if (fator === undefined) return;
     const precoOriginal = parseFloat(el.dataset.precoOriginal);
     if (!precoOriginal) return;
@@ -1906,7 +1929,10 @@ async function renderProdutoPage(){
   const cupomDestaque = await autoAplicarCupomDestaque(); // já aplica sozinho pro carrinho/checkout baterem com o preço mostrado aqui
   // Preço de fábrica agora é permissão de conta (não é mais cupom) — tem
   // prioridade sobre o cupom de boas-vindas acima quando os dois existem.
-  const fatorFabrica = (await temPermissaoFabrica())
+  // combosFabrica guarda TODAS as combinações desse produto (cada tamanho/
+  // cor pode ter um fator diferente) — resolvido de novo a cada troca de
+  // quilate/banho, igual precoAtual, pra nunca aplicar o desconto errado.
+  const combosFabrica = (await temPermissaoFabrica())
     ? (await obterPrecosFabrica())[p.id]
     : undefined;
 
@@ -1921,6 +1947,7 @@ async function renderProdutoPage(){
     void precoEl.offsetWidth;
     precoEl.classList.add('pulso-preco');
 
+    const fatorFabrica = resolverFatorFabrica(combosFabrica, quilateSelecionado, banhoSelecionado);
     if (fatorFabrica !== undefined){
       const precoFabrica = precoAtual * fatorFabrica;
       precoEl.innerHTML = `${formatarPreco(precoFabrica)} <s class="preco-riscado">${formatarPreco(precoAtual)}</s>`;
