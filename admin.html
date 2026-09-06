@@ -2692,13 +2692,12 @@ async function atualizarBadgeTrocas(){
 
 /* ============================================================
    FINANCEIRO — receita, custo estimado e lucro de tudo que já foi pago.
-   O custo por item é uma ESTIMATIVA: usa a mesma proporção já calculada
-   pro preço de fábrica (custo_peca + imposto + frete, dividido pelo
-   preço base do produto HOJE) multiplicada pelo preço de venda daquele
-   item no pedido. Não é contábil exato — se o custo do produto mudou
-   depois da venda, ou a peça tinha quilate/banho diferente do preço
-   base, o número é uma aproximação. Serve pra ter noção do lucro, não
-   pra fechamento fiscal.
+   O custo por item é uma ESTIMATIVA baseada no custo de produção de HOJE
+   daquele tamanho/cor exatos (matriz_custos, quando o produto tem
+   quilate/banho — nunca o custo de um tamanho "emprestado" pro outro),
+   ou custo_peca+imposto+frete pra produto sem variante. Não é contábil
+   exato — se o custo do produto mudou depois da venda, o número é uma
+   aproximação. Serve pra ter noção do lucro, não pra fechamento fiscal.
    ============================================================ */
 async function renderFinanceiro(){
   const grid = document.getElementById('financeiroStatGrid');
@@ -2708,7 +2707,7 @@ async function renderFinanceiro(){
 
   const [pedidosRes, produtosRes] = await Promise.all([
     sb.from('pedidos').select('id, nome_cliente, itens, total, status_pagamento, criado_em').eq('status_pagamento', 'aprovado').order('criado_em', { ascending: false }),
-    sb.rpc('produtos_admin').select('id, preco, custo_peca, custo_imposto, custo_frete')
+    sb.rpc('produtos_admin').select('id, preco, custo_peca, custo_imposto, custo_frete, matriz_custos')
   ]);
 
   if (pedidosRes.error || produtosRes.error){
@@ -2716,24 +2715,45 @@ async function renderFinanceiro(){
     return;
   }
 
-  // Mapa produto_id -> fator de custo (mesma fórmula de precos_fabrica_ativos).
-  const fatorPorProduto = {};
+  // Mapa produto_id -> dados de custo: combinações quilate/banho (quando
+  // existem) + o custo simples de fallback (produto sem variante).
+  const custosPorProduto = {};
   (produtosRes.data || []).forEach(p => {
-    if (p.custo_peca && p.custo_peca > 0 && p.preco > 0){
-      const custoTotal = Number(p.custo_peca) + Number(p.custo_imposto || 0) + Number(p.custo_frete || 0);
-      fatorPorProduto[p.id] = Math.min(1, Math.max(0, custoTotal / Number(p.preco)));
+    const combos = Array.isArray(p.matriz_custos) ? p.matriz_custos : [];
+    const custoSimples = (p.custo_peca && p.custo_peca > 0)
+      ? Number(p.custo_peca) + Number(p.custo_imposto || 0) + Number(p.custo_frete || 0)
+      : null;
+    if (combos.length || custoSimples !== null){
+      custosPorProduto[p.id] = { combos, custoSimples };
     }
   });
+
+  // Acha o custo certo pra um item vendido — mesma prioridade de
+  // resolverPrecoVariante() (combinação exata > só quilate > só banho >
+  // custo simples do produto), pra nunca aplicar o custo de um tamanho
+  // diferente do que a pessoa realmente comprou.
+  function resolverCustoItem(dados, quilate, banho){
+    if (!dados) return undefined;
+    const { combos, custoSimples } = dados;
+    if (combos.length){
+      const exato = combos.find(c => (c.quilate || null) === (quilate || null) && (c.banho || null) === (banho || null));
+      if (exato) return Number(exato.custo);
+      const porQuilate = quilate && combos.find(c => (c.quilate || null) === quilate);
+      if (porQuilate) return Number(porQuilate.custo);
+      const porBanho = banho && combos.find(c => (c.banho || null) === banho);
+      if (porBanho) return Number(porBanho.custo);
+    }
+    return custoSimples === null ? undefined : custoSimples;
+  }
 
   let receitaTotal = 0, custoTotal = 0, itensSemCusto = 0;
   const linhas = (pedidosRes.data || []).map(pedido => {
     const receita = Number(pedido.total) || 0;
     let custoPedido = 0;
     (pedido.itens || []).forEach(item => {
-      const fator = fatorPorProduto[item.id];
-      const valorItem = (Number(item.preco) || 0) * (Number(item.qtd) || 1);
-      if (fator === undefined){ itensSemCusto++; return; } // sem custo cadastrado: não entra na conta (não dá pra estimar)
-      custoPedido += valorItem * fator;
+      const custoUnitario = resolverCustoItem(custosPorProduto[item.id], item.quilate, item.banho);
+      if (custoUnitario === undefined){ itensSemCusto++; return; } // sem custo cadastrado: não entra na conta (não dá pra estimar)
+      custoPedido += custoUnitario * (Number(item.qtd) || 1);
     });
     receitaTotal += receita;
     custoTotal += custoPedido;
@@ -3345,6 +3365,34 @@ function calcularMatrizPrecos(quilates, banhosCustos){
   return matriz;
 }
 
+// Espelha calcularMatrizPrecos(), mas guarda o CUSTO total de cada
+// combinação (antes da margem) em vez do preço de venda — é o que o
+// Financeiro e o "preço de fábrica" usam pra saber quanto cada tamanho/
+// cor custou de verdade, sem inventar um custo único quando há vários
+// quilates. Uso 100% interno: nunca exposto ao público.
+function calcularMatrizCustos(quilates, banhosCustos){
+  if (!quilates.length && !banhosCustos.length) return [];
+  const custoPecaBase = parseFloat(document.getElementById('fCustoPeca').value) || 0;
+  const cotacao = parseFloat(document.getElementById('fCotacaoDolar').value) || 0;
+  const icmsPct = parseFloat(document.getElementById('fIcmsPct').value) || 0;
+  const custoFrete = parseFloat(document.getElementById('fCustoFrete').value) || 0;
+  const bases = quilates.length
+    ? quilates.map(q => ({ quilate: q.valor, custo: q.custo }))
+    : [{ quilate: null, custo: custoPecaBase }];
+  const extras = banhosCustos.length
+    ? banhosCustos.map(b => ({ banho: b.nome, extra: b.custo || 0 }))
+    : [{ banho: null, extra: 0 }];
+  const matriz = [];
+  for (const base of bases){
+    for (const extra of extras){
+      const custoCombinado = base.custo + extra.extra;
+      const imposto = calcularImpostoImportacao(custoCombinado, cotacao, icmsPct);
+      matriz.push({ quilate: base.quilate, banho: extra.banho, custo: custoCombinado + imposto + custoFrete });
+    }
+  }
+  return matriz;
+}
+
 function atualizarCalcLucro(){
   const custoPeca = parseFloat(document.getElementById('fCustoPeca').value) || 0;
   const cotacao = parseFloat(document.getElementById('fCotacaoDolar').value) || 0;
@@ -3730,6 +3778,7 @@ document.getElementById('formProduto').addEventListener('submit', async (e) => {
       // (imposto uma vez em cima do total combinado) — é o que o site usa
       // de verdade pra mostrar/cobrar o preço, não os campos acima.
       matriz_precos: calcularMatrizPrecos(quilatesFormAtual, banhosCustos),
+      matriz_custos: calcularMatrizCustos(quilatesFormAtual, banhosCustos),
       formato_pedra: document.getElementById('fFormato').value || null,
       cravacao: document.getElementById('fCravacao').value.trim() || null,
       grau_cor: document.getElementById('fGrauCor').value || null,
