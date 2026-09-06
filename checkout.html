@@ -166,7 +166,7 @@
     <h2>Seu pedido</h2>
     <div id="checkoutItens"></div>
 
-    <div class="cupom-linha">
+    <div class="cupom-linha" id="blocoCupomCheckout">
       <label for="ckCupom">Cupom de desconto</label>
       <div class="frete-calc-linha">
         <input type="text" id="ckCupom" placeholder="Digite o código">
@@ -174,6 +174,7 @@
       </div>
       <div id="ckCupomResultado"></div>
     </div>
+    <p id="avisoCupomFabrica" style="display:none;font-size:0.82rem;color:var(--texto-suave);margin:-4px 0 14px;">🏭 Você já tem preço de fábrica ativo nesta compra — cupons de desconto não acumulam com ele.</p>
 
     <div class="checkout-totais" id="checkoutTotais"></div>
     <button type="submit" form="formCheckout" class="btn btn-primary" id="btnConfirmarPedido" style="width:100%;justify-content:center;margin-top:16px;">Ir para o pagamento</button>
@@ -416,6 +417,40 @@ function iniciarFormularioCheckout(itens){
   renderResumo();
   preencherComPerfilSalvo();
 
+  // Preço de fábrica é benefício de conta e tem prioridade sobre cupom —
+  // o fechamento do pedido já ignora cupom nesse caso (ver criar_pedido),
+  // então esconder o campo (e nem reaplicar um cupom salvo) evita a pessoa
+  // ver um desconto na tela que não mudaria nada na cobrança final.
+  temPermissaoFabrica().then(tem => {
+    if (tem){
+      document.getElementById('blocoCupomCheckout').style.display = 'none';
+      document.getElementById('avisoCupomFabrica').style.display = 'block';
+      return;
+    }
+
+    // Cupom salvo do carrinho — reaplica automaticamente (valida de novo aqui)
+    const cupomSalvo = obterCupomAplicado();
+    if (cupomSalvo){
+      document.getElementById('ckCupom').value = cupomSalvo;
+      aplicarCupomCheckout(cupomSalvo, true);
+    } else {
+      // Sem cupom salvo ainda — só reaplica sozinho o cupom de boas-vindas
+      // se a pessoa já clicou em "Resgatar" no popup (senão não é pra
+      // descontar nada escondido, mesmo com o cupom em destaque existindo).
+      obterCupomDestaque().then(cupom => {
+        if (!cupom || obterCupomAplicado() || obterCupomDestaqueResgatado() !== cupom.codigo) return;
+        document.getElementById('ckCupom').value = cupom.codigo;
+        aplicarCupomCheckout(cupom.codigo, true);
+      });
+    }
+    document.getElementById('btnAplicarCupomCheckout').addEventListener('click', () => {
+      aplicarCupomCheckout(document.getElementById('ckCupom').value.trim());
+    });
+    document.getElementById('ckCupom').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter'){ e.preventDefault(); aplicarCupomCheckout(document.getElementById('ckCupom').value.trim()); }
+    });
+  });
+
   // CEP salvo no carrinho (guest ou não) — só usado se o perfil não
   // preencher um primeiro (ver preencherComPerfilSalvo, que roda antes).
   // Usa document.getElementById direto (não a const ckCep, que só é
@@ -427,28 +462,6 @@ function iniciarFormularioCheckout(itens){
     cepInputInicial.value = formatarCep(cepSalvo);
     cepInputInicial.dispatchEvent(new Event('blur'));
   }
-
-  // Cupom salvo do carrinho — reaplica automaticamente (valida de novo aqui)
-  const cupomSalvo = obterCupomAplicado();
-  if (cupomSalvo){
-    document.getElementById('ckCupom').value = cupomSalvo;
-    aplicarCupomCheckout(cupomSalvo, true);
-  } else {
-    // Sem cupom salvo ainda — só reaplica sozinho o cupom de boas-vindas
-    // se a pessoa já clicou em "Resgatar" no popup (senão não é pra
-    // descontar nada escondido, mesmo com o cupom em destaque existindo).
-    obterCupomDestaque().then(cupom => {
-      if (!cupom || obterCupomAplicado() || obterCupomDestaqueResgatado() !== cupom.codigo) return;
-      document.getElementById('ckCupom').value = cupom.codigo;
-      aplicarCupomCheckout(cupom.codigo, true);
-    });
-  }
-  document.getElementById('btnAplicarCupomCheckout').addEventListener('click', () => {
-    aplicarCupomCheckout(document.getElementById('ckCupom').value.trim());
-  });
-  document.getElementById('ckCupom').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter'){ e.preventDefault(); aplicarCupomCheckout(document.getElementById('ckCupom').value.trim()); }
-  });
 }
 
 async function aplicarCupomCheckout(codigo, silencioso){

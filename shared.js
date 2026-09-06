@@ -829,6 +829,11 @@ async function mostrarPopupCupomBoasVindas(){
   const data = await obterCupomDestaque();
   if (!data) return;
   if (obterCupomDestaqueResgatado() === data.codigo) return; // já resgatou, não mostra de novo
+  // Preço de fábrica já é o benefício máximo da conta e tem prioridade —
+  // cupom de boas-vindas não acumula com ele (ver criar_pedido), então
+  // convidar pra "resgatar" aqui só criaria uma expectativa de desconto
+  // extra que nunca vai aparecer na cobrança final.
+  if (await temPermissaoFabrica()) return;
   try {
     if (sessionStorage.getItem('pavan_popup_cupom_visto')) return;
   } catch {}
