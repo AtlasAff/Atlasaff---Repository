@@ -38,8 +38,8 @@ function escaparHtml(texto){
    Compartilhado entre conta.html (pedidos de quem tá logado) e
    rastreio.html (consulta pública por número do pedido).
    ============================================================ */
-const STATUS_PEDIDO_LABEL = { novo: 'Novo', confirmado: 'Confirmado', enviado: 'Enviado', entregue: 'Entregue', cancelado: 'Cancelado' };
-const STATUS_PEDIDO_COR = { novo: 'amarelo', confirmado: 'verde', enviado: 'verde', entregue: 'verde', cancelado: 'vermelho' };
+const STATUS_PEDIDO_LABEL = { novo: 'Pedido feito', confirmado: 'Pagamento confirmado', em_transito_internacional: 'A caminho do Brasil', enviado: 'Enviado', entregue: 'Entregue', cancelado: 'Cancelado' };
+const STATUS_PEDIDO_COR = { novo: 'amarelo', confirmado: 'verde', em_transito_internacional: 'amarelo', enviado: 'verde', entregue: 'verde', cancelado: 'vermelho' };
 const STATUS_PAGAMENTO_LABEL = { pendente: 'Aguardando pagamento', em_analise: 'Pagamento em análise', aprovado: 'Pago', recusado: 'Pagamento recusado', estornado: 'Estornado' };
 const STATUS_PAGAMENTO_COR = { pendente: 'amarelo', em_analise: 'amarelo', aprovado: 'verde', recusado: 'vermelho', estornado: 'vermelho' };
 const FORMA_PAGAMENTO_LABEL = { pix: 'Pix', credit_card: 'Cartão de crédito', debit_card: 'Cartão de débito', ticket: 'Boleto', account_money: 'Saldo Mercado Pago' };
@@ -55,7 +55,8 @@ function linkRastreio(codigo, transportadora){
 
 const ETAPAS_PEDIDO = [
   { chave: 'novo', rotulo: 'Pedido feito', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8h12l-1 12H7L6 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>' },
-  { chave: 'confirmado', rotulo: 'Confirmado', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M8 12.3l2.6 2.6L16 9.5"/></svg>' },
+  { chave: 'confirmado', rotulo: 'Pagamento confirmado', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M8 12.3l2.6 2.6L16 9.5"/></svg>' },
+  { chave: 'em_transito_internacional', rotulo: 'A caminho do Brasil', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12h20"/><path d="M12 2c3 3 4.5 6.5 4.5 10s-1.5 7-4.5 10c-3-3-4.5-6.5-4.5-10S9 5 12 2Z"/></svg>' },
   { chave: 'enviado', rotulo: 'Enviado', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2.5 7h11v9h-11z"/><path d="M13.5 11h4l3 3v2h-7z"/><circle cx="6.5" cy="18" r="1.6"/><circle cx="17.5" cy="18" r="1.6"/></svg>' },
   { chave: 'entregue', rotulo: 'Entregue', icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9h12v-9"/><path d="M10 19v-5h4v5"/></svg>' }
 ];
@@ -89,6 +90,18 @@ function previsaoEntregaHtml(p){
   const previsao = new Date(p.criado_em);
   previsao.setDate(previsao.getDate() + Number(p.frete_prazo_dias));
   return `<span class="pedido-meta-item">📅 Previsão de entrega: <strong>${previsao.toLocaleDateString('pt-BR')}</strong></span>`;
+}
+
+// Enquanto a peça ainda está vindo do fornecedor internacional (sem
+// rastreio nacional ainda), mostramos isso de forma transparente — nunca
+// um código de rastreio fingido. O rastreio de verdade só aparece quando
+// o status vira "enviado" (reenvio já feito daqui, dentro do Brasil).
+function previsaoChegadaInternacionalHtml(p){
+  if (p.status !== 'em_transito_internacional') return '';
+  const previsaoTexto = p.previsao_chegada_internacional
+    ? `previsão de chegar por aqui em <strong>${new Date(p.previsao_chegada_internacional + 'T00:00:00').toLocaleDateString('pt-BR')}</strong>`
+    : 'ainda sem previsão exata';
+  return `<div class="aviso-transito-internacional">🌍 Sua peça está vindo do nosso fornecedor internacional — ${previsaoTexto}. Assim que chegar por aqui, ela é reenviada com código de rastreio nacional.</div>`;
 }
 
 // Card de pedido é "produto em primeiro lugar": mostra a foto e o nome do

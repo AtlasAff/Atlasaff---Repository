@@ -1665,7 +1665,7 @@ async function carregarDashboardAdmin(){
   const pedidos = pedidosRes.data || [];
   const produtosAtivos = (produtosRes.data || []).filter(p => p.ativo);
   const estoqueBaixo = produtosAtivos.filter(p => (p.estoque ?? 0) <= (p.estoque_minimo ?? 5)).length;
-  const pedidosNovos = pedidos.filter(p => ['novo', 'confirmado'].includes(p.status)).length;
+  const pedidosNovos = pedidos.filter(p => ['novo', 'confirmado', 'em_transito_internacional'].includes(p.status)).length;
   const receitaMes = pedidos
     .filter(p => p.status_pagamento === 'aprovado' && new Date(p.criado_em) >= inicioMes)
     .reduce((soma, p) => soma + Number(p.total || 0), 0);
@@ -2134,8 +2134,9 @@ let pedidosAdminCache = [];
 // Os textos aqui são mais diretos (visão interna), os de shared.js são
 // mais "de cliente" — por isso ficaram duplicados em vez de unificados.
 const STATUS_PEDIDO_LABEL_ADMIN = {
-  novo: 'Novo',
-  confirmado: 'Confirmado',
+  novo: 'Pedido feito',
+  confirmado: 'Pagamento confirmado',
+  em_transito_internacional: 'A caminho do Brasil (fornecedor)',
   enviado: 'Enviado',
   entregue: 'Entregue',
   cancelado: 'Cancelado'
@@ -2193,7 +2194,25 @@ async function renderTabelaPedidos(){
   document.querySelectorAll('#corpoTabelaPedidos select[data-acao="status"]').forEach(sel => {
     sel.addEventListener('change', async () => {
       const pedidoId = sel.getAttribute('data-id');
-      const { error } = await sb.from('pedidos').update({ status: sel.value }).eq('id', pedidoId);
+      const atualizacao = { status: sel.value };
+
+      // Esse status é "transparente" de propósito (ver conversa sobre
+      // rastreio internacional): em vez de fingir um código de rastreio,
+      // avisa a data estimada de chegada da peça vinda do fornecedor.
+      if (sel.value === 'em_transito_internacional'){
+        const dataInformada = prompt('Previsão de chegada da peça aqui no Brasil (formato DD/MM/AAAA) — deixe em branco se ainda não souber:');
+        if (dataInformada){
+          const partes = dataInformada.trim().split('/');
+          if (partes.length === 3){
+            const [d, m, a] = partes;
+            atualizacao.previsao_chegada_internacional = `${a}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+          } else {
+            alert('Data em formato inválido — salvando sem previsão. Você pode editar de novo depois.');
+          }
+        }
+      }
+
+      const { error } = await sb.from('pedidos').update(atualizacao).eq('id', pedidoId);
       if (error){ alert('Erro ao atualizar status: ' + error.message); return; }
       // Dispara o e-mail de status pro cliente — não bloqueia a tela nem
       // mostra erro se falhar (ex: Resend ainda não configurado); é
@@ -2293,7 +2312,7 @@ document.getElementById('btnSalvarRastreio').addEventListener('click', async () 
   // enviado — promove o status pra "enviado" sozinho (só quando ainda faz
   // sentido: não mexe se o pedido já foi entregue ou cancelado, pra não
   // "regredir" o status por engano numa edição posterior do rastreio).
-  const promoverParaEnviado = !!codigo && ['novo', 'confirmado'].includes(pedidoDetalhesAtual.status);
+  const promoverParaEnviado = !!codigo && ['novo', 'confirmado', 'em_transito_internacional'].includes(pedidoDetalhesAtual.status);
   const atualizacao = { transportadora_rastreio: transportadora, codigo_rastreio: codigo };
   if (promoverParaEnviado) atualizacao.status = 'enviado';
 

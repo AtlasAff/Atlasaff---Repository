@@ -1217,6 +1217,13 @@
 }
 .pedido-cancelado-aviso svg{ width:16px; height:16px; flex-shrink:0; }
 
+.aviso-transito-internacional{
+  background: var(--amarelo-bg); color: var(--amarelo);
+  padding: 10px 12px; border-radius: var(--radius);
+  font-size:0.82rem; font-weight:600;
+  margin-bottom: 18px;
+}
+
 /* ---------------- CARTÃO DE PAGAMENTO (info) ---------------- */
 .pagamento-info-card{
   display:flex; gap:14px;
