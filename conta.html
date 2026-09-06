@@ -18,7 +18,7 @@
 
 <header id="siteHeader">
   <div class="header-inner container">
-    <a href="index.html" class="logo" aria-label="Pavan & Co. - início">
+    <a href="/" class="logo" aria-label="Pavan & Co. - início">
       <img class="logo-mark" src="logo.png" alt="Pavan & Co.">
     </a>
     <nav class="main-nav" aria-label="Categorias principais"><ul id="navList"></ul></nav>
@@ -222,10 +222,6 @@
             <div class="perfil-stat">
               <strong id="statPedidos">0</strong>
               <span>Pedidos</span>
-            </div>
-            <div class="perfil-stat">
-              <strong id="statTotal">R$ 0</strong>
-              <span>Investido</span>
             </div>
             <div class="perfil-stat">
               <strong id="statFavoritos">0</strong>
@@ -582,10 +578,7 @@ async function mostrarConta(){
 
   renderFavoritos();
 
-  // Estatísticas do topo — some pedidos cancelados não entram no total investido.
-  const pedidosValidos = (pedidos || []).filter(p => p.status !== 'cancelado');
   document.getElementById('statPedidos').textContent = pedidos ? pedidos.length : 0;
-  document.getElementById('statTotal').textContent = formatarPreco(pedidosValidos.reduce((soma, p) => soma + Number(p.total || 0), 0));
 
   const ultimaFormaPagamento = (pedidos || []).find(p => p.forma_pagamento)?.forma_pagamento;
   document.getElementById('pagamentoUltimaForma').textContent = ultimaFormaPagamento
