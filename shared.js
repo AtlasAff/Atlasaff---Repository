@@ -764,7 +764,7 @@ async function mostrarPopupCupomBoasVindas(){
     </button>
     <span class="popup-cupom-eyebrow">Presente de boas-vindas 🎁</span>
     <strong class="popup-cupom-desconto">${desconto}</strong>
-    <p>Resgate agora${minimoTexto} — o desconto já fica aplicado em toda a loja (preço riscado + novo preço), sem precisar copiar código.</p>
+    <p>Resgate agora${minimoTexto} e o desconto é aplicado automaticamente em toda a loja.</p>
     <button type="button" class="popup-cupom-resgatar" data-codigo="${data.codigo}">Resgatar desconto</button>
   `;
   document.body.appendChild(popup);

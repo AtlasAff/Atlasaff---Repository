@@ -737,6 +737,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.6 12.6 12 21.2 2.8 12 12 2.8h8.6z" transform="rotate(45 12 12)"/><circle cx="9" cy="9" r="1.4" fill="currentColor" stroke="none"/><path d="m8.5 15.5 7-7"/></svg>
         Cupons
       </button>
+      <button type="button" class="admin-nav-item" data-pagina="financeiro">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>
+        Financeiro
+      </button>
 
       <div class="admin-nav-grupo-titulo">Atendimento</div>
       <button type="button" class="admin-nav-item" data-pagina="mensagens">
@@ -811,6 +815,28 @@
           </table>
           </div>
           <div class="carregar-mais-wrap" id="produtosCarregarMaisWrap" style="margin-bottom:0;"></div>
+        </div>
+
+        <!-- ============ FINANCEIRO ============ -->
+        <div class="admin-pagina" id="paginaFinanceiro" data-pagina="financeiro" style="display:none;">
+          <div class="admin-page-titulo"><div><h1>Financeiro</h1><p>Receita, custo estimado e lucro de tudo que já foi pago — o custo é uma estimativa (proporcional ao preço, usando o custo cadastrado do produto hoje), não um valor contábil exato.</p></div></div>
+          <div class="stat-grid" id="financeiroStatGrid"></div>
+          <div class="dash-secao-titulo">Lucro por pedido pago</div>
+          <div class="admin-tabela-wrap">
+            <table class="admin-tabela">
+              <thead>
+                <tr>
+                  <th>Pedido</th>
+                  <th>Data</th>
+                  <th>Cliente</th>
+                  <th>Receita</th>
+                  <th>Custo estimado</th>
+                  <th>Lucro</th>
+                </tr>
+              </thead>
+              <tbody id="corpoTabelaFinanceiro"></tbody>
+            </table>
+          </div>
         </div>
 
         <!-- ============ LOJA (configurações) ============ -->
@@ -1511,6 +1537,7 @@ const CARREGADORES_PAGINA_ADMIN = {
   avaliacoes: () => renderAvaliacoesPendentes(),
   trocas: () => renderTrocas(),
   clientes: () => renderTabelaClientes(),
+  financeiro: () => renderFinanceiro(),
   loja: () => {}
 };
 
@@ -2502,6 +2529,92 @@ async function atualizarBadgeTrocas(){
   const badge = document.getElementById('tileBadgeTrocas');
   if (count > 0){ badge.textContent = count; badge.style.display = 'flex'; }
   else badge.style.display = 'none';
+}
+
+/* ============================================================
+   FINANCEIRO — receita, custo estimado e lucro de tudo que já foi pago.
+   O custo por item é uma ESTIMATIVA: usa a mesma proporção já calculada
+   pro preço de fábrica (custo_peca + imposto + frete, dividido pelo
+   preço base do produto HOJE) multiplicada pelo preço de venda daquele
+   item no pedido. Não é contábil exato — se o custo do produto mudou
+   depois da venda, ou a peça tinha quilate/banho diferente do preço
+   base, o número é uma aproximação. Serve pra ter noção do lucro, não
+   pra fechamento fiscal.
+   ============================================================ */
+async function renderFinanceiro(){
+  const grid = document.getElementById('financeiroStatGrid');
+  const corpo = document.getElementById('corpoTabelaFinanceiro');
+  grid.innerHTML = '';
+  corpo.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--texto-suave);">Carregando…</td></tr>`;
+
+  const [pedidosRes, produtosRes] = await Promise.all([
+    sb.from('pedidos').select('id, nome_cliente, itens, total, status_pagamento, criado_em').eq('status_pagamento', 'aprovado').order('criado_em', { ascending: false }),
+    sb.rpc('produtos_admin').select('id, preco, custo_peca, custo_imposto, custo_frete')
+  ]);
+
+  if (pedidosRes.error || produtosRes.error){
+    corpo.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--texto-suave);">Erro ao carregar dados financeiros.</td></tr>`;
+    return;
+  }
+
+  // Mapa produto_id -> fator de custo (mesma fórmula de precos_fabrica_ativos).
+  const fatorPorProduto = {};
+  (produtosRes.data || []).forEach(p => {
+    if (p.custo_peca && p.custo_peca > 0 && p.preco > 0){
+      const custoTotal = Number(p.custo_peca) + Number(p.custo_imposto || 0) + Number(p.custo_frete || 0);
+      fatorPorProduto[p.id] = Math.min(1, Math.max(0, custoTotal / Number(p.preco)));
+    }
+  });
+
+  let receitaTotal = 0, custoTotal = 0, itensSemCusto = 0;
+  const linhas = (pedidosRes.data || []).map(pedido => {
+    const receita = Number(pedido.total) || 0;
+    let custoPedido = 0;
+    (pedido.itens || []).forEach(item => {
+      const fator = fatorPorProduto[item.id];
+      const valorItem = (Number(item.preco) || 0) * (Number(item.qtd) || 1);
+      if (fator === undefined){ itensSemCusto++; return; } // sem custo cadastrado: não entra na conta (não dá pra estimar)
+      custoPedido += valorItem * fator;
+    });
+    receitaTotal += receita;
+    custoTotal += custoPedido;
+    return { pedido, receita, custo: custoPedido, lucro: receita - custoPedido };
+  });
+
+  const lucroTotal = receitaTotal - custoTotal;
+  const margemPct = receitaTotal > 0 ? (lucroTotal / receitaTotal) * 100 : 0;
+
+  const stats = [
+    { label: 'Receita (pedidos pagos)', valor: formatarPreco(receitaTotal),
+      icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 9.5c0-1.4 1.3-2.5 3-2.5s3 1 3 2.2c0 2.8-6 1.3-6 4 0 1.3 1.3 2.3 3 2.3s3-1 3-2.3"/></svg>' },
+    { label: 'Custo estimado', valor: formatarPreco(custoTotal),
+      icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 8l-9-5-9 5 9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8"/></svg>' },
+    { label: 'Lucro estimado', valor: formatarPreco(lucroTotal),
+      icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>' },
+    { label: 'Margem média', valor: `${margemPct.toFixed(1)}%`,
+      icone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="3"/><circle cx="17" cy="17" r="3"/><line x1="5" y1="19" x2="19" y2="5"/></svg>' }
+  ];
+  grid.innerHTML = stats.map(s => `
+    <div class="stat-card">
+      <div class="stat-card-topo"><span class="stat-card-label">${s.label}</span>${s.icone}</div>
+      <div class="stat-card-valor">${s.valor}</div>
+    </div>
+  `).join('');
+
+  corpo.innerHTML = linhas.length ? linhas.map(({ pedido, receita, custo, lucro }) => `
+    <tr>
+      <td>#${pedido.id.slice(0, 8).toUpperCase()}</td>
+      <td>${new Date(pedido.criado_em).toLocaleDateString('pt-BR')}</td>
+      <td>${escaparHtml(pedido.nome_cliente)}</td>
+      <td>${formatarPreco(receita)}</td>
+      <td>${formatarPreco(custo)}</td>
+      <td style="font-weight:700;color:var(--verde);">${formatarPreco(lucro)}</td>
+    </tr>
+  `).join('') : `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--texto-suave);">Nenhum pedido pago ainda.</td></tr>`;
+
+  if (itensSemCusto > 0){
+    corpo.innerHTML += `<tr><td colspan="6" style="text-align:center;padding:14px;color:var(--texto-suave);font-size:0.8rem;">${itensSemCusto} item(ns) vendido(s) sem custo cadastrado no produto — não entraram na conta de custo/lucro acima.</td></tr>`;
+  }
 }
 
 /* ============================================================
