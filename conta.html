@@ -267,6 +267,7 @@
           <option value="troca">Solicitar troca</option>
           <option value="devolucao">Solicitar devolução</option>
         </select>
+        <p id="avisoTrocaIndisponivel" style="display:none;font-size:0.76rem;color:var(--texto-suave);margin-top:6px;">Troca e devolução ficam disponíveis depois que o pedido for entregue, por até 30 dias corridos.</p>
       </div>
       <div>
         <label for="solicitacaoMotivo" style="font-size:0.85rem;font-weight:600;display:block;margin-bottom:6px;">Motivo</label>
@@ -642,6 +643,12 @@ function pedidoParaHtml(p, solicitacoes, avaliadosSet){
   const formaPagamento = FORMA_PAGAMENTO_LABEL[p.forma_pagamento] || p.forma_pagamento;
   const podeCancelar = ['novo', 'confirmado', 'em_transito_internacional'].includes(p.status);
   const podeAvaliar = p.status === 'entregue';
+  // Troca/devolução só depois de entregue e dentro de 30 dias corridos da
+  // entrega (mesma regra aplicada em criar_solicitacao_troca — isso aqui é
+  // só pra já mostrar as opções certas na hora de abrir o formulário, o
+  // RPC continua sendo quem garante de verdade).
+  const podeTrocarDevolver = p.status === 'entregue' && !!p.entregue_em
+    && (Date.now() - new Date(p.entregue_em).getTime()) <= 30 * 24 * 60 * 60 * 1000;
   const resumo = resumoItensPedido(p.itens);
 
   return `
@@ -727,7 +734,7 @@ function pedidoParaHtml(p, solicitacoes, avaliadosSet){
         <div class="conta-pedido-acoes">
           ${p.nota_fiscal_path ? `<button type="button" data-acao="baixar-nf" data-pedido-id="${p.id}">📄 Baixar nota fiscal</button>` : ''}
           <button type="button" data-acao="repetir" data-pedido-id="${p.id}">Comprar novamente</button>
-          <button type="button" data-acao="problema" data-pedido-id="${p.id}">Tenho um problema com esse pedido</button>
+          <button type="button" data-acao="problema" data-pedido-id="${p.id}" data-pode-trocar="${podeTrocarDevolver}">Trocar, devolver ou relatar um problema</button>
           ${podeCancelar ? `<button type="button" class="acao-cancelar" data-acao="cancelar" data-pedido-id="${p.id}">Cancelar pedido</button>` : ''}
         </div>
       </div>
@@ -789,6 +796,16 @@ document.getElementById('contaPedidos').addEventListener('click', async (e) => {
     document.getElementById('solicitacaoPedidoNumero').textContent = `#${pedidoId.slice(0, 8).toUpperCase()}`;
     document.getElementById('formSolicitacao').reset();
     document.getElementById('msgSolicitacao').className = 'conta-msg';
+    // Troca/devolução só aparece habilitado quando o pedido já foi entregue
+    // e ainda tá dentro dos 30 dias — fora disso, só "Relatar um problema"
+    // (o RPC bloqueia de qualquer forma, isso aqui é só pra não deixar a
+    // pessoa preencher tudo e levar um erro no final).
+    const podeTrocar = btn.getAttribute('data-pode-trocar') === 'true';
+    const selectTipo = document.getElementById('solicitacaoTipo');
+    selectTipo.querySelector('option[value="troca"]').disabled = !podeTrocar;
+    selectTipo.querySelector('option[value="devolucao"]').disabled = !podeTrocar;
+    selectTipo.value = 'problema';
+    document.getElementById('avisoTrocaIndisponivel').style.display = podeTrocar ? 'none' : 'block';
     document.getElementById('modalSolicitacao').classList.add('show');
   }
 
@@ -818,7 +835,7 @@ document.getElementById('formSolicitacao').addEventListener('submit', async (e) 
   botao.disabled = true;
   botao.textContent = 'Enviando...';
 
-  const { error } = await sb.rpc('criar_solicitacao_troca', {
+  const { data: novaSolicitacaoId, error } = await sb.rpc('criar_solicitacao_troca', {
     p_pedido_id: document.getElementById('solicitacaoPedidoId').value,
     p_tipo: document.getElementById('solicitacaoTipo').value,
     p_motivo: document.getElementById('solicitacaoMotivo').value.trim(),
@@ -834,6 +851,11 @@ document.getElementById('formSolicitacao').addEventListener('submit', async (e) 
     msg.className = 'conta-msg show erro';
     return;
   }
+
+  // Best-effort: avisa por e-mail (cliente recebe confirmação, lojista
+  // recebe alerta de solicitação nova) — não trava a tela se falhar.
+  sb.functions.invoke('notificar-solicitacao-troca', { body: { solicitacao_id: novaSolicitacaoId, evento: 'criada' } }).catch(() => {});
+
   msg.textContent = 'Solicitação enviada! Nossa equipe vai analisar e responder por aqui.';
   msg.className = 'conta-msg show sucesso';
   setTimeout(() => {
