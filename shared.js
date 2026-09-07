@@ -193,10 +193,12 @@ async function assinarNewsletter(form){
 async function carregarSeloAvaliacoesSite(){
   const el = document.getElementById('seloAvaliacoesSite');
   if (!el) return;
-  const { data, error } = await sb.from('avaliacoes').select('nota').eq('aprovado', true);
-  if (error || !data || !data.length){ el.style.display = 'none'; return; }
-  const media = data.reduce((soma, a) => soma + a.nota, 0) / data.length;
-  el.innerHTML = `⭐ ${media.toFixed(1)} · +${data.length} avaliaç${data.length === 1 ? 'ão' : 'ões'} verificada${data.length === 1 ? '' : 's'}`;
+  // Agregado no banco (média/contagem) em vez de puxar a nota de toda
+  // avaliação aprovada pro navegador — essa função roda em toda página do
+  // site (initHeaderShared), então o custo cresce com o total de avaliações.
+  const { data, error } = await sb.rpc('estatisticas_avaliacoes_site').single();
+  if (error || !data || !data.total){ el.style.display = 'none'; return; }
+  el.innerHTML = `⭐ ${Number(data.media).toFixed(1)} · +${data.total} avaliaç${data.total === 1 ? 'ão' : 'ões'} verificada${data.total === 1 ? '' : 's'}`;
 }
 
 /* ============================================================

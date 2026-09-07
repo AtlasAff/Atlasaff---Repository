@@ -267,7 +267,7 @@
           <option value="troca">Solicitar troca</option>
           <option value="devolucao">Solicitar devolução</option>
         </select>
-        <p id="avisoTrocaIndisponivel" style="display:none;font-size:0.76rem;color:var(--texto-suave);margin-top:6px;">Troca e devolução ficam disponíveis depois que o pedido for entregue, por até 30 dias corridos.</p>
+        <p id="avisoTrocaIndisponivel" style="display:none;font-size:0.76rem;color:var(--texto-suave);margin-top:6px;">Troca e devolução ficam disponíveis depois que o pedido for entregue, por até <span data-prazo="troca">30</span> dias corridos.</p>
       </div>
       <div>
         <label for="solicitacaoMotivo" style="font-size:0.85rem;font-weight:600;display:block;margin-bottom:6px;">Motivo</label>
@@ -614,11 +614,15 @@ async function mostrarConta(){
 
   // Busca de uma vez só (não pedido a pedido): solicitações de troca/devolução
   // já abertas e quais itens já foram avaliados, pra decidir o que mostrar
-  // em cada card sem disparar N consultas.
+  // em cada card sem disparar N consultas. Também garante a config do site
+  // carregada (prazo_troca_dias) antes de montar os cards — initHeaderShared
+  // já carrega isso em paralelo, mas sem esse await aqui não tem garantia de
+  // que já terminou quando pedidoParaHtml() rodar.
   const idsPedidos = pedidos.map(p => p.id);
   const [{ data: solicitacoes }, { data: avaliadas }] = await Promise.all([
     sb.from('solicitacoes_troca').select('*').in('pedido_id', idsPedidos).order('criado_em', { ascending: false }),
-    sb.from('avaliacoes').select('pedido_id, produto_id').eq('user_id', sessao.user.id).in('pedido_id', idsPedidos)
+    sb.from('avaliacoes').select('pedido_id, produto_id').eq('user_id', sessao.user.id).in('pedido_id', idsPedidos),
+    carregarConfigSite()
   ]);
   const solicitacoesPorPedido = {};
   (solicitacoes || []).forEach(s => { (solicitacoesPorPedido[s.pedido_id] ||= []).push(s); });
@@ -643,12 +647,13 @@ function pedidoParaHtml(p, solicitacoes, avaliadosSet){
   const formaPagamento = FORMA_PAGAMENTO_LABEL[p.forma_pagamento] || p.forma_pagamento;
   const podeCancelar = ['novo', 'confirmado', 'em_transito_internacional'].includes(p.status);
   const podeAvaliar = p.status === 'entregue';
-  // Troca/devolução só depois de entregue e dentro de 30 dias corridos da
-  // entrega (mesma regra aplicada em criar_solicitacao_troca — isso aqui é
-  // só pra já mostrar as opções certas na hora de abrir o formulário, o
-  // RPC continua sendo quem garante de verdade).
+  // Troca/devolução só depois de entregue e dentro do prazo configurado em
+  // config_site.prazo_troca_dias (mesma fonte que criar_solicitacao_troca
+  // usa de verdade — isso aqui é só pra já mostrar as opções certas na hora
+  // de abrir o formulário, o RPC continua sendo quem garante de verdade).
+  const prazoTrocaDias = (window.CONFIG_SITE && window.CONFIG_SITE.prazo_troca_dias) || 30;
   const podeTrocarDevolver = p.status === 'entregue' && !!p.entregue_em
-    && (Date.now() - new Date(p.entregue_em).getTime()) <= 30 * 24 * 60 * 60 * 1000;
+    && (Date.now() - new Date(p.entregue_em).getTime()) <= prazoTrocaDias * 24 * 60 * 60 * 1000;
   const resumo = resumoItensPedido(p.itens);
 
   return `
