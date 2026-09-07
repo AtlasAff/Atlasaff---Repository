@@ -910,6 +910,16 @@
               <span class="tile-label">Contato &amp; redes sociais</span>
               <span style="font-size:0.78rem;color:var(--texto-suave);">Número do WhatsApp, Instagram e TikTok usados no site inteiro.</span>
             </button>
+            <button type="button" class="admin-tile" id="btnPrazosConfig" style="align-items:flex-start;text-align:left;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+              <span class="tile-label">Prazos de garantia e troca</span>
+              <span style="font-size:0.78rem;color:var(--texto-suave);">Muda o número mostrado nas páginas do site E a regra aplicada de verdade, juntos.</span>
+            </button>
+            <button type="button" class="admin-tile" id="btnAdministradores" style="align-items:flex-start;text-align:left;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/><path d="M17.5 3.5l1 1 2-2"/></svg>
+              <span class="tile-label">Administradores</span>
+              <span style="font-size:0.78rem;color:var(--texto-suave);">Quem tem acesso a esse painel — dar ou tirar acesso de uma conta.</span>
+            </button>
           </div>
         </div>
 
@@ -1144,6 +1154,43 @@
     </form>
     <div class="modal-footer">
       <button type="button" class="btn-admin btn-admin-outline" id="btnFecharContatoConfig">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalPrazosConfig">
+  <div class="modal-card" style="max-width:420px;">
+    <h2>Prazos de garantia e troca</h2>
+    <p style="font-size:0.8rem;color:var(--texto-suave);margin-top:-8px;">Esses números alimentam DUAS coisas ao mesmo tempo: o texto que aparece nas páginas de Garantia e Trocas &amp; devoluções, e a regra que o site realmente aplica ao aceitar ou recusar um pedido de troca/devolução. Mudando aqui, os dois ficam sempre iguais.</p>
+    <form id="formPrazosConfig" style="display:flex;flex-direction:column;gap:10px;">
+      <div class="form-campo">
+        <label for="cfgPrazoGarantia">Garantia contra defeito de fabricação (dias)</label>
+        <input type="number" id="cfgPrazoGarantia" min="1" max="3650" required>
+      </div>
+      <div class="form-campo">
+        <label for="cfgPrazoTroca">Troca/devolução após entrega (dias)</label>
+        <input type="number" id="cfgPrazoTroca" min="1" max="3650" required>
+      </div>
+      <button type="submit" class="btn-admin btn-admin-primary">Salvar</button>
+    </form>
+    <div class="modal-footer">
+      <button type="button" class="btn-admin btn-admin-outline" id="btnFecharPrazosConfig">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalAdministradores">
+  <div class="modal-card" style="max-width:440px;">
+    <h2>Administradores</h2>
+    <p style="font-size:0.8rem;color:var(--texto-suave);margin-top:-8px;">Só contas listadas aqui têm acesso a esse painel. A pessoa precisa já ter uma conta criada no site antes de você dar acesso a ela.</p>
+    <div id="listaAdministradores" style="display:flex;flex-direction:column;gap:8px;margin:12px 0;"></div>
+    <form id="formAdicionarAdmin" style="display:flex;gap:8px;">
+      <input type="email" id="novoAdminEmail" placeholder="E-mail de uma conta já cadastrada" required style="flex:1;padding:10px 12px;border:1px solid var(--cinza-borda);border-radius:var(--radius);">
+      <button type="submit" class="btn-admin btn-admin-primary">Dar acesso</button>
+    </form>
+    <div id="msgAdministradores" style="font-size:0.78rem;margin-top:8px;"></div>
+    <div class="modal-footer">
+      <button type="button" class="btn-admin btn-admin-outline" id="btnFecharAdministradores">Fechar</button>
     </div>
   </div>
 </div>
@@ -1939,6 +1986,112 @@ document.getElementById('formContatoConfig').addEventListener('submit', async (e
   }
   botao.textContent = 'Salvo ✓';
   setTimeout(() => { botao.textContent = 'Salvar'; }, 1800);
+});
+
+/* ============================================================
+   PRAZOS DE GARANTIA E TROCA — config_site.prazo_garantia_dias /
+   prazo_troca_dias. Alimenta o texto público (garantia.html,
+   trocas-devolucoes.html) E a regra real aplicada em
+   criar_solicitacao_troca — um número só, sem risco de o texto prometer
+   uma coisa e a regra aplicar outra.
+   ============================================================ */
+async function abrirModalPrazosConfig(){
+  const { data, error } = await sb.from('config_site').select('prazo_garantia_dias, prazo_troca_dias').eq('id', 1).maybeSingle();
+  if (error){ alert('Erro ao carregar configurações: ' + error.message); return; }
+  document.getElementById('cfgPrazoGarantia').value = (data && data.prazo_garantia_dias) || 90;
+  document.getElementById('cfgPrazoTroca').value = (data && data.prazo_troca_dias) || 30;
+  document.getElementById('modalPrazosConfig').classList.add('show');
+}
+
+document.getElementById('btnPrazosConfig').addEventListener('click', abrirModalPrazosConfig);
+document.getElementById('btnFecharPrazosConfig').addEventListener('click', () => {
+  document.getElementById('modalPrazosConfig').classList.remove('show');
+});
+
+document.getElementById('formPrazosConfig').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const botao = e.target.querySelector('button[type="submit"]');
+  botao.disabled = true;
+  botao.textContent = 'Salvando...';
+
+  const dados = {
+    prazo_garantia_dias: parseInt(document.getElementById('cfgPrazoGarantia').value, 10) || 90,
+    prazo_troca_dias: parseInt(document.getElementById('cfgPrazoTroca').value, 10) || 30,
+    atualizado_em: new Date().toISOString()
+  };
+
+  const { error } = await sb.from('config_site').update(dados).eq('id', 1);
+
+  botao.disabled = false;
+  if (error){
+    alert('Erro ao salvar: ' + error.message);
+    botao.textContent = 'Salvar';
+    return;
+  }
+  botao.textContent = 'Salvo ✓';
+  setTimeout(() => { botao.textContent = 'Salvar'; }, 1800);
+});
+
+/* ============================================================
+   ADMINISTRADORES — quem tem acesso a esse painel (tabela admins).
+   ============================================================ */
+async function abrirModalAdministradores(){
+  document.getElementById('msgAdministradores').textContent = '';
+  document.getElementById('modalAdministradores').classList.add('show');
+  await renderAdministradores();
+}
+
+async function renderAdministradores(){
+  const wrap = document.getElementById('listaAdministradores');
+  wrap.innerHTML = 'Carregando...';
+  const { data, error } = await sb.rpc('listar_admins_admin');
+  if (error){ wrap.innerHTML = `<p style="color:var(--texto-suave);font-size:0.82rem;">Erro ao carregar: ${error.message}</p>`; return; }
+
+  wrap.innerHTML = (data || []).map(a => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--creme-escuro);border-radius:var(--radius);">
+      <span style="font-size:0.85rem;">${escaparHtml(a.email)}</span>
+      <button type="button" data-acao="remover-admin" data-id="${a.user_id}" style="font-size:0.76rem;color:var(--bordo);text-decoration:underline;">Remover acesso</button>
+    </div>
+  `).join('') || `<p style="color:var(--texto-suave);font-size:0.82rem;">Nenhum administrador encontrado.</p>`;
+
+  wrap.querySelectorAll('button[data-acao="remover-admin"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Remover o acesso admin dessa conta?')) return;
+      const { error: erroRemover } = await sb.rpc('revogar_admin', { p_user_id: btn.getAttribute('data-id') });
+      const msg = document.getElementById('msgAdministradores');
+      if (erroRemover){ msg.textContent = erroRemover.message; msg.style.color = 'var(--bordo)'; return; }
+      msg.textContent = '';
+      renderAdministradores();
+    });
+  });
+}
+
+document.getElementById('btnAdministradores').addEventListener('click', abrirModalAdministradores);
+document.getElementById('btnFecharAdministradores').addEventListener('click', () => {
+  document.getElementById('modalAdministradores').classList.remove('show');
+});
+
+document.getElementById('formAdicionarAdmin').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const input = document.getElementById('novoAdminEmail');
+  const msg = document.getElementById('msgAdministradores');
+  const botao = e.target.querySelector('button[type="submit"]');
+  botao.disabled = true;
+  botao.textContent = 'Dando acesso...';
+
+  const { error } = await sb.rpc('conceder_admin', { p_email: input.value.trim() });
+
+  botao.disabled = false;
+  botao.textContent = 'Dar acesso';
+  if (error){
+    msg.textContent = error.message;
+    msg.style.color = 'var(--bordo)';
+    return;
+  }
+  msg.textContent = 'Acesso concedido ✓';
+  msg.style.color = 'var(--verde)';
+  input.value = '';
+  renderAdministradores();
 });
 
 document.getElementById('heroFotoDrop').addEventListener('click', () => document.getElementById('heroFotoInput').click());
