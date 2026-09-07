@@ -185,6 +185,21 @@ async function assinarNewsletter(form){
 }
 
 /* ============================================================
+   SELO DE AVALIAÇÕES DO SITE — usado na faixa de confiança da home
+   (index.html). Só entram avaliações aprovadas (mesma regra que já vale
+   pra elas aparecerem na página do produto), então o número bate com o
+   que qualquer cliente vê ao navegar pelo site.
+   ============================================================ */
+async function carregarSeloAvaliacoesSite(){
+  const el = document.getElementById('seloAvaliacoesSite');
+  if (!el) return;
+  const { data, error } = await sb.from('avaliacoes').select('nota').eq('aprovado', true);
+  if (error || !data || !data.length){ el.style.display = 'none'; return; }
+  const media = data.reduce((soma, a) => soma + a.nota, 0) / data.length;
+  el.innerHTML = `⭐ ${media.toFixed(1)} · +${data.length} avaliaç${data.length === 1 ? 'ão' : 'ões'} verificada${data.length === 1 ? '' : 's'}`;
+}
+
+/* ============================================================
    ÍCONES DE CATEGORIA (por chave "icone" da tabela categorias)
    "padrao" é usado por qualquer categoria nova criada no admin,
    até você (opcionalmente) me pedir um ícone customizado pra ela.
@@ -548,6 +563,8 @@ async function initHeaderShared(){
       }
     });
   }
+
+  carregarSeloAvaliacoesSite();
 
   const yearEl = document.getElementById('year');
   if (yearEl) yearEl.textContent = new Date().getFullYear();

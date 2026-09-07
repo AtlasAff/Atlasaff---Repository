@@ -2707,6 +2707,9 @@ async function renderTrocas(){
       btn.disabled = false;
       btn.textContent = 'Salvar';
       if (error){ alert('Erro: ' + error.message); return; }
+      // Best-effort: avisa o cliente por e-mail que o status mudou (com a
+      // resposta, quando tiver) — não trava a tela se falhar.
+      sb.functions.invoke('notificar-solicitacao-troca', { body: { solicitacao_id: id, evento: 'atualizada' } }).catch(() => {});
       mostrarToastAdmin('Solicitação atualizada ✓');
       atualizarBadgeTrocas();
     });
