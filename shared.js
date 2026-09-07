@@ -318,10 +318,19 @@ async function carregarHomeHero(tentativa = 1){
    ============================================================ */
 async function carregarConfigSite(){
   if (window.CONFIG_SITE) return window.CONFIG_SITE;
-  const { data, error } = await sb.from('config_site').select('whatsapp_numero, instagram_url, tiktok_url').eq('id', 1).maybeSingle();
+  const { data, error } = await sb.from('config_site').select('whatsapp_numero, instagram_url, tiktok_url, prazo_troca_dias, prazo_garantia_dias').eq('id', 1).maybeSingle();
   if (error){ console.error('Erro ao carregar config do site:', error); }
   window.CONFIG_SITE = data || {};
   return window.CONFIG_SITE;
+}
+
+// Preenche qualquer elemento com data-prazo="troca" ou data-prazo="garantia"
+// com o número configurado no admin — usado nas páginas de política de
+// trocas/devolução e garantia, pra nunca ficar um texto prometendo um prazo
+// diferente do que a regra do banco realmente aplica.
+function preencherPrazosConfig(config){
+  document.querySelectorAll('[data-prazo="troca"]').forEach(el => { el.textContent = config.prazo_troca_dias ?? 30; });
+  document.querySelectorAll('[data-prazo="garantia"]').forEach(el => { el.textContent = config.prazo_garantia_dias ?? 90; });
 }
 
 // Monta o link do WhatsApp a partir da config carregada, com uma mensagem opcional.
@@ -571,6 +580,7 @@ async function initHeaderShared(){
 
   const configSite = await carregarConfigSite();
   preencherRedesSociaisRodape(configSite);
+  preencherPrazosConfig(configSite);
   document.dispatchEvent(new CustomEvent('configSiteCarregada', { detail: configSite }));
 
   injetarSelosSeguranca();
