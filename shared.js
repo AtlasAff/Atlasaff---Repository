@@ -1256,7 +1256,7 @@ function renderCartDrawer(){
 
   if (itens.length === 0){
     lista.innerHTML = `<div class="carrinho-vazio"><p>Seu carrinho está vazio.</p></div>`;
-    rodape.innerHTML = `<a href="index.html" class="btn btn-primary" style="width:100%;justify-content:center;">Continuar comprando</a>`;
+    rodape.innerHTML = `<a href="/" class="btn btn-primary" style="width:100%;justify-content:center;">Continuar comprando</a>`;
     return;
   }
 
@@ -1605,7 +1605,7 @@ async function renderCategoryPage(){
 
   if (!catInfo){
     document.querySelector('.page-title h1').textContent = 'Categoria não encontrada';
-    grid.innerHTML = `<p class="sem-resultados">Essa categoria não existe (ou foi removida). <a href="index.html" style="text-decoration:underline;">Voltar à loja</a>.</p>`;
+    grid.innerHTML = `<p class="sem-resultados">Essa categoria não existe (ou foi removida). <a href="/" style="text-decoration:underline;">Voltar à loja</a>.</p>`;
     return;
   }
 
@@ -1816,7 +1816,7 @@ async function renderColecaoPage(){
 
   if (!label){
     document.querySelector('.page-title h1').textContent = 'Coleção não encontrada';
-    grid.innerHTML = `<p class="sem-resultados">Essa coleção não existe. <a href="index.html" style="text-decoration:underline;">Voltar à loja</a>.</p>`;
+    grid.innerHTML = `<p class="sem-resultados">Essa coleção não existe. <a href="/" style="text-decoration:underline;">Voltar à loja</a>.</p>`;
     return;
   }
 
@@ -1861,7 +1861,7 @@ async function renderProdutoPage(){
 
   const p = await carregarProdutoPorId(id);
   if (!p){
-    document.querySelector('.produto-grid').innerHTML = `<p class="sem-resultados">Produto não encontrado. <a href="index.html" style="text-decoration:underline;">Voltar à loja</a>.</p>`;
+    document.querySelector('.produto-grid').innerHTML = `<p class="sem-resultados">Produto não encontrado. <a href="/" style="text-decoration:underline;">Voltar à loja</a>.</p>`;
     return;
   }
 
