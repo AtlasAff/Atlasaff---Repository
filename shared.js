@@ -257,6 +257,42 @@ function extrairSegmentoUrl(prefixo){
   return (idx !== -1 && partes[idx + 1]) ? decodeURIComponent(partes[idx + 1]) : null;
 }
 
+// Botão de "ver senha" (👁) em TODO campo type="password" do site,
+// automático — não precisa mexer em cada formulário. Roda em toda página
+// (initHeaderShared chama isso), envolve o input existente com um wrapper
+// posicionado e adiciona o botão dentro, sem duplicar HTML em lugar
+// nenhum. data-toggle-senha-pronto evita duplicar o botão se a função
+// rodar mais de uma vez na mesma página.
+const ICONE_OLHO_ABERTO = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>';
+const ICONE_OLHO_FECHADO = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3l18 18"/><path d="M10.6 10.6a3 3 0 0 0 4.2 4.2"/><path d="M9.9 4.24A11 11 0 0 1 12 4c7 0 11 8 11 8a13.3 13.3 0 0 1-3.1 3.9M6.1 6.1A13.6 13.6 0 0 0 1 12s4 8 11 8a11 11 0 0 0 5.1-1.24"/></svg>';
+function ativarToggleSenha(){
+  document.querySelectorAll('input[type="password"]').forEach(input => {
+    if (input.dataset.toggleSenhaPronto) return;
+    input.dataset.toggleSenhaPronto = '1';
+
+    const wrapper = document.createElement('div');
+    wrapper.style.position = 'relative';
+    input.parentNode.insertBefore(wrapper, input);
+    wrapper.appendChild(input);
+    input.style.paddingRight = '42px';
+    // largura em % do CSS existente é relativa ao NOVO pai (o wrapper) —
+    // então continua ocupando 100% do espaço disponível certinho.
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.setAttribute('aria-label', 'Mostrar senha');
+    btn.style.cssText = 'position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;padding:6px;cursor:pointer;color:#6E6259;display:flex;align-items:center;line-height:0;';
+    btn.innerHTML = ICONE_OLHO_ABERTO;
+    btn.addEventListener('click', () => {
+      const mostrando = input.type === 'text';
+      input.type = mostrando ? 'password' : 'text';
+      btn.innerHTML = mostrando ? ICONE_OLHO_ABERTO : ICONE_OLHO_FECHADO;
+      btn.setAttribute('aria-label', mostrando ? 'Mostrar senha' : 'Esconder senha');
+    });
+    wrapper.appendChild(btn);
+  });
+}
+
 function formatarPreco(valor){
   const num = Number(valor);
   // Acima de R$ 1.000, esconde os centavos (R$ 1.000 em vez de R$ 1.000,00)
@@ -598,6 +634,7 @@ async function initHeaderShared(){
   }
 
   carregarSeloAvaliacoesSite();
+  ativarToggleSenha();
 
   const yearEl = document.getElementById('year');
   if (yearEl) yearEl.textContent = new Date().getFullYear();
