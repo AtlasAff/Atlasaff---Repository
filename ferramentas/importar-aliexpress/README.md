@@ -1,0 +1,84 @@
+# Importar produto do AliExpress
+
+Ferramenta que roda no **seu computador** (não no site) pra puxar as
+informações de um produto do AliExpress e já criar um rascunho dele na
+loja, pronto pra você revisar e ativar. Usa a sua própria sessão logada
+no AliExpress, então funciona sem levar bloqueio (é a mesma ideia por
+trás de ferramentas como o DSers).
+
+## Passo 1 — Baixar essa pasta
+
+Se você ainda não tem o código do site no seu computador:
+
+1. Entra no repositório do site no GitHub.
+2. Clica no botão verde **"Code"** → **"Download ZIP"**.
+3. Extrai o ZIP em algum lugar do seu computador.
+4. Dentro dele, acha a pasta `ferramentas/importar-aliexpress` — é só essa que você vai usar.
+
+## Passo 2 — Instalar o Node.js (só na primeira vez)
+
+1. Entra em **[nodejs.org](https://nodejs.org/)**.
+2. Baixa a versão **"LTS"** (a recomendada) pro seu sistema (Windows ou Mac).
+3. Instala normalmente, clicando "Avançar" em tudo (igual instalar qualquer programa).
+
+## Passo 3 — Abrir o terminal na pasta certa
+
+- **Windows**: abre a pasta `ferramentas/importar-aliexpress` no Explorador de Arquivos, clica na barra de endereço lá em cima, digita `cmd` e aperta Enter — abre um terminal já na pasta certa.
+- **Mac**: abre o app **Terminal**, digita `cd ` (com espaço) e arrasta a pasta `ferramentas/importar-aliexpress` pra dentro da janela do terminal, aperta Enter.
+
+## Passo 4 — Instalar as dependências (só na primeira vez)
+
+No terminal que você abriu, digita e aperta Enter:
+
+```
+npm install
+```
+
+Vai demorar um minuto ou dois baixando umas coisinhas. Só precisa fazer isso uma vez (ou de novo se apagar a pasta `node_modules`).
+
+## Passo 5 — Logar na sua conta AliExpress
+
+```
+npm run login
+```
+
+Vai abrir uma janela de navegador. Loga na sua conta AliExpress normalmente,
+como você sempre faz. Depois de logado, volta pro terminal e aperta Enter
+(ele vai estar esperando você lá).
+
+Isso salva sua sessão numa pasta local — só precisa repetir esse passo de
+vez em quando (quando a sessão expirar, alguns meses depois).
+
+## Passo 6 — Importar um produto
+
+Copia o link do produto no AliExpress e roda:
+
+```
+npm run importar -- https://www.aliexpress.com/item/COLA-O-LINK-AQUI.html
+```
+
+(o `--` antes do link é importante, não esquece)
+
+Vai aparecer no terminal o que foi encontrado (nome, quantas fotos, preço,
+variações) e o que **não** foi encontrado (esses campos você preenche na
+mão depois). No fim, vai pedir seu e-mail e senha de admin do site — é
+só pra salvar o produto, não fica guardado em lugar nenhum.
+
+## Passo 7 — Terminar no site
+
+Abre o admin do site normalmente, acha o produto na lista (ele entra
+**inativo**, ou seja, não aparece pro cliente ainda — e com um ícone 🔗 de
+link do fornecedor). Revisa:
+
+- Categoria
+- Quilate / banho / tamanho (as variações que apareceram no terminal te dão uma pista de quais existem)
+- Preço final (usa a calculadora de margem que já existe no admin)
+- Fotos (confere se vieram certas)
+
+Quando estiver tudo certo, marca como **ativo** e salva — aí sim aparece no site.
+
+## Se algo der errado
+
+- **"Ainda não tem sessão salva"** → roda `npm run login` de novo.
+- **Nome/fotos/preço vieram vazios** → o AliExpress mudou alguma coisa no formato da página. Preenche na mão dessa vez e avisa o Claude — é rápido de ajustar o script.
+- **Trava ou dá erro estranho** → o AliExpress pode ter bloqueado momentaneamente. Espera um pouco e tenta de novo, ou usa o link de outro produto pra testar.
