@@ -814,6 +814,8 @@
           <div class="stat-grid" id="dashStatGrid"></div>
           <div class="dash-secao-titulo">Últimos pedidos</div>
           <div class="dash-lista-card" id="dashUltimosPedidos"><div class="dash-lista-vazio">Carregando…</div></div>
+          <div class="dash-secao-titulo">Espaço no Supabase (plano grátis)</div>
+          <div class="dash-lista-card" id="dashEspacoSupabase" style="padding:16px 18px;display:flex;flex-direction:column;gap:16px;"></div>
         </div>
 
         <!-- ============ PRODUTOS ============ -->
@@ -1719,6 +1721,8 @@ async function carregarDashboardAdmin(){
     sb.from('avaliacoes').select('id', { count: 'exact', head: true }).eq('aprovado', false)
   ]);
 
+  renderEspacoSupabase();
+
   const pedidos = pedidosRes.data || [];
   const produtosAtivos = (produtosRes.data || []).filter(p => p.ativo);
   const estoqueBaixo = produtosAtivos.filter(p => (p.estoque ?? 0) <= (p.estoque_minimo ?? 5)).length;
@@ -1763,6 +1767,54 @@ async function carregarDashboardAdmin(){
       <span style="font-weight:700;min-width:78px;text-align:right;">${formatarPreco(p.total)}</span>
     </div>
   `).join('') : '<div class="dash-lista-vazio">Nenhum pedido ainda.</div>';
+}
+
+/* ============================================================
+   ESPAÇO NO SUPABASE — banco de dados + armazenamento de arquivo,
+   comparado com o limite do plano grátis (500 MB banco / 1 GB
+   armazenamento — https://supabase.com/docs/guides/platform/billing-on-supabase).
+   Se um dia assinar o plano Pro, esses dois números viram outra coisa
+   (8 GB banco incluso, 100 GB armazenamento incluso) — precisa atualizar
+   aqui também, não tem como o site descobrir sozinho qual plano tá ativo.
+   ============================================================ */
+const LIMITE_BANCO_BYTES_GRATIS = 500 * 1024 * 1024;
+const LIMITE_STORAGE_BYTES_GRATIS = 1024 * 1024 * 1024;
+
+function formatarBytes(bytes){
+  if (bytes >= 1024 * 1024 * 1024) return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+  if (bytes >= 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  return Math.round(bytes / 1024) + ' KB';
+}
+
+function barraEspacoHtml(rotulo, usadoBytes, limiteBytes){
+  const pct = Math.min(100, (usadoBytes / limiteBytes) * 100);
+  // Verde até 70%, amarelo até 90%, vermelho dali pra cima — mesma lógica
+  // de "hora de prestar atenção" usada no resto do admin (estoque baixo etc).
+  const cor = pct >= 90 ? 'var(--vermelho)' : pct >= 70 ? 'var(--amarelo)' : 'var(--verde)';
+  return `
+    <div>
+      <div style="display:flex;justify-content:space-between;font-size:0.82rem;margin-bottom:6px;">
+        <span>${rotulo}</span>
+        <span style="color:var(--texto-suave);">${formatarBytes(usadoBytes)} de ${formatarBytes(limiteBytes)} (${pct.toFixed(1)}%)</span>
+      </div>
+      <div style="height:8px;background:var(--creme-escuro);border-radius:4px;overflow:hidden;">
+        <div style="height:100%;width:${pct}%;background:${cor};border-radius:4px;"></div>
+      </div>
+    </div>
+  `;
+}
+
+async function renderEspacoSupabase(){
+  const wrap = document.getElementById('dashEspacoSupabase');
+  const { data, error } = await sb.rpc('estatisticas_espaco_admin').single();
+  if (error || !data){
+    wrap.innerHTML = `<p style="font-size:0.82rem;color:var(--texto-suave);">Não foi possível carregar o uso de espaço agora.</p>`;
+    return;
+  }
+  wrap.innerHTML =
+    barraEspacoHtml('Banco de dados', data.banco_bytes, LIMITE_BANCO_BYTES_GRATIS) +
+    barraEspacoHtml('Armazenamento de arquivos (fotos, notas fiscais...)', data.storage_bytes, LIMITE_STORAGE_BYTES_GRATIS) +
+    `<p style="font-size:0.76rem;color:var(--texto-suave);margin:0;">Baseado no plano grátis do Supabase. Se estiver perto do limite, é hora de assinar o plano pago.</p>`;
 }
 
 let produtosAdmin = [];
