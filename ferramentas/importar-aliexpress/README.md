@@ -87,7 +87,7 @@ Quando estiver tudo certo, marca como **ativo** e salva — aí sim aparece no s
 ## Se algo der errado
 
 - **"Ainda não tem sessão salva"** → roda `npm run login` de novo.
-- **Nome/fotos/preço vieram vazios** → o AliExpress mudou alguma coisa no formato da página. Preenche na mão dessa vez e avisa o Claude — é rápido de ajustar o script.
+- **Nome/fotos/preço vieram vazios** → o AliExpress mudou alguma coisa no formato da página. Preenche na mão dessa vez — e o próprio script cria uma pastinha `debug/` (dentro de `importar-aliexpress`) com 2 arquivos daquela tentativa (`...-dados-embutidos.json` e `...-pagina.html`). Manda esses 2 arquivos pro Claude que ele ajusta certinho, sem precisar advinhar.
 - **Trava ou dá erro estranho** → o AliExpress pode ter bloqueado momentaneamente. Espera um pouco e tenta de novo, ou usa o link de outro produto pra testar.
 - **"arraste pra verificar" dá erro / não deixa passar** → o AliExpress detectou que é um navegador automatizado. Fecha tudo, espera uns minutos e roda `npm run login` de novo — às vezes é só tentar de novo que passa. Se continuar sempre dando erro, avisa o Claude.
 - **Erro dizendo que não achou o "chrome"** → você precisa ter o Google Chrome instalado (não Edge, não Firefox) — [google.com/chrome](https://www.google.com/chrome/).
