@@ -25,7 +25,7 @@ import { chromium } from 'playwright';
 import { createClient } from '@supabase/supabase-js';
 import { createInterface } from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -97,24 +97,34 @@ async function modoLogin(){
 
 /* ============================================================
    EXTRAÇÃO DOS DADOS DA PÁGINA — várias tentativas em camadas, porque o
-   AliExpress muda o formato da página de vez em quando. Cada camada é
-   independente: se uma falhar, tenta a próxima; se todas falharem pra um
-   campo específico, esse campo fica vazio (não trava o resto).
+   AliExpress muda o formato da página de vez em quando. Cada campo tenta
+   várias fontes em ordem; só entra no aviso de "não achei" se TODAS as
+   tentativas daquele campo falharem (uma tentativa que dá certo depois de
+   outra falhar não deixa rastro de erro).
    ============================================================ */
 async function extrairDadosProduto(page){
   const avisos = [];
 
-  // Camada 1: o formato clássico guarda um JSON grande com tudo dentro de
-  // "window.runParams.data" (ou variações desse nome) — é a fonte mais
-  // completa quando existe.
-  const dadosEmbutidos = await page.evaluate(() => {
-    const candidatos = ['runParams', '_d_c_'];
-    for (const nomeGlobal of candidatos){
-      const valor = window[nomeGlobal];
-      if (valor && typeof valor === 'object') return valor;
+  // A página do AliExpress é montada por JavaScript DEPOIS que ela abre
+  // (o HTML original vem "vazio" nessa parte) — então tem que esperar
+  // ela terminar de montar antes de tentar ler nome/preço. Esse seletor
+  // (`data-pl="product-title"`) é o mesmo que o PRÓPRIO AliExpress usa
+  // internamente pra saber se o título do produto já apareceu na tela.
+  try {
+    await page.waitForSelector('[data-pl="product-title"], [class*="title--line-one"]', { timeout: 15000 });
+  } catch { /* não achou nesse tempo — segue mesmo assim com o que carregou */ }
+  await page.waitForTimeout(1200); // folga pra preço/imagens acabarem de montar também
+
+  // Além do que está na tela, alguns dados (principalmente as FOTOS) vêm
+  // prontos escondidos num objeto JavaScript no meio da página — não
+  // precisa esperar nada pra pegar esses.
+  const dados = await page.evaluate(() => {
+    const fontes = [window._d_c_?.DCData, window.runParams?.data, window.runParams, window._d_c_];
+    for (const f of fontes){
+      if (f && typeof f === 'object' && Object.keys(f).length) return f;
     }
     // Procura em qualquer <script> um "window.algumaCoisa = {...}" que
-    // pareça ter dado de produto (título, imagens).
+    // pareça ter dado de produto (título, imagens) — layout antigo/alternativo.
     const scripts = [...document.querySelectorAll('script')];
     for (const s of scripts){
       const texto = s.textContent || '';
@@ -125,54 +135,71 @@ async function extrairDadosProduto(page){
       }
     }
     return null;
-  });
+  }) || {};
 
-  const dados = dadosEmbutidos?.data || dadosEmbutidos || {};
-
-  // Cada campo tentado separadamente — um caminho de JSON que não bate
-  // não pode derrubar os outros.
-  function tentar(fn, nomeCampo){
-    try {
-      const v = fn();
-      if (v === undefined || v === null || v === '') throw new Error('vazio');
-      return v;
-    } catch {
-      avisos.push(nomeCampo);
-      return null;
+  // Tenta uma lista de jeitos diferentes de achar o mesmo campo, em ordem;
+  // só registra aviso se NENHUM deles der certo.
+  async function tentarCadeia(nomeCampo, ...tentativas){
+    for (const t of tentativas){
+      try {
+        const v = await t();
+        if (v !== undefined && v !== null && v !== '') return v;
+      } catch { /* tenta a próxima */ }
     }
+    avisos.push(nomeCampo);
+    return null;
   }
 
-  const nome = tentar(() =>
-    dados?.titleModule?.subject ||
-    dados?.title ||
-    document.title?.replace(/\s*[-|].*$/, ''),
-  'nome') || await tentar(() => page.title(), 'nome (título da aba)');
+  const limpar = (t) => t?.replace(/\s+/g, ' ').trim();
 
-  const descricao = tentar(() =>
-    dados?.descriptionModule?.description ||
-    (dados?.specsModule?.props || []).map(p => `${p.attrName}: ${p.attrValue}`).join('\n')
-  , 'descrição/especificações');
+  const nome = await tentarCadeia('nome',
+    async () => limpar(await page.locator('[data-pl="product-title"]').first().textContent({ timeout: 3000 })),
+    async () => limpar(await page.locator('[class*="title--line-one"]').first().textContent({ timeout: 2000 })),
+    () => dados?.titleModule?.subject || dados?.title,
+    async () => limpar((await page.title())?.replace(/\s*[-|]\s*AliExpress.*$/i, ''))
+  );
 
-  const fotos = tentar(() => {
-    const lista = dados?.imageModule?.imagePathList || dados?.imagePathList;
+  const preco = await tentarCadeia('preço',
+    async () => limpar(await page.locator('[class*="price-default--current"]').first().textContent({ timeout: 3000 })),
+    () => dados?.priceModule?.formatedActivityPrice || dados?.priceModule?.formatedPrice
+  );
+
+  const fotos = await tentarCadeia('fotos', () => {
+    const lista = dados?.imagePathList || dados?.imageModule?.imagePathList;
     if (!Array.isArray(lista) || !lista.length) throw new Error('sem lista');
     return lista.map(u => u.startsWith('http') ? u : `https:${u}`);
-  }, 'fotos') || [];
+  }) || [];
 
-  const preco = tentar(() => {
-    const p = dados?.priceModule?.formatedActivityPrice || dados?.priceModule?.formatedPrice;
-    if (!p) throw new Error('sem preço');
-    return p;
-  }, 'preço');
+  const descricao = await tentarCadeia('descrição/especificações',
+    async () => limpar(await page.locator('[class*="seo-sellpoints--sellerPoint"]').first().textContent({ timeout: 3000 })),
+    () => dados?.descriptionModule?.description ||
+      (dados?.specsModule?.props || []).map(p => `${p.attrName}: ${p.attrValue}`).join('\n')
+  );
 
-  const variacoes = tentar(() => {
+  const variacoes = await tentarCadeia('variações (tamanho/cor/etc — precisa mapear na mão)', () => {
     const props = dados?.skuModule?.productSKUPropertyList;
     if (!Array.isArray(props) || !props.length) throw new Error('sem variação');
     return props.map(p => ({
       nome: p.skuPropertyName,
       valores: (p.skuPropertyValues || []).map(v => v.propertyValueDisplayName || v.propertyValueName)
     }));
-  }, 'variações (tamanho/cor/etc — precisa mapear na mão)') || [];
+  }) || [];
+
+  // Quando algum campo importante não foi achado, salva um "raio-x" da
+  // página (o que estava escondido no JavaScript + a página já renderizada
+  // na tela) numa pasta local — não vai pro site nem pro GitHub, é só pra
+  // você me mandar o conteúdo desses arquivos e eu ajustar os caminhos
+  // certos, sem ficar advinhando de novo.
+  if (avisos.length){
+    try {
+      const pastaDebug = path.join(__dirname, 'debug');
+      await mkdir(pastaDebug, { recursive: true });
+      const carimbo = new Date().toISOString().replace(/[:.]/g, '-');
+      await writeFile(path.join(pastaDebug, `${carimbo}-dados-embutidos.json`), JSON.stringify(dados, null, 2));
+      await writeFile(path.join(pastaDebug, `${carimbo}-pagina.html`), await page.content());
+      console.log(`\n(criei um "raio-x" da página em debug/${carimbo}-*.* — se algum campo continuar faltando depois de revisar no admin, me manda esses dois arquivos que eu ajusto certinho)`);
+    } catch { /* isso é só um extra, não pode travar a importação por causa disso */ }
+  }
 
   return { nome, descricao, fotos, preco, variacoes, avisos };
 }
