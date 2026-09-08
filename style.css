@@ -1982,6 +1982,22 @@ body.pronto{ opacity: 1; transition: opacity .45s ease; }
 .formato-pill:hover ~ .formato-bar,
 .formato-pill.active ~ .formato-bar{ width:65%; }
 
+/* "Escolha a ocasião" — mesma ideia de "Escolha por formato", só que sem
+   ícone/foto (compromisso, noivado, casamento... não têm imagem própria) */
+.ocasiao-wrap{ padding: 8px 20px 6px; }
+.ocasiao-wrap h4{ font-size: 0.86rem; font-weight:600; margin-bottom: 12px; }
+.ocasiao-pills{ display:flex; gap: 10px; flex-wrap:wrap; }
+.ocasiao-pill{
+  padding: 9px 18px;
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight:600;
+  color: var(--texto-suave);
+  transition: border-color .2s ease, background .2s ease, color .2s ease;
+}
+.ocasiao-pill.active{ border-color: var(--bordo); background: var(--bordo); color: #fff; }
+
 /* ============================================================
    AVALIAÇÕES
    ============================================================ */

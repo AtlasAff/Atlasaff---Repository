@@ -404,7 +404,7 @@ async function carregarCategorias(){
 // link_fornecedor (uso interno do admin/dropshipping) — se colocar '*' aqui,
 // esse link vaza no JSON da resposta (visível no Network do navegador)
 // mesmo que a tela não mostre ele em lugar nenhum.
-const COLUNAS_PRODUTO_PUBLICO = 'id, nome, categoria, descricao, material_aro, pedra_central, banho, banhos_disponiveis, quilate_pedra, quilates_disponiveis, pedra_lateral, formato_pedra, cravacao, grau_cor, grau_clareza, grau_corte, largura_mm, tamanhos_disponiveis, preco, estoque, fotos, video_url, destaque, ativo, criado_em, frete_gratis_sempre, matriz_precos';
+const COLUNAS_PRODUTO_PUBLICO = 'id, nome, categoria, descricao, material_aro, pedra_central, banho, banhos_disponiveis, quilate_pedra, quilates_disponiveis, pedra_lateral, formato_pedra, ocasiao, cravacao, grau_cor, grau_clareza, grau_corte, largura_mm, tamanhos_disponiveis, preco, estoque, fotos, video_url, destaque, ativo, criado_em, frete_gratis_sempre, matriz_precos';
 
 function mapProduto(row){
   const pedra = row.pedra_central || "Sem pedra";
@@ -428,6 +428,7 @@ function mapProduto(row){
     // pelo preço mostrado. Ver resolverPrecoVariante().
     matrizPrecos: row.matriz_precos || [],
     formato: row.formato_pedra || "",
+    ocasiao: row.ocasiao || "",
     cravacao: row.cravacao || "",
     grauCor: row.grau_cor || "",
     grauClareza: row.grau_clareza || "",
@@ -1618,10 +1619,12 @@ async function renderCategoryPage(){
   const materiaisDisponiveis = [...new Set(todos.map(p => p.material))];
   const pedrasDisponiveis = [...new Set(todos.map(p => p.pedra))];
   const formatosDisponiveis = [...new Set(todos.map(p => p.formato).filter(Boolean))];
+  const ocasioesDisponiveis = [...new Set(todos.map(p => p.ocasiao).filter(Boolean))];
 
   let filtroMateriais = new Set();
   let filtroPedras = new Set();
   let filtroFormato = null;
+  let filtroOcasiao = null;
   let ordenacaoAtual = "relevancia";
 
   // "Escolha por formato" — só aparece se algum produto da categoria tiver pedra
@@ -1649,6 +1652,31 @@ async function renderCategoryPage(){
     });
   } else {
     formatoWrap.style.display = 'none';
+  }
+
+  // "Escolha a ocasião" — mesmo mecanismo de "Escolha por formato" (pills,
+  // aparece só se algum produto da categoria tiver o campo preenchido), só
+  // que sem ícone/foto — usado hoje pra separar Alianças de Compromisso,
+  // Noivado, Casamento etc dentro da mesma categoria, sem precisar de um
+  // item de menu pra cada uma. Se ninguém marcar nada, aparecem todos.
+  const ocasiaoWrap = document.getElementById('ocasiaoWrap');
+  if (ocasiaoWrap && ocasioesDisponiveis.length){
+    ocasiaoWrap.style.display = 'block';
+    ocasiaoWrap.querySelector('.ocasiao-pills').innerHTML = ocasioesDisponiveis.map(o => `
+      <button type="button" class="ocasiao-pill" data-ocasiao="${o}">${o}</button>
+    `).join('');
+    ocasiaoWrap.querySelectorAll('.ocasiao-pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const o = btn.getAttribute('data-ocasiao');
+        const jaAtivo = btn.classList.contains('active');
+        ocasiaoWrap.querySelectorAll('.ocasiao-pill').forEach(b => b.classList.remove('active'));
+        if (jaAtivo){ filtroOcasiao = null; }
+        else { btn.classList.add('active'); filtroOcasiao = o; }
+        renderizarTudo();
+      });
+    });
+  } else if (ocasiaoWrap){
+    ocasiaoWrap.style.display = 'none';
   }
 
   const painel = document.getElementById('painelFiltros');
@@ -1680,7 +1708,8 @@ async function renderCategoryPage(){
       const passaMaterial = filtroMateriais.size === 0 || filtroMateriais.has(p.material);
       const passaPedra = filtroPedras.size === 0 || filtroPedras.has(p.pedra);
       const passaFormato = !filtroFormato || p.formato === filtroFormato;
-      return passaMaterial && passaPedra && passaFormato;
+      const passaOcasiao = !filtroOcasiao || p.ocasiao === filtroOcasiao;
+      return passaMaterial && passaPedra && passaFormato && passaOcasiao;
     });
   }
 
@@ -1699,6 +1728,7 @@ async function renderCategoryPage(){
     filtroMateriais.forEach(m => chips.push({ tipo: 'material', valor: m }));
     filtroPedras.forEach(p => chips.push({ tipo: 'pedra', valor: p }));
     if (filtroFormato) chips.push({ tipo: 'formato', valor: filtroFormato });
+    if (filtroOcasiao) chips.push({ tipo: 'ocasiao', valor: filtroOcasiao });
     chipsWrap.innerHTML = chips.map(c => `
       <span class="filter-chip">
         ${c.valor}
@@ -1716,6 +1746,10 @@ async function renderCategoryPage(){
         else if (tipo === 'formato'){
           filtroFormato = null;
           formatoWrap.querySelectorAll('.formato-pill').forEach(b => b.classList.remove('active'));
+        }
+        else if (tipo === 'ocasiao'){
+          filtroOcasiao = null;
+          if (ocasiaoWrap) ocasiaoWrap.querySelectorAll('.ocasiao-pill').forEach(b => b.classList.remove('active'));
         }
         const chk = painel.querySelector(`input[data-tipo="${tipo}"][value="${valor}"]`);
         if (chk) chk.checked = false;
@@ -1747,6 +1781,8 @@ async function renderCategoryPage(){
       filtroPedras = new Set();
       filtroFormato = null;
       formatoWrap.querySelectorAll('.formato-pill').forEach(b => b.classList.remove('active'));
+      filtroOcasiao = null;
+      if (ocasiaoWrap) ocasiaoWrap.querySelectorAll('.ocasiao-pill').forEach(b => b.classList.remove('active'));
       renderizarTudo();
     }
   });
