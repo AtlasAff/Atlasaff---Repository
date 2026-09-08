@@ -1,0 +1,10 @@
+# Dependências instaladas localmente — cada um que rodar a ferramenta
+# instala a sua com "npm install", não faz sentido versionar.
+node_modules/
+
+# Sessão logada do AliExpress (cookies reais da sua conta) — fica só na
+# sua máquina, nunca deve ir pro repositório.
+ferramentas/importar-aliexpress/.sessao-aliexpress.json
+
+# Arquivos de sistema comuns
+.DS_Store

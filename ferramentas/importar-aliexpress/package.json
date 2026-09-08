@@ -1,0 +1,15 @@
+{
+  "name": "importar-aliexpress-pavan",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Importa produto do AliExpress pra loja Pavan & Co. usando sua própria sessão logada, evitando bloqueio por acesso de servidor.",
+  "type": "module",
+  "scripts": {
+    "login": "node importar.mjs --login",
+    "importar": "node importar.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "playwright": "^1.47.0"
+  }
+}
