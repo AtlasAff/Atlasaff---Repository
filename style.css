@@ -514,7 +514,7 @@
   .footer-col a:hover{ opacity: 1; text-decoration: underline; }
   .footer-logo{ display:flex; align-items:center; margin-bottom:12px; }
   /* TAMANHO DA LOGO no rodapé (geralmente menor que no header) */
-  .footer-logo img{ height:32px; width:auto; object-fit:contain; }
+  .footer-logo img{ height:32px; width:auto; object-fit:contain; border-radius:8px; }
   .social-row{ display:flex; gap:14px; margin-top:4px; }
   .social-row a{ width:34px; height:34px; border:1px solid rgba(247,243,236,0.35); border-radius:50%; display:flex; align-items:center; justify-content:center; }
   .social-row svg{ width:16px; height:16px; }
