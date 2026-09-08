@@ -15,6 +15,13 @@ Se você ainda não tem o código do site no seu computador:
 3. Extrai o ZIP em algum lugar do seu computador.
 4. Dentro dele, acha a pasta `ferramentas/importar-aliexpress` — é só essa que você vai usar.
 
+## Passo 1.5 — Ter o Google Chrome instalado
+
+A ferramenta usa o Chrome de verdade do seu computador (não um navegador
+escondido) — se você não tiver o Google Chrome instalado, baixa em
+**[google.com/chrome](https://www.google.com/chrome/)** (é grátis, instala
+normal). Se você já usa Chrome no dia a dia, pode pular esse passo.
+
 ## Passo 2 — Instalar o Node.js (só na primeira vez)
 
 1. Entra em **[nodejs.org](https://nodejs.org/)**.
@@ -82,3 +89,5 @@ Quando estiver tudo certo, marca como **ativo** e salva — aí sim aparece no s
 - **"Ainda não tem sessão salva"** → roda `npm run login` de novo.
 - **Nome/fotos/preço vieram vazios** → o AliExpress mudou alguma coisa no formato da página. Preenche na mão dessa vez e avisa o Claude — é rápido de ajustar o script.
 - **Trava ou dá erro estranho** → o AliExpress pode ter bloqueado momentaneamente. Espera um pouco e tenta de novo, ou usa o link de outro produto pra testar.
+- **"arraste pra verificar" dá erro / não deixa passar** → o AliExpress detectou que é um navegador automatizado. Fecha tudo, espera uns minutos e roda `npm run login` de novo — às vezes é só tentar de novo que passa. Se continuar sempre dando erro, avisa o Claude.
+- **Erro dizendo que não achou o "chrome"** → você precisa ter o Google Chrome instalado (não Edge, não Firefox) — [google.com/chrome](https://www.google.com/chrome/).
