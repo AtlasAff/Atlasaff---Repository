@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://pavanoficial.com.br/index.html</loc><priority>1.0</priority></url>
-  <url><loc>https://pavanoficial.com.br/categoria.html?c=aneis</loc><priority>0.8</priority></url>
-  <url><loc>https://pavanoficial.com.br/categoria.html?c=colares</loc><priority>0.8</priority></url>
-  <url><loc>https://pavanoficial.com.br/categoria.html?c=brincos</loc><priority>0.8</priority></url>
-  <url><loc>https://pavanoficial.com.br/categoria.html?c=pulseiras</loc><priority>0.8</priority></url>
-  <url><loc>https://pavanoficial.com.br/categoria.html?c=aliancas</loc><priority>0.8</priority></url>
+  <url><loc>https://pavanoficial.com.br/</loc><priority>1.0</priority></url>
+  <url><loc>https://pavanoficial.com.br/categoria/aneis</loc><priority>0.8</priority></url>
+  <url><loc>https://pavanoficial.com.br/categoria/colares</loc><priority>0.8</priority></url>
+  <url><loc>https://pavanoficial.com.br/categoria/brincos</loc><priority>0.8</priority></url>
+  <url><loc>https://pavanoficial.com.br/categoria/pulseiras</loc><priority>0.8</priority></url>
+  <url><loc>https://pavanoficial.com.br/categoria/aliancas</loc><priority>0.8</priority></url>
+  <url><loc>https://pavanoficial.com.br/categoria/joias</loc><priority>0.8</priority></url>
   <url><loc>https://pavanoficial.com.br/sobre.html</loc><priority>0.5</priority></url>
   <url><loc>https://pavanoficial.com.br/faq.html</loc><priority>0.4</priority></url>
   <url><loc>https://pavanoficial.com.br/contato.html</loc><priority>0.4</priority></url>

@@ -245,6 +245,18 @@ function fotoFormatoHTML(nomeFormato){
   return `<img src="${arquivo}" alt="${nomeFormato}" loading="lazy">`;
 }
 
+// Lê o segmento seguinte a /prefixo/ no caminho da URL — usado pelas URLs
+// bonitas (/produto/slug, /categoria/slug) servidas por REWRITE do Vercel
+// (ver vercel.json): o rewrite só troca qual arquivo é entregue, a barra
+// de endereço do navegador continua mostrando o caminho de verdade, sem
+// nenhuma querystring nova — então o slug só dá pra pegar daqui, não de
+// window.location.search.
+function extrairSegmentoUrl(prefixo){
+  const partes = window.location.pathname.split('/').filter(Boolean);
+  const idx = partes.indexOf(prefixo);
+  return (idx !== -1 && partes[idx + 1]) ? decodeURIComponent(partes[idx + 1]) : null;
+}
+
 function formatarPreco(valor){
   const num = Number(valor);
   // Acima de R$ 1.000, esconde os centavos (R$ 1.000 em vez de R$ 1.000,00)
@@ -390,7 +402,7 @@ async function carregarCategorias(){
     id: c.id,
     nome: c.nome,
     slug: c.slug,
-    href: `categoria.html?c=${c.slug}`,
+    href: `/categoria/${c.slug}`,
     icon: ICONES_CATEGORIA[c.icone] || ICONES_CATEGORIA.padrao,
     foto: c.foto_url || FOTOS_CATEGORIA[c.icone] || FOTOS_CATEGORIA.padrao
   }));
@@ -404,13 +416,14 @@ async function carregarCategorias(){
 // link_fornecedor (uso interno do admin/dropshipping) — se colocar '*' aqui,
 // esse link vaza no JSON da resposta (visível no Network do navegador)
 // mesmo que a tela não mostre ele em lugar nenhum.
-const COLUNAS_PRODUTO_PUBLICO = 'id, nome, categoria, descricao, material_aro, pedra_central, banho, banhos_disponiveis, quilate_pedra, quilates_disponiveis, pedra_lateral, formato_pedra, ocasiao, cravacao, grau_cor, grau_clareza, grau_corte, largura_mm, tamanhos_disponiveis, preco, estoque, fotos, video_url, destaque, ativo, criado_em, frete_gratis_sempre, matriz_precos';
+const COLUNAS_PRODUTO_PUBLICO = 'id, slug, nome, categoria, descricao, material_aro, pedra_central, banho, banhos_disponiveis, quilate_pedra, quilates_disponiveis, pedra_lateral, formato_pedra, ocasiao, cravacao, grau_cor, grau_clareza, grau_corte, largura_mm, tamanhos_disponiveis, preco, estoque, fotos, video_url, destaque, ativo, criado_em, frete_gratis_sempre, matriz_precos';
 
 function mapProduto(row){
   const pedra = row.pedra_central || "Sem pedra";
   const banho = row.banho || "Sem banho";
   return {
     id: row.id,
+    slug: row.slug || row.id,
     nome: row.nome,
     categoria: row.categoria,
     descricao: row.descricao || "",
@@ -505,8 +518,16 @@ async function carregarTodosProdutosAtivos(){
   return data.map(mapProduto);
 }
 
-async function carregarProdutoPorId(id){
-  const { data, error } = await sb.from('produtos').select(COLUNAS_PRODUTO_PUBLICO).eq('id', id).maybeSingle();
+// Aceita tanto o slug bonito (/produto/nome-da-peca, o normal) quanto o
+// id antigo direto (produto.html?id=uuid) — links já compartilhados ou
+// indexados no Google continuam funcionando mesmo depois da mudança pra
+// URL limpa.
+async function carregarProduto(idOuSlug){
+  const ehUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOuSlug || '');
+  const query = sb.from('produtos').select(COLUNAS_PRODUTO_PUBLICO);
+  const { data, error } = ehUuid
+    ? await query.eq('id', idOuSlug).maybeSingle()
+    : await query.eq('slug', idOuSlug).maybeSingle();
   if (error || !data){ console.error('Erro ao carregar produto:', error); return null; }
   return mapProduto(data);
 }
@@ -1506,7 +1527,7 @@ function cardProdutoHTML(p){
     <div class="prod-card reveal ${esgotado ? 'esgotado' : ''}">
       ${esgotado ? '<span class="badge-esgotado-card">Esgotado</span>' : ''}
       ${temFreteGratis ? seloFreteGratisHTML('selo-frete-gratis--foto') : ''}
-      <a href="produto.html?id=${p.id}" class="prod-card-link" aria-label="Ver ${p.nome}">
+      <a href="/produto/${p.slug}" class="prod-card-link" aria-label="Ver ${p.nome}">
         <div class="prod-img" style="background-image:url('${p.image}')"></div>
         <div class="prod-name">${p.nome}</div>
         <div class="prod-info-box">
@@ -1597,7 +1618,7 @@ function renderGridPaginado(gridEl, listaCompleta, opts = {}){
    ============================================================ */
 async function renderCategoryPage(){
   const params = new URLSearchParams(window.location.search);
-  const slug = params.get('c');
+  const slug = params.get('c') || extrairSegmentoUrl('categoria');
   const grid = document.getElementById('prodGrid');
   grid.innerHTML = skeletonGridHTML();
 
@@ -1613,6 +1634,13 @@ async function renderCategoryPage(){
   document.title = `${catInfo.nome} | Pavan & Co.`;
   document.getElementById('breadcrumbAtual').textContent = catInfo.nome;
   document.querySelector('.page-title h1').textContent = catInfo.nome;
+
+  // Meta tags dinâmicas por categoria — mesmo motivo do produto.html:
+  // antes eram fixas ("Categoria | Pavan & Co.") pra qualquer categoria.
+  const urlCanonicaCat = `https://pavanoficial.com.br${catInfo.href}`;
+  document.querySelector('meta[property="og:title"]')?.setAttribute('content', `${catInfo.nome} | Pavan & Co.`);
+  document.querySelector('meta[property="og:url"]')?.setAttribute('content', urlCanonicaCat);
+  document.querySelector('link[rel="canonical"]')?.setAttribute('href', urlCanonicaCat);
 
   const todos = await carregarProdutosPorCategoria(slug);
 
@@ -1892,10 +1920,16 @@ function initBuscaForm(formId, redireciona){
    PÁGINA DE PRODUTO
    ============================================================ */
 async function renderProdutoPage(){
+  // A URL bonita (/produto/algum-slug) é servida por um REWRITE do Vercel
+  // (ver vercel.json) — isso troca só qual arquivo é entregue, a barra de
+  // endereço do navegador continua mostrando /produto/algum-slug de
+  // verdade, sem nenhuma querystring. Então o slug tem que ser lido do
+  // CAMINHO da URL, não de window.location.search (que só existe no link
+  // antigo produto.html?id=uuid, mantido funcionando por compatibilidade).
   const params = new URLSearchParams(window.location.search);
-  const id = params.get('id');
+  const idOuSlug = params.get('id') || params.get('slug') || extrairSegmentoUrl('produto');
 
-  const p = await carregarProdutoPorId(id);
+  const p = await carregarProduto(idOuSlug);
   if (!p){
     document.querySelector('.produto-grid').innerHTML = `<p class="sem-resultados">Produto não encontrado. <a href="/" style="text-decoration:underline;">Voltar à loja</a>.</p>`;
     return;
@@ -1912,6 +1946,20 @@ async function renderProdutoPage(){
   document.getElementById('breadcrumbCat').href = catInfo ? catInfo.href : '#';
   document.getElementById('breadcrumbNome').textContent = p.nome;
   document.title = `${p.nome} | Pavan & Co.`;
+
+  // Meta tags dinâmicas por produto — antes eram fixas ("Produto | Pavan &
+  // Co.") pra qualquer peça, então compartilhar um link no WhatsApp/redes
+  // sociais sempre mostrava o mesmo título/imagem genérico, não a peça
+  // certa. Também aponta o canonical pra URL limpa (/produto/slug).
+  const urlCanonica = `https://pavanoficial.com.br/produto/${p.slug}`;
+  const descricaoResumo = (p.descricao || '').replace(/<[^>]+>/g, '').slice(0, 160) ||
+    'Joias atemporais em ouro 18k, ouro rosé e prata 925, com moissanite e zircônia.';
+  document.querySelector('meta[name="description"]')?.setAttribute('content', descricaoResumo);
+  document.querySelector('meta[property="og:title"]')?.setAttribute('content', `${p.nome} | Pavan & Co.`);
+  document.querySelector('meta[property="og:description"]')?.setAttribute('content', descricaoResumo);
+  document.querySelector('meta[property="og:image"]')?.setAttribute('content', p.fotos[0] || 'https://pavanoficial.com.br/logo.png');
+  document.querySelector('meta[property="og:url"]')?.setAttribute('content', urlCanonica);
+  document.querySelector('link[rel="canonical"]')?.setAttribute('href', urlCanonica);
 
   const configSite = await carregarConfigSite();
   const linkWhatsProduto = document.getElementById('linkWhatsappProduto');

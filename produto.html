@@ -2,6 +2,11 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
+<!-- Essa página agora também é servida em /produto/algum-slug (rewrite do
+     Vercel, ver vercel.json) — sem isso, todo link/CSS/imagem relativo
+     (style.css, logo.png, conta.html...) seria resolvido relativo a
+     /produto/, não à raiz do site, e quebraria tudo. -->
+<base href="/">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
 <link rel="icon" href="favicon.ico" sizes="any">
