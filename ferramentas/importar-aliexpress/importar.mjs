@@ -46,6 +46,35 @@ async function perguntar(pergunta, opts = {}){
   return resposta.trim();
 }
 
+// O Playwright, do jeito padrão, deixa sinais no navegador que sistemas
+// anti-robô (tipo o "arraste pra verificar" do AliExpress) detectam fácil
+// — por isso a verificação dava erro direto, em qualquer tipo de login.
+// Aqui a gente: usa o Chrome DE VERDADE já instalado no PC (não o
+// Chromium de teste que vem junto do Playwright, que é mais "denunciado"),
+// e apaga/disfarça as marcas mais óbvias de automação antes de qualquer
+// página carregar. Não é 100% garantido (nada é), mas resolve a maioria
+// dos casos.
+async function abrirNavegador({ headless, storageState }){
+  const browser = await chromium.launch({
+    headless,
+    channel: 'chrome', // precisa ter o Google Chrome instalado no Windows/Mac
+    args: ['--disable-blink-features=AutomationControlled']
+  });
+  const context = await browser.newContext({
+    ...(storageState ? { storageState } : {}),
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+    viewport: { width: 1366, height: 768 },
+    locale: 'pt-BR'
+  });
+  await context.addInitScript(() => {
+    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+    Object.defineProperty(navigator, 'languages', { get: () => ['pt-BR', 'pt', 'en'] });
+    Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+    window.chrome = window.chrome || { runtime: {} };
+  });
+  return { browser, context };
+}
+
 /* ============================================================
    MODO LOGIN — abre um navegador de verdade, espera você logar na sua
    conta AliExpress, salva a sessão (cookies + storage) num arquivo local
@@ -55,8 +84,7 @@ async function modoLogin(){
   console.log('Abrindo o navegador — loga na sua conta AliExpress normalmente.');
   console.log('Quando terminar (já estiver na sua conta), volta aqui e aperta Enter.\n');
 
-  const browser = await chromium.launch({ headless: false });
-  const context = await browser.newContext();
+  const { browser, context } = await abrirNavegador({ headless: false });
   const page = await context.newPage();
   await page.goto('https://www.aliexpress.com/', { waitUntil: 'domcontentloaded' });
 
@@ -159,8 +187,7 @@ async function modoImportar(url){
   }
 
   console.log('Abrindo a página do produto...');
-  const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext({ storageState: ARQUIVO_SESSAO });
+  const { browser, context } = await abrirNavegador({ headless: true, storageState: ARQUIVO_SESSAO });
   const page = await context.newPage();
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await page.waitForTimeout(2500); // dá tempo do JS da página terminar de montar tudo
