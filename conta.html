@@ -557,6 +557,17 @@ document.getElementById('inputAvatarArquivo').addEventListener('change', async (
   mostrarToast('Foto de perfil atualizada ✓');
 });
 
+// Nome vindo dos metadados da sessão — cadastro por e-mail salva em
+// "nome" (metadata que a gente escolheu), login com Google preenche
+// "full_name"/"name" sozinho (não passa pelo nosso formulário de
+// cadastro, então nunca vai ter "nome"). Sem isso, quem entra pela
+// primeira vez com Google via a própria e-mail como "nome" na tela, com
+// o nome de verdade jogado fora mesmo o Google já tendo mandado ele.
+function nomeDosMetadados(sessao){
+  const meta = sessao.user.user_metadata || {};
+  return meta.nome || meta.full_name || meta.name || null;
+}
+
 // Iniciais pro avatar circular — usa nome e sobrenome; se só tiver o
 // e-mail (perfil ainda não preenchido), usa a primeira letra dele.
 function obterIniciaisConta(nome){
@@ -596,7 +607,7 @@ async function mostrarConta(){
 
   // Preenche o formulário de dados com o que já foi salvo antes (se houver)
   const { data: perfil } = await sb.from('perfis').select('*').eq('user_id', sessao.user.id).maybeSingle();
-  const nomeExibicao = perfil?.nome || sessao.user.user_metadata?.nome || sessao.user.email;
+  const nomeExibicao = perfil?.nome || nomeDosMetadados(sessao) || sessao.user.email;
   document.getElementById('contaPerfilNome').textContent = nomeExibicao;
   const avatarEl = document.getElementById('perfilAvatar');
   if (perfil?.foto_url){
@@ -606,7 +617,7 @@ async function mostrarConta(){
     avatarEl.style.backgroundImage = 'none';
     avatarEl.textContent = obterIniciaisConta(nomeExibicao);
   }
-  document.getElementById('pfNome').value = perfil?.nome || sessao.user.user_metadata?.nome || '';
+  document.getElementById('pfNome').value = perfil?.nome || nomeDosMetadados(sessao) || '';
   document.getElementById('pfTelefone').value = perfil?.telefone || '';
   document.getElementById('pfCep').value = perfil?.cep ? formatarCep(perfil.cep) : '';
   document.getElementById('pfEndereco').value = perfil?.endereco || '';
