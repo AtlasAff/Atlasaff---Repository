@@ -105,6 +105,16 @@ function paraNumero(precoTexto){
   return Number.isFinite(n) ? n : null;
 }
 
+// Acha o primeiro "R$X,XX" dentro de uma frase qualquer (ex: "Compra
+// internacional, R$35,20+ em impostos estimados.") e converte só essa
+// parte — paraNumero() sozinho quebraria aqui, porque pegaria também
+// vírgula/ponto de outras partes da frase que não são o valor.
+function extrairValorReais(texto){
+  if (!texto) return null;
+  const m = texto.match(/R\$\s*([\d.,]+)/);
+  return m ? paraNumero(m[1]) : null;
+}
+
 async function perguntar(pergunta, opts = {}){
   const rl = createInterface({ input: stdin, output: stdout });
   const resposta = await rl.question(pergunta);
@@ -478,8 +488,8 @@ async function modoImportar(url){
     }
   }
 
-  console.log(`\nPreço listado: ${preco || '(não encontrado)'} — confere/ajusta no admin, não é necessariamente o preço de fábrica`);
-  if (impostoEstimado) console.log(`Imposto estimado (mostrado pelo próprio AliExpress): ${impostoEstimado}`);
+  console.log(`\nCusto da peça (fornecedor): ${preco || '(não encontrado)'} — isso é CUSTO, não preço de venda; vai pro campo "Custo da peça" do admin, o preço de venda fica 0 até você rodar a calculadora de margem`);
+  if (impostoEstimado) console.log(`Imposto estimado (mostrado pelo próprio AliExpress): ${impostoEstimado} — vai pro campo "Imposto" do admin como valor fixo`);
   if (estoque) console.log(`Estoque no fornecedor: ${estoque}`);
   console.log(`Fotos encontradas: ${fotos.length}`);
   if (variacoes.length){
@@ -578,22 +588,31 @@ async function modoImportar(url){
     process.exit(1);
   }
 
-  // Preço vem como texto formatado (ex: "R$149,14") — converte pro número
-  // puro que o banco espera. Se não der pra entender, fica 0 mesmo (fácil
-  // de notar no admin que precisa preencher na mão) em vez de travar.
-  const precoNumero = paraNumero(preco) ?? 0;
+  // IMPORTANTE: o preço do AliExpress é CUSTO, não preço de venda — vai
+  // pro campo "custo_peca" (que o admin já tem, junto com custo_imposto/
+  // custo_frete/margem_lucro), nunca pro campo "preco" (esse é o que
+  // aparece pro cliente!). "preco" fica 0 até você rodar a calculadora de
+  // margem no admin — assim é impossível ativar sem querer vendendo pelo
+  // preço de custo.
+  const custoPecaNumero = paraNumero(preco) ?? 0;
+
+  // O imposto que o próprio AliExpress mostra ("R$35,20+ em impostos
+  // estimados") também vai preenchido, direto no campo de custo — evita
+  // ter que calcular por % de ICMS (que nem sempre bate com o valor real).
+  const custoImpostoNumero = extrairValorReais(impostoEstimado);
 
   // Estoque vem como texto ("Apenas 7 restante(s)") — extrai só o número.
   const estoqueMatch = estoque?.match(/\d+/);
   const estoqueNumero = estoqueMatch ? parseInt(estoqueMatch[0], 10) : null;
 
   // Cria o produto como RASCUNHO (ativo:false — não aparece pro cliente
-  // até você revisar e ativar no admin). link_fornecedor já vem
-  // preenchido com o link original, pra você conferir a página de novo
-  // se precisar. Sem ".select()" no final de propósito: a leitura direta
-  // da tabela produtos é restrita mesmo pra admin (o site normalmente lê
-  // produto por uma função própria, não direto na tabela) — o insert em
-  // si funciona igual, só não confirma o retorno.
+  // até você revisar e ativar no admin, com preço de venda ainda ZERADO
+  // de propósito). link_fornecedor já vem preenchido com o link original,
+  // pra você conferir a página de novo se precisar. Sem ".select()" no
+  // final de propósito: a leitura direta da tabela produtos é restrita
+  // mesmo pra admin (o site normalmente lê produto por uma função
+  // própria, não direto na tabela) — o insert em si funciona igual, só
+  // não confirma o retorno.
   const { error: erroInsert } = await sb.from('produtos').insert({
     nome: nome || '(sem nome — importação parcial, preencher)',
     descricao: descricao || null,
@@ -601,10 +620,9 @@ async function modoImportar(url){
     link_fornecedor: url,
     categoria: categoriaProvisoria,
     ativo: false,
-    // preço do AliExpress é só referência (frete, taxa, margem — nada
-    // disso é preço final de venda) — ajusta na calculadora do admin
-    // antes de ativar, mesmo já vindo preenchido.
-    preco: precoNumero,
+    preco: 0,
+    custo_peca: custoPecaNumero,
+    ...(custoImpostoNumero !== null ? { custo_imposto: custoImpostoNumero } : {}),
     ...(estoqueNumero !== null ? { estoque: estoqueNumero } : {}),
     ...(tamanhosBR.length ? { tamanhos_disponiveis: tamanhosBR } : {})
   });
@@ -616,7 +634,7 @@ async function modoImportar(url){
 
   console.log(`\n✅ Rascunho criado: "${nome || '(sem nome)'}"`);
   console.log(`Categoria provisória: "${categoriaProvisoria}" — troca pela certa na revisão.`);
-  console.log('Abre o admin do site, acha esse produto na lista (aparece como inativo, com o ícone 🔗 de link do fornecedor) e termina de revisar: categoria, quilate/banho/tamanho, preço final.');
+  console.log('⚠️  Preço de venda ainda está ZERADO de propósito — abre o admin, acha esse produto na lista (aparece como inativo, com o ícone 🔗) e roda a calculadora de margem (custo + imposto já vieram preenchidos) antes de ativar.');
 }
 
 /* ============================================================

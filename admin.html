@@ -1438,8 +1438,12 @@
           </div>
           <div class="form-linha cols-3">
             <div class="form-campo">
-              <label for="fCustoImposto">Imposto calculado (R$) <span style="font-weight:400;color:var(--texto-suave);">(automático)</span></label>
+              <label for="fCustoImposto" id="fCustoImpostoLabel">Imposto calculado (R$) <span style="font-weight:400;color:var(--texto-suave);">(automático)</span></label>
               <input type="number" id="fCustoImposto" step="0.01" readonly style="background:var(--cinza-bg);">
+              <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:0.78rem;color:var(--texto-suave);margin-top:6px;">
+                <input type="checkbox" id="fImpostoManual" style="width:auto;">
+                Já sei o valor exato (ex: o próprio AliExpress já mostrou na compra) — digitar direto em vez de calcular por %
+              </label>
             </div>
             <div class="form-campo">
               <label for="fCustoFrete">Frete (R$)</label>
@@ -3648,8 +3652,17 @@ function atualizarCalcLucro(){
   const custoFrete = parseFloat(document.getElementById('fCustoFrete').value) || 0;
   const margem = margemAtual();
 
-  const impostoCalculado = calcularImpostoImportacao(custoPeca, cotacao, icmsPct);
-  document.getElementById('fCustoImposto').value = custoPeca ? impostoCalculado.toFixed(2) : '';
+  // Modo manual: em vez de calcular o imposto por %, usa o valor que foi
+  // digitado direto no campo (ex: o valor exato que o AliExpress já
+  // mostrou na compra) — não sobrescreve o que a pessoa digitou.
+  const impostoManual = document.getElementById('fImpostoManual').checked;
+  let impostoCalculado;
+  if (impostoManual){
+    impostoCalculado = parseFloat(document.getElementById('fCustoImposto').value) || 0;
+  } else {
+    impostoCalculado = calcularImpostoImportacao(custoPeca, cotacao, icmsPct);
+    document.getElementById('fCustoImposto').value = custoPeca ? impostoCalculado.toFixed(2) : '';
+  }
 
   const custoTotal = custoPeca + impostoCalculado + custoFrete;
   const resultado = document.getElementById('calcLucroResultado');
@@ -3674,8 +3687,27 @@ function atualizarCalcLucro(){
     atualizarPrecoBanho(chk.getAttribute('data-chave'));
   });
 }
-['fCustoPeca', 'fCotacaoDolar', 'fIcmsPct', 'fCustoFrete', 'fMargemLucro'].forEach(id => {
+['fCustoPeca', 'fCotacaoDolar', 'fIcmsPct', 'fCustoFrete', 'fMargemLucro', 'fCustoImposto'].forEach(id => {
   document.getElementById(id).addEventListener('input', atualizarCalcLucro);
+});
+
+// Alterna entre imposto calculado por % (padrão) e imposto digitado na
+// mão — quando ligado, libera o campo pra editar e desativa o % (ele para
+// de ser usado no cálculo). Usado tanto pelo checkbox quanto ao abrir um
+// produto já salvo (ver populaFormularioProduto mais abaixo).
+function aplicarModoImposto(manual){
+  const campoImposto = document.getElementById('fCustoImposto');
+  document.getElementById('fImpostoManual').checked = manual;
+  campoImposto.readOnly = !manual;
+  campoImposto.style.background = manual ? '' : 'var(--cinza-bg)';
+  document.getElementById('fIcmsPct').disabled = manual;
+  document.getElementById('fCustoImpostoLabel').innerHTML = manual
+    ? 'Imposto (R$) <span style="font-weight:400;color:var(--texto-suave);">(digitado na mão)</span>'
+    : 'Imposto calculado (R$) <span style="font-weight:400;color:var(--texto-suave);">(automático)</span>';
+}
+document.getElementById('fImpostoManual').addEventListener('change', function(){
+  aplicarModoImposto(this.checked);
+  atualizarCalcLucro();
 });
 
 document.getElementById('formatoAdminPills').innerHTML = Object.keys(FOTOS_FORMATO).map(f => `
@@ -3734,6 +3766,9 @@ function abrirModalProduto(produto){
   // contenteditable não é campo de formulário de verdade — form.reset()
   // não limpa ele sozinho, precisa zerar na mão.
   document.getElementById('fDescricao').innerHTML = '';
+  // form.reset() desmarca o checkbox do imposto manual, mas não desfaz o
+  // readonly/disabled que a gente muda na mão — volta pro modo automático.
+  aplicarModoImposto(false);
   fotosFormAtual = [];
   videoFormAtual = null;
   tamanhosFormAtual = new Set();
@@ -3804,7 +3839,21 @@ function abrirModalProduto(produto){
     document.getElementById('fIcmsPct').value = produto.icms_pct ?? 18;
     document.getElementById('fCustoFrete').value = produto.custo_frete ?? '';
     document.getElementById('fMargemLucro').value = produto.margem_lucro ?? '';
-    atualizarCalcLucro(); // já recalcula o imposto (fCustoImposto é derivado, não salvo direto)
+
+    // O imposto salvo não é um campo "de origem" (não sabemos se veio do
+    // cálculo por % ou foi digitado na mão) — se ele não bate com o que a
+    // fórmula por % daria pra esse custo (fora uma margem de arredondamento),
+    // assume que foi digitado na mão da última vez e já abre nesse modo.
+    const impostoSalvo = produto.custo_imposto;
+    const impostoPorFormula = calcularImpostoImportacao(
+      parseFloat(document.getElementById('fCustoPeca').value) || 0,
+      parseFloat(document.getElementById('fCotacaoDolar').value) || 0,
+      parseFloat(document.getElementById('fIcmsPct').value) || 0
+    );
+    const pareceManual = impostoSalvo != null && Math.abs(Number(impostoSalvo) - impostoPorFormula) > 0.02;
+    aplicarModoImposto(pareceManual);
+    if (pareceManual) document.getElementById('fCustoImposto').value = Number(impostoSalvo).toFixed(2);
+    atualizarCalcLucro(); // se for automático, recalcula o imposto; se for manual, usa o valor que acabou de entrar no campo
     document.getElementById('fLinkFornecedor').value = produto.link_fornecedor || '';
     document.getElementById('fDestaque').checked = !!produto.destaque;
     document.getElementById('fAtivo').checked = produto.ativo !== false;
