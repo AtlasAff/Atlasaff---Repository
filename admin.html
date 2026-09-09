@@ -614,7 +614,7 @@
   }
   .tamanhos-multi button.active{ background: var(--bordo); color:#fff; border-color: var(--bordo); }
 
-  .quilates-add-linha{ display:flex; gap:8px; }
+  .quilates-add-linha{ display:flex; gap:8px; flex-wrap:wrap; }
   .quilates-add-linha input{
     flex:1;
     padding: 10px 12px;
@@ -1449,7 +1449,7 @@
 
         <div class="form-campo" style="margin-top:22px;">
           <label>Preço por quilate <span style="font-weight:400;color:var(--texto-suave);">(opcional — cada quilate cadastrado aqui passa a mandar no preço daquele quilate, em vez do valor único acima; a descrição aparece pro cliente, embaixo do valor, quando ele escolhe esse quilate)</span></label>
-          <div class="quilates-add-linha" style="flex-wrap:wrap;">
+          <div class="quilates-add-linha">
             <input type="text" id="fQuilateNovo" placeholder="Ex: 1ct (6.5mm)" style="min-width:130px;">
             <input type="number" id="fQuilateCustoNovo" step="0.01" placeholder="Valor (R$)" style="max-width:120px;">
             <input type="number" id="fQuilateTaxaNovo" step="0.01" placeholder="Taxa (R$)" style="max-width:120px;">
@@ -3445,7 +3445,10 @@ function adicionarQuilate(){
   const inputDescricao = document.getElementById('fQuilateDescricaoNovo');
   const valor = inputValor.value.trim();
   const custo = parseFloat(inputCusto.value);
-  if (!valor || !custo || quilatesFormAtual.some(q => q.valor === valor)) return;
+  // isNaN (não !custo) de propósito — custo 0 é válido (ex: pedra que não
+  // soma nada nesse quilate específico) e não pode ser barrado como se
+  // fosse "vazio", mesma pegadinha já corrigida pro custo do banho.
+  if (!valor || isNaN(custo) || custo < 0 || quilatesFormAtual.some(q => q.valor === valor)) return;
   const taxa = parseFloat(inputTaxa.value) || 0;
   const descricao = inputDescricao.value.trim();
   quilatesFormAtual.push({ valor, custo, taxa, descricao, preco: calcularPrecoFinal(custo, taxa) });
@@ -3671,15 +3674,18 @@ function atualizarCalcLucro(){
 
   // Recalcula o preço de venda de cada quilate já cadastrado (a taxa de
   // cada um fica como foi digitada, só o preço final é que reflete o
-  // frete/margem atuais).
+  // frete/margem atuais). renderQuilatesMulti() já chama verificarPrejuizo()
+  // no final — sem quilate nenhum, ninguém mais chamaria, então chama
+  // direto aqui (uma vez só em cada caso, não as duas).
   if (quilatesFormAtual.length){
     quilatesFormAtual.forEach(q => { q.preco = calcularPrecoFinal(q.custo, q.taxa); });
     renderQuilatesMulti();
+  } else {
+    verificarPrejuizo();
   }
   document.querySelectorAll('#banhoOpcoes .banho-check:checked').forEach(chk => {
     atualizarPrecoBanho(chk.getAttribute('data-chave'));
   });
-  verificarPrejuizo();
 }
 ['fCustoPeca', 'fCustoFrete', 'fMargemLucro', 'fCustoImposto'].forEach(id => {
   document.getElementById(id).addEventListener('input', atualizarCalcLucro);
@@ -3794,7 +3800,7 @@ document.querySelectorAll('.editor-toolbar button').forEach(btn => {
   });
 });
 
-async function abrirModalProduto(produto){
+function abrirModalProduto(produto){
   const form = document.getElementById('formProduto');
   form.reset();
   // contenteditable não é campo de formulário de verdade — form.reset()
