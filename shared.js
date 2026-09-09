@@ -2146,6 +2146,7 @@ async function renderProdutoPage(){
   atualizarPrecoExibido();
 
   const quilateWrap = document.getElementById('quilateWrap');
+  const quilateDescricaoEl = document.getElementById('quilateDescricao');
   if (p.quilates.length){
     quilateWrap.style.display = 'block';
     quilateWrap.querySelector('.tamanho-pills').innerHTML = p.quilates.map(q => `
@@ -2160,6 +2161,18 @@ async function renderProdutoPage(){
         // é o preço do quilate sozinho, senão o banho "apaga" ele de novo.
         precoAtual = resolverPrecoVariante(p, quilateSelecionado, banhoSelecionado);
         atualizarPrecoExibido();
+        // Descrição opcional cadastrada pra esse quilate específico (ver
+        // admin → Preço e estoque → "Preço por quilate") — some se esse
+        // quilate não tiver nenhuma.
+        const quilateInfo = p.quilates.find(q => q.valor === quilateSelecionado);
+        if (quilateDescricaoEl){
+          if (quilateInfo && quilateInfo.descricao){
+            quilateDescricaoEl.textContent = quilateInfo.descricao;
+            quilateDescricaoEl.style.display = 'block';
+          } else {
+            quilateDescricaoEl.style.display = 'none';
+          }
+        }
       });
     });
   } else {
