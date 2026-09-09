@@ -498,6 +498,10 @@ async function modoImportar(url){
   // de notar no admin que precisa preencher na mão) em vez de travar.
   const precoNumero = paraNumero(preco) ?? 0;
 
+  // Estoque vem como texto ("Apenas 7 restante(s)") — extrai só o número.
+  const estoqueMatch = estoque?.match(/\d+/);
+  const estoqueNumero = estoqueMatch ? parseInt(estoqueMatch[0], 10) : null;
+
   // Cria o produto como RASCUNHO (ativo:false — não aparece pro cliente
   // até você revisar e ativar no admin). link_fornecedor já vem
   // preenchido com o link original, pra você conferir a página de novo
@@ -505,6 +509,11 @@ async function modoImportar(url){
   // da tabela produtos é restrita mesmo pra admin (o site normalmente lê
   // produto por uma função própria, não direto na tabela) — o insert em
   // si funciona igual, só não confirma o retorno.
+  //
+  // "tamanhos_disponiveis" NÃO entra aqui de propósito: o AliExpress usa
+  // numeração americana de anel (4, 5, 5.5...), diferente da numeração de
+  // aro usada no Brasil — salvar direto botaria tamanho errado pro
+  // cliente. Mapeia isso na mão (os tamanhos aparecem no terminal acima).
   const { error: erroInsert } = await sb.from('produtos').insert({
     nome: nome || '(sem nome — importação parcial, preencher)',
     descricao: descricao || null,
@@ -515,7 +524,8 @@ async function modoImportar(url){
     // preço do AliExpress é só referência (frete, taxa, margem — nada
     // disso é preço final de venda) — ajusta na calculadora do admin
     // antes de ativar, mesmo já vindo preenchido.
-    preco: precoNumero
+    preco: precoNumero,
+    ...(estoqueNumero !== null ? { estoque: estoqueNumero } : {})
   });
 
   if (erroInsert){
