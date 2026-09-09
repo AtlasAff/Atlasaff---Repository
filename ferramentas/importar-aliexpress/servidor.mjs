@@ -274,6 +274,7 @@ async function handlePublicar(req, res){
   // verdade, não só quilates_disponiveis/banhos_disponiveis.
   const custoPecaNumero = Number(corpo.custoPeca) || 0;
   const custoImpostoNumero = corpo.custoImposto !== null && corpo.custoImposto !== undefined && corpo.custoImposto !== '' ? Number(corpo.custoImposto) : null;
+  const custoFreteNumero = Number(corpo.custoFrete) || 0;
   const taxaImpostoAprox = (custoPecaNumero > 0 && custoImpostoNumero) ? custoImpostoNumero / custoPecaNumero : 0;
   const margemNumero = Number(corpo.margemLucro) || null;
   const { matrizPrecos, matrizCustos } = montarMatrizes({
@@ -285,7 +286,8 @@ async function handlePublicar(req, res){
     banhosCustos: banhosFinal.map(b => ({ nome: b.nome, custo: b.custo })),
     custoPecaBase: custoPecaNumero,
     taxaImposto: taxaImpostoAprox,
-    margemNumero
+    margemNumero,
+    freteNumero: custoFreteNumero
   });
 
   // Atualizando: acrescenta a observação nova embaixo da que já existia,
@@ -304,6 +306,7 @@ async function handlePublicar(req, res){
     ativo: Boolean(corpo.ativo),
     preco: Number(corpo.preco) || 0,
     custo_peca: custoPecaNumero,
+    custo_frete: custoFreteNumero,
     ...(custoImpostoNumero !== null ? { custo_imposto: custoImpostoNumero } : {}),
     ...(margemNumero ? { margem_lucro: margemNumero } : {}),
     ...(corpo.estoque !== null && corpo.estoque !== undefined && corpo.estoque !== '' ? { estoque: Number(corpo.estoque) } : {}),

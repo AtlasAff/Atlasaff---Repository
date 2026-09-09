@@ -526,9 +526,10 @@ $('btnAddTamanho').addEventListener('click', () => {
 function calcularPrecoComMargem(custo, custoComImposto){
   const margem = parseFloat($('fMargem').value) || 0;
   if (!margem) return 0;
+  const frete = parseFloat($('fCustoFrete').value) || 0;
   const taxaImposto = (estado.custoPeca > 0 && estado.custoImposto) ? estado.custoImposto / estado.custoPeca : 0;
   const custoBaseComImposto = custoComImposto != null ? Number(custoComImposto) : custo * (1 + taxaImposto);
-  return Math.round(custoBaseComImposto * (1 + margem / 100) * 100) / 100;
+  return Math.round((custoBaseComImposto + frete) * (1 + margem / 100) * 100) / 100;
 }
 function renderQuilates(){
   $('quilatesChips').innerHTML = estado.quilates.map((q, i) => `
@@ -619,11 +620,13 @@ $('btnRegenerar').addEventListener('click', async () => {
 });
 
 // ---------------------------------------------------------------
-// TOOLBAR DA DESCRIÇÃO
+// TOOLBAR DA DESCRIÇÃO — usa mousedown + preventDefault em vez de
+// click, senão o clique no botão tira o foco/seleção do texto ANTES do
+// execCommand rodar, e o comando perde de vista o que devia formatar.
 document.querySelectorAll('.toolbar button').forEach(btn => {
-  btn.addEventListener('click', () => {
+  btn.addEventListener('mousedown', (e) => {
+    e.preventDefault();
     document.execCommand(btn.dataset.cmd, false, null);
-    $('descricaoEdit').focus();
   });
 });
 
@@ -655,6 +658,7 @@ $('btnPublicar').addEventListener('click', async () => {
     preco: $('fPreco').value,
     custoPeca: $('fCustoPeca').value,
     custoImposto: $('fCustoImposto').value,
+    custoFrete: $('fCustoFrete').value,
     margemLucro: $('fMargem').value,
     estoque: $('fEstoque').value,
     tamanhos: estado.tamanhos,
