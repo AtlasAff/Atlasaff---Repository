@@ -537,6 +537,19 @@
   .calc-lucro-resultado span{ font-size:0.72rem; color: var(--texto-suave); text-transform:uppercase; letter-spacing:0.03em; }
   .calc-lucro-resultado strong{ font-size:1.1rem; color: var(--bordo); }
   .calc-lucro-resultado .btn-admin{ margin-left:auto; }
+  .aviso-prejuizo{
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: var(--vermelho-bg);
+    border: 1px solid var(--vermelho);
+    border-radius: var(--radius);
+    color: var(--vermelho);
+    font-size: 0.82rem;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+  .aviso-prejuizo li{ margin-top:4px; }
+  .produto-tab.tem-prejuizo{ color: var(--vermelho); }
   .form-campo label{ font-size:0.8rem; font-weight:600; display:block; margin-bottom:5px; }
   .form-campo input, .form-campo select, .form-campo textarea{
     width:100%;
@@ -1467,6 +1480,7 @@
         <div class="calc-lucro-resultado" id="calcLucroResultado" style="display:none;">
           <div><span>Lucro por peça</span><strong id="calcLucroValor"></strong></div>
         </div>
+        <div id="avisoPrejuizo" class="aviso-prejuizo" style="display:none;"></div>
 
         <div class="form-linha cols-2" style="margin-top:22px;">
           <div class="form-campo">
@@ -3396,6 +3410,7 @@ function renderQuilatesMulti(){
     });
   });
   atualizarCampoPrecoBase();
+  verificarPrejuizo();
 }
 
 // Com quilate cadastrado, cada um já tem seu próprio valor/taxa e preço
@@ -3664,10 +3679,60 @@ function atualizarCalcLucro(){
   document.querySelectorAll('#banhoOpcoes .banho-check:checked').forEach(chk => {
     atualizarPrecoBanho(chk.getAttribute('data-chave'));
   });
+  verificarPrejuizo();
 }
 ['fCustoPeca', 'fCustoFrete', 'fMargemLucro', 'fCustoImposto'].forEach(id => {
   document.getElementById(id).addEventListener('input', atualizarCalcLucro);
 });
+// fPreco não entra na lista acima de propósito: atualizarCalcLucro()
+// SOBRESCREVE fPreco quando tem margem preenchida (é o cálculo
+// automático) — se ela rodasse a cada tecla digitada aqui, desfaria na
+// hora qualquer ajuste manual que o admin fizesse no preço final. Só
+// confere prejuízo, sem mexer em mais nada.
+document.getElementById('fPreco').addEventListener('input', verificarPrejuizo);
+
+// Aviso de prejuízo — sem IA nenhuma, só matemática (por isso nunca erra
+// e não tem custo nenhum): compara o preço de venda de verdade contra o
+// custo real (valor + taxa + frete) de cada quilate cadastrado, ou do
+// valor único quando não tem quilate nenhum. Roda toda vez que qualquer
+// campo de preço muda (ver atualizarCalcLucro, renderQuilatesMulti e o
+// listener do fPreco acima) — pega na hora se o admin digitar (ou a
+// margem calcular) um preço que dá prejuízo de verdade, antes de salvar.
+function verificarPrejuizo(){
+  const aviso = document.getElementById('avisoPrejuizo');
+  const abaPreco = document.querySelector('.produto-tab[data-tab="preco"]');
+  const custoFrete = parseFloat(document.getElementById('fCustoFrete').value) || 0;
+  const problemas = [];
+
+  if (quilatesFormAtual.length){
+    quilatesFormAtual.forEach(q => {
+      const custoTotalQ = Math.round((q.custo + q.taxa + custoFrete) * 100) / 100;
+      if (custoTotalQ > 0 && q.preco > 0 && q.preco <= custoTotalQ){
+        const perda = Math.round((custoTotalQ - q.preco) * 100) / 100;
+        problemas.push(`<li><strong>${q.valor}</strong>: vendendo por ${formatarPreco(q.preco)} você perde ${formatarPreco(perda)} por peça (custo real: ${formatarPreco(custoTotalQ)})</li>`);
+      }
+    });
+  } else {
+    const custoPeca = parseFloat(document.getElementById('fCustoPeca').value) || 0;
+    const imposto = parseFloat(document.getElementById('fCustoImposto').value) || 0;
+    const custoTotal = Math.round((custoPeca + imposto + custoFrete) * 100) / 100;
+    const precoAtual = parseFloat(document.getElementById('fPreco').value) || 0;
+    if (custoTotal > 0 && precoAtual > 0 && precoAtual <= custoTotal){
+      const perda = Math.round((custoTotal - precoAtual) * 100) / 100;
+      problemas.push(`<li>Vendendo por ${formatarPreco(precoAtual)} você perde ${formatarPreco(perda)} por peça (custo real: ${formatarPreco(custoTotal)})</li>`);
+    }
+  }
+
+  if (problemas.length){
+    aviso.innerHTML = `⚠️ <strong>Prejuízo — confere antes de ativar:</strong><ul style="margin:6px 0 0 18px;padding:0;">${problemas.join('')}</ul>`;
+    aviso.style.display = 'block';
+    if (abaPreco) abaPreco.classList.add('tem-prejuizo');
+  } else {
+    aviso.style.display = 'none';
+    if (abaPreco) abaPreco.classList.remove('tem-prejuizo');
+  }
+  return problemas.length > 0;
+}
 
 // Frete: "grátis" zera e esconde o campo de valor; desmarcado mostra o
 // campo pra digitar quanto o fornecedor cobra.
@@ -4003,6 +4068,17 @@ document.getElementById('formProduto').addEventListener('submit', async (e) => {
     document.querySelector('.produto-tab[data-tab="fotos"]').classList.add('tem-erro');
     alert('Adicione pelo menos 1 foto antes de salvar.');
     return;
+  }
+
+  // Última checagem antes de salvar: se algum preço (valor único ou
+  // algum quilate) ainda está no prejuízo, mostra o aviso vermelho na
+  // aba de Preço e pede confirmação explícita — nunca deixa passar batido
+  // sem querer, mas não impede de vez (às vezes é de propósito, tipo
+  // liquidar um item específico).
+  if (verificarPrejuizo()){
+    ativarAbaProduto('preco');
+    const confirma = confirm('Esse produto tem um preço que dá PREJUÍZO (venda menor que o custo real) — olha o aviso vermelho na aba "Preço & Estoque". Salvar assim mesmo?');
+    if (!confirma) return;
   }
 
   const botaoSalvar = e.target.querySelector('button[type="submit"]');
