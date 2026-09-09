@@ -6,6 +6,27 @@ loja, pronto pra você revisar e ativar. Usa a sua própria sessão logada
 no AliExpress, então funciona sem levar bloqueio (é a mesma ideia por
 trás de ferramentas como o DSers).
 
+## Atalho fácil (sem digitar comando nenhum)
+
+Depois de baixar a pasta (Passo 1) e instalar o Node.js (Passo 2, só na
+primeira vez), tem dois arquivos que fazem tudo sozinhos — só clicar duas
+vezes, sem abrir terminal nem digitar nada:
+
+- **`Login no AliExpress`** (`.bat` no Windows, `.command` no Mac) — usa
+  na primeira vez e de vez em quando depois (quando a sessão expirar).
+- **`Abrir Interface`** (`.bat` no Windows, `.command` no Mac) — abre a
+  interface visual pra importar produtos. É esse que você vai usar mais.
+
+Na primeira vez que clicar em qualquer um dos dois, ele já instala
+sozinho o que falta (pode demorar um minuto) — não precisa rodar
+`npm install` na mão. Se aparecer um aviso do Windows/Mac tipo "não
+reconhecemos o autor desse arquivo", pode confirmar que quer abrir mesmo
+assim (é normal pra qualquer arquivo baixado da internet, não é vírus).
+
+Se preferir entender o que cada comando faz (ou o clique duplo não
+funcionar por algum motivo), os passos abaixo explicam o mesmo processo
+digitando no terminal.
+
 ## Passo 1 — Baixar essa pasta
 
 Se você ainda não tem o código do site no seu computador:
@@ -154,3 +175,4 @@ Quando estiver tudo certo, marca como **ativo** e salva — aí sim aparece no s
 - **Erro dizendo que não achou o "chrome"** → você precisa ter o Google Chrome instalado (não Edge, não Firefox) — [google.com/chrome](https://www.google.com/chrome/).
 - **A interface não abriu sozinha no navegador** → copia `http://localhost:3737` (aparece no terminal) e cola na barra de endereço do navegador na mão.
 - **"porta já em uso" ao rodar `npm run interface`** → já tem uma janela dessa ferramenta aberta em algum lugar (ou outro programa usando a mesma porta) — fecha a outra janela/terminal e tenta de novo.
+- **(Mac) Clicar duas vezes no `.command` não faz nada, ou dá erro de permissão** → abre o Terminal, digita `chmod +x ` (com espaço) e arrasta os dois arquivos `.command` pra dentro da janela, aperta Enter — só precisa fazer isso uma vez.
