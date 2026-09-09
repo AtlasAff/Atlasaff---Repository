@@ -176,6 +176,24 @@ async function extrairDadosProduto(page){
     () => dados?.priceModule?.formatedActivityPrice || dados?.priceModule?.formatedPrice
   );
 
+  // Extras (não travam nada e não entram no aviso de "não encontrado" —
+  // são só referência a mais pra você usar no admin, o AliExpress mesmo
+  // já mostra pro comprador). Não usa tentarCadeia de propósito: quando
+  // faltam, é normal (nem todo produto/loja tem esse aviso), não é erro.
+  const impostoEstimado = await (async () => {
+    try {
+      const t = await page.locator('[class*="vat-installment--item"]').first().textContent({ timeout: 2000 });
+      return limpar(t);
+    } catch { return null; }
+  })();
+
+  const estoque = await (async () => {
+    try {
+      const t = await page.locator('[class*="quantity--info"]').first().textContent({ timeout: 2000 });
+      return limpar(t);
+    } catch { return null; }
+  })();
+
   const fotos = await tentarCadeia('fotos', () => {
     const lista = dados?.imagePathList || dados?.imageModule?.imagePathList;
     if (!Array.isArray(lista) || !lista.length) throw new Error('sem lista');
@@ -195,13 +213,47 @@ async function extrairDadosProduto(page){
       (dados?.specsModule?.props || []).map(p => `${p.attrName}: ${p.attrValue}`).join('\n')
   );
 
-  const variacoes = await tentarCadeia('variações (tamanho/cor/etc — precisa mapear na mão)', () => {
-    const props = dados?.skuModule?.productSKUPropertyList;
-    if (!Array.isArray(props) || !props.length) throw new Error('sem variação');
-    return props.map(p => ({
-      nome: p.skuPropertyName,
-      valores: (p.skuPropertyValues || []).map(v => v.propertyValueDisplayName || v.propertyValueName)
-    }));
+  const variacoes = await tentarCadeia('variações (tamanho/cor/etc — precisa mapear na mão)', async () => {
+    // Cada grupo de variação (tamanho, cor metálica etc.) é um bloco com
+    // um título ("Tamanho:", "Cor metálica:...") e, dentro, uma opção por
+    // elemento com o valor certinho no atributo title="" — não depende de
+    // ler o texto visível (que às vezes vem com espaço/lixo junto).
+    const grupos = await page.evaluate(() => {
+      const valoresDe = (container) => [...new Set(
+        [...container.querySelectorAll('[class*="sku-item--text"]')]
+          .map(el => (el.getAttribute('title') || el.textContent || '').trim())
+          .filter(Boolean)
+      )];
+
+      const propriedades = [...document.querySelectorAll('[class*="sku-item--property"]')];
+      let achados;
+      if (propriedades.length){
+        achados = propriedades.map((prop, i) => {
+          const tituloTexto = prop.querySelector('[class*="sku-item--title"]')?.textContent || '';
+          const nome = tituloTexto.split(':')[0].trim() || `Opção ${i + 1}`;
+          return { nome, valores: valoresDe(prop) };
+        });
+      } else {
+        // Não achou o wrapper com título — pega cada grupo de opções
+        // direto, sem nome (fica "Opção 1", "Opção 2"...).
+        achados = [...document.querySelectorAll('[class*="sku-item--skus"]')].map((g, i) => ({
+          nome: `Opção ${i + 1}`,
+          valores: valoresDe(g)
+        }));
+      }
+
+      // A página às vezes repete o mesmo bloco duas vezes (layout
+      // duplicado escondido) — tira as duplicatas exatas.
+      const vistos = new Set();
+      return achados.filter(g => g.valores.length).filter(g => {
+        const chave = g.nome + '|' + g.valores.join(',');
+        if (vistos.has(chave)) return false;
+        vistos.add(chave);
+        return true;
+      });
+    });
+    if (!grupos.length) throw new Error('sem variação');
+    return grupos;
   }) || [];
 
   // Quando algum campo importante não foi achado, salva um "raio-x" da
@@ -220,7 +272,7 @@ async function extrairDadosProduto(page){
     } catch { /* isso é só um extra, não pode travar a importação por causa disso */ }
   }
 
-  return { nome, descricao, fotos, preco, variacoes, avisos };
+  return { nome, descricao, fotos, preco, variacoes, avisos, impostoEstimado, estoque };
 }
 
 /* ============================================================
@@ -301,7 +353,7 @@ async function modoImportar(url){
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await page.waitForTimeout(2500); // dá tempo do JS da página terminar de montar tudo
 
-  let { nome, descricao, fotos, preco, variacoes, avisos } = await extrairDadosProduto(page);
+  let { nome, descricao, fotos, preco, variacoes, avisos, impostoEstimado, estoque } = await extrairDadosProduto(page);
   await browser.close();
 
   console.log(`\nNome (como veio do fornecedor): ${nome || '(não encontrado)'}`);
@@ -323,6 +375,8 @@ async function modoImportar(url){
   }
 
   console.log(`\nPreço listado: ${preco || '(não encontrado)'} — confere/ajusta no admin, não é necessariamente o preço de fábrica`);
+  if (impostoEstimado) console.log(`Imposto estimado (mostrado pelo próprio AliExpress): ${impostoEstimado}`);
+  if (estoque) console.log(`Estoque no fornecedor: ${estoque}`);
   console.log(`Fotos encontradas: ${fotos.length}`);
   if (variacoes.length){
     console.log('Variações encontradas (mapeia pra quilate/banho/tamanho na mão no admin):');
