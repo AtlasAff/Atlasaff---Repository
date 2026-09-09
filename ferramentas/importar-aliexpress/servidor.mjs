@@ -21,7 +21,7 @@ import {
   carregarCredenciais, salvarCredenciais,
   abrirNavegador, extrairDadosProduto, formatarComIA, revisarComIA,
   converterTamanhosParaBR, paraNumero, extrairValorReais, baixarESubirFoto,
-  montarMatrizes
+  montarMatrizes, buscarProdutoExistente, sugerirCategoria
 } from './importar.mjs';
 
 const PORTA = 3737;
@@ -102,6 +102,12 @@ async function handleBuscar(req, res){
     return responderJSON(res, 400, { erro: 'Ainda não tem sessão do AliExpress salva — roda "npm run login" no terminal primeiro (só precisa fazer isso de vez em quando).' });
   }
 
+  // Checa cedo (antes de abrir o navegador — sem sentido gastar 1+ minuto
+  // clicando em variação só pra descobrir depois que já existe) se esse
+  // link já foi importado antes.
+  const sbAnon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const produtoExistente = await buscarProdutoExistente(sbAnon, link);
+
   let browser;
   try {
     const abertura = await abrirNavegador({ headless: true, storageState: ARQUIVO_SESSAO });
@@ -123,6 +129,17 @@ async function handleBuscar(req, res){
       } catch (err) {
         erroIA = err.message;
       }
+    }
+
+    // Sugestão de categoria pela IA — só quando NÃO é atualização de um
+    // produto existente (nesse caso a categoria que ele já tem prevalece,
+    // o front-end decide isso ao montar o formulário).
+    let categoriaSugerida = null;
+    if (credenciais.chaveGroq && !produtoExistente){
+      try {
+        const { data: categoriasAtivas } = await sbAnon.from('categorias').select('slug, nome').eq('ativa', true).order('ordem');
+        categoriaSugerida = await sugerirCategoria({ nome: nomeIA || dados.nome, categorias: categoriasAtivas || [] }, credenciais.chaveGroq);
+      } catch { /* sugestão é só um extra, nunca trava a busca */ }
     }
 
     const custoPecaNumero = paraNumero(dados.preco) ?? 0;
@@ -147,6 +164,8 @@ async function handleBuscar(req, res){
       avisoTamanho,
       avisos: dados.avisos,
       avisosMatriz: dados.matrizVariacoes?.avisos || [],
+      categoriaSugerida,
+      produtoExistente,
       link
     });
   } catch (err) {
@@ -213,6 +232,17 @@ async function handlePublicar(req, res){
     await salvarCredenciais(credenciais);
   }
 
+  // Atualizando um produto existente: busca o registro completo agora
+  // que já está logado como admin (produtos_admin() devolve tudo,
+  // inclusive observacoes_internas, que não é público) — as observações
+  // novas são ACRESCENTADAS embaixo das antigas, nunca substituem uma
+  // anotação sua de antes.
+  let produtoExistenteAtual = null;
+  if (corpo.produtoExistenteId){
+    const { data } = await sb.rpc('produtos_admin').select('*').eq('id', corpo.produtoExistenteId).maybeSingle();
+    produtoExistenteAtual = data || null;
+  }
+
   // Sobe cada foto que ainda não é do nosso Storage (uma foto já
   // reaproveitada de uma tentativa anterior — ex: você voltou e mandou
   // publicar de novo — não é baixada e subida de novo à toa).
@@ -258,15 +288,18 @@ async function handlePublicar(req, res){
     margemNumero
   });
 
-  // Sem ".select()" no final de propósito (mesmo motivo do script de
-  // terminal): a leitura direta da tabela produtos é restrita mesmo pra
-  // admin — o insert funciona igual, só não confirma id/slug de volta.
-  const { error: erroInsert } = await sb.from('produtos').insert({
+  // Atualizando: acrescenta a observação nova embaixo da que já existia,
+  // não substitui. Produto novo: só o que veio do formulário mesmo.
+  const observacoesFinal = produtoExistenteAtual?.observacoes_internas
+    ? `${produtoExistenteAtual.observacoes_internas}\n\n${corpo.observacoes || ''}`.trim()
+    : (corpo.observacoes || null);
+
+  const dadosProduto = {
     nome: corpo.nome || '(sem nome)',
     descricao: corpo.descricao || null,
     fotos: fotosFinal,
     link_fornecedor: corpo.linkFornecedor || null,
-    observacoes_internas: corpo.observacoes || null,
+    observacoes_internas: observacoesFinal,
     categoria: corpo.categoria,
     ativo: Boolean(corpo.ativo),
     preco: Number(corpo.preco) || 0,
@@ -294,12 +327,24 @@ async function handlePublicar(req, res){
       banhos_custos: banhosFinal.map(b => ({ nome: b.nome, custo: b.custo }))
     } : {}),
     ...(matrizPrecos.length ? { matriz_precos: matrizPrecos, matriz_custos: matrizCustos } : {})
-  });
+  };
 
-  if (erroInsert){
-    return responderJSON(res, 500, { erro: erroInsert.message });
+  // Sem ".select()" no final de propósito (mesmo motivo do script de
+  // terminal): a leitura direta da tabela produtos é restrita mesmo pra
+  // admin — insert/update funcionam igual, só não confirmam id/slug de volta.
+  const { error: erroSalvar } = corpo.produtoExistenteId
+    ? await sb.from('produtos').update(dadosProduto).eq('id', corpo.produtoExistenteId)
+    : await sb.from('produtos').insert(dadosProduto);
+
+  if (erroSalvar){
+    return responderJSON(res, 500, { erro: erroSalvar.message });
   }
-  responderJSON(res, 200, { ok: true, fotosEnviadas: fotosFinal.length, banhosSalvos: banhosFinal.length });
+  responderJSON(res, 200, {
+    ok: true,
+    atualizado: Boolean(corpo.produtoExistenteId),
+    fotosEnviadas: fotosFinal.length,
+    banhosSalvos: banhosFinal.length
+  });
 }
 
 const servidor = http.createServer(async (req, res) => {

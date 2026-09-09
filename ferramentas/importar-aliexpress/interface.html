@@ -79,23 +79,29 @@
   </div>
 
   <div class="card">
-    <h2>1. Colar o link do produto</h2>
-    <div class="linha-busca">
-      <input type="url" id="inputLink" placeholder="https://www.aliexpress.com/item/...">
-      <button id="btnBuscar">Buscar produto</button>
+    <h2>1. Colar o(s) link(s) do produto</h2>
+    <div class="campo">
+      <textarea id="inputLink" rows="2" placeholder="Cola o link do produto — ou vários, um por linha, pra importar em fila"></textarea>
     </div>
+    <button id="btnBuscar">Buscar produto(s)</button>
     <div id="erroBusca" style="margin-top:10px;"></div>
+    <div id="filaBox" style="display:none;margin-top:14px;">
+      <p style="font-size:0.82rem;color:var(--texto-suave);margin-bottom:8px;">Fila — clica num item ✅ pronto pra revisar e publicar:</p>
+      <div id="filaLista" style="display:flex;flex-direction:column;gap:6px;"></div>
+    </div>
   </div>
 
   <div id="carregando">
     <div class="spinner"></div>
-    <p>Abrindo a página, lendo tudo, clicando nas variações se tiver quilate/cor...<br>Pode demorar um pouco, principalmente com bastante variação.</p>
+    <p>Abrindo a página, lendo tudo, clicando nas variações se tiver quilate/cor...<br>Pode demorar um pouco, principalmente com bastante variação. Com vários links, processa um de cada vez (não é mais rápido colar tudo de uma vez, só mais prático).</p>
   </div>
 
   <form id="formulario">
 
     <div class="card">
       <h2>2. Revisa e edita</h2>
+
+      <div id="avisoDuplicado" style="display:none;margin-bottom:14px;"></div>
 
       <div class="campo">
         <label for="fNome">Nome do produto</label>
@@ -233,8 +239,10 @@
 
 <script>
 const API = '';
-let estado = { fotos: [], tamanhos: [], quilates: [], banhos: [], custoPeca: 0, custoImposto: 0 };
+let estado = { fotos: [], tamanhos: [], quilates: [], banhos: [], custoPeca: 0, custoImposto: 0, produtoExistenteId: null };
 let statusAtual = {};
+let fila = []; // vários links de uma vez: [{ link, status: 'pendente'|'buscando'|'pronto'|'erro'|'publicado', dados, erro }]
+let filaItemAtual = null; // item da fila que está aberto no formulário agora (null = busca de link único)
 
 function $(id){ return document.getElementById(id); }
 function formatarR$(n){ return 'R$' + (Number(n) || 0).toFixed(2).replace('.', ','); }
@@ -286,33 +294,88 @@ function montarLoginBox(){
 }
 
 // ---------------------------------------------------------------
-// BUSCAR
+// BUSCAR — um link só continua exatamente como antes (sem fila, direto
+// pro formulário); vários links entram numa fila, processados um de cada
+// vez (em sequência de propósito — abrir vários AliExpress ao mesmo
+// tempo aumenta a chance de detecção de automação).
+async function buscarUm(link){
+  const resp = await fetch('/api/buscar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ link }) });
+  const dados = await resp.json();
+  if (!resp.ok || dados.erro) throw new Error(dados.erro || 'Erro desconhecido');
+  return dados;
+}
+
+function renderFila(){
+  if (fila.length < 2){ $('filaBox').style.display = 'none'; return; }
+  $('filaBox').style.display = 'block';
+  const icones = { pendente: '⏳', buscando: '🔄', pronto: '✅', publicado: '✔️', erro: '❌' };
+  $('filaLista').innerHTML = fila.map((item, i) => {
+    const nome = item.dados ? (item.dados.nomeIA || item.dados.nomeOriginal || item.link) : item.link;
+    return `<div class="chip" style="width:100%;justify-content:space-between;box-sizing:border-box;${item.status === 'pronto' ? 'cursor:pointer;' : ''}" data-i="${i}">
+      <span>${icones[item.status] || ''} ${nome}${item.status === 'erro' ? ' — ' + item.erro : ''}</span>
+    </div>`;
+  }).join('');
+  $('filaLista').querySelectorAll('[data-i]').forEach(el => {
+    const item = fila[Number(el.dataset.i)];
+    if (item.status === 'pronto') el.addEventListener('click', () => abrirDaFila(item));
+  });
+}
+
+function abrirDaFila(item){
+  filaItemAtual = item;
+  preencherFormulario(item.dados);
+}
+
 $('btnBuscar').addEventListener('click', async () => {
-  const link = $('inputLink').value.trim();
-  if (!link){ $('erroBusca').innerHTML = '<div class="erro-box">Cola o link do produto primeiro.</div>'; return; }
+  const links = [...new Set($('inputLink').value.split('\n').map(l => l.trim()).filter(Boolean))];
+  if (!links.length){ $('erroBusca').innerHTML = '<div class="erro-box">Cola pelo menos um link.</div>'; return; }
   $('erroBusca').innerHTML = '';
   $('formulario').style.display = 'none';
   $('rodape').style.display = 'none';
-  $('carregando').style.display = 'block';
   $('btnBuscar').disabled = true;
 
-  try {
-    const resp = await fetch('/api/buscar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ link }) });
-    const dados = await resp.json();
-    if (!resp.ok || dados.erro){ throw new Error(dados.erro || 'Erro desconhecido'); }
-    preencherFormulario(dados);
-  } catch (err) {
-    $('erroBusca').innerHTML = `<div class="erro-box">Não consegui buscar: ${err.message}</div>`;
-  } finally {
-    $('carregando').style.display = 'none';
-    $('btnBuscar').disabled = false;
+  if (links.length === 1){
+    filaItemAtual = null;
+    fila = [];
+    renderFila();
+    $('carregando').style.display = 'block';
+    try {
+      preencherFormulario(await buscarUm(links[0]));
+    } catch (err) {
+      $('erroBusca').innerHTML = `<div class="erro-box">Não consegui buscar: ${err.message}</div>`;
+    } finally {
+      $('carregando').style.display = 'none';
+      $('btnBuscar').disabled = false;
+    }
+    return;
   }
+
+  fila = links.map(link => ({ link, status: 'pendente', dados: null, erro: null }));
+  renderFila();
+  $('carregando').style.display = 'block';
+  for (const item of fila){
+    item.status = 'buscando';
+    renderFila();
+    try {
+      item.dados = await buscarUm(item.link);
+      item.status = 'pronto';
+    } catch (err) {
+      item.status = 'erro';
+      item.erro = err.message;
+    }
+    renderFila();
+  }
+  $('carregando').style.display = 'none';
+  $('btnBuscar').disabled = false;
+  const primeiroPronto = fila.find(i => i.status === 'pronto');
+  if (primeiroPronto) abrirDaFila(primeiroPronto);
 });
 
 function preencherFormulario(dados){
   $('fNome').value = dados.nomeIA || dados.nomeOriginal || '';
   $('descricaoEdit').innerHTML = dados.descricaoIA || dados.descricaoOriginal || '';
   $('fLinkFornecedor').value = dados.link || '';
+  $('fAtivo').checked = false; // reseta — senão ficava marcado de uma busca anterior sem querer
 
   estado.custoPeca = dados.custoPeca || 0;
   estado.custoImposto = dados.custoImposto;
@@ -349,11 +412,59 @@ function preencherFormulario(dados){
   avisos.push(`Importado do AliExpress em ${new Date().toLocaleString('pt-BR')}.`);
   $('fObservacoes').value = avisos.join('\n');
 
-  carregarCategorias();
+  renderAvisoDuplicado(dados.produtoExistente);
+  if (dados.produtoExistente){
+    estado.produtoExistenteId = dados.produtoExistente.id;
+    $('fAtivo').checked = !!dados.produtoExistente.ativo;
+  } else {
+    estado.produtoExistenteId = null;
+  }
+  atualizarBotaoPublicar();
+
+  carregarCategorias(dados.produtoExistente?.categoria || dados.categoriaSugerida || null);
   atualizarPrecoPreview();
   $('formulario').style.display = 'block';
   $('rodape').style.display = 'flex';
   window.scrollTo({ top: $('formulario').offsetTop - 20, behavior: 'smooth' });
+}
+
+// ---------------------------------------------------------------
+// DUPLICADO — esse link já foi importado antes? Deixa a pessoa escolher
+// entre atualizar o produto existente (preço/estoque/fotos mais recentes,
+// sem criar bagunça no catálogo) ou seguir criando um novo mesmo assim.
+function renderAvisoDuplicado(produtoExistente){
+  const el = $('avisoDuplicado');
+  if (!produtoExistente){
+    el.style.display = 'none';
+    el.innerHTML = '';
+    return;
+  }
+  el.style.display = 'block';
+  const dataFmt = new Date(produtoExistente.criado_em).toLocaleDateString('pt-BR');
+  el.innerHTML = `<div class="erro-box">
+    ⚠️ Esse link já foi importado antes: <strong>"${produtoExistente.nome}"</strong> (${produtoExistente.ativo ? 'ativo no site' : 'rascunho'}, criado em ${dataFmt}).
+    <div style="margin-top:8px;display:flex;gap:8px;">
+      <button type="button" id="btnUsarAtualizar">Atualizar esse produto</button>
+      <button type="button" class="outline" id="btnUsarNovo">Criar novo mesmo assim</button>
+    </div>
+    <p id="confirmacaoDuplicado" style="margin:8px 0 0;font-weight:bold;"></p>
+  </div>`;
+  $('btnUsarAtualizar').addEventListener('click', () => {
+    estado.produtoExistenteId = produtoExistente.id;
+    $('fCategoria').value = produtoExistente.categoria;
+    $('fAtivo').checked = !!produtoExistente.ativo;
+    atualizarBotaoPublicar();
+    $('confirmacaoDuplicado').textContent = '✓ Vai ATUALIZAR o produto existente ao publicar (categoria e "ativo" preenchidos com o que ele já tem).';
+  });
+  $('btnUsarNovo').addEventListener('click', () => {
+    estado.produtoExistenteId = null;
+    atualizarBotaoPublicar();
+    $('confirmacaoDuplicado').textContent = '✓ Vai criar um produto NOVO e separado ao publicar.';
+  });
+}
+
+function atualizarBotaoPublicar(){
+  $('btnPublicar').textContent = estado.produtoExistenteId ? 'Atualizar produto' : 'Publicar produto';
 }
 
 // ---------------------------------------------------------------
@@ -523,6 +634,10 @@ $('btnCancelar').addEventListener('click', () => {
   $('rodape').style.display = 'none';
   $('inputLink').value = '';
   $('erroBusca').innerHTML = '';
+  estado.produtoExistenteId = null;
+  filaItemAtual = null;
+  renderAvisoDuplicado(null);
+  atualizarBotaoPublicar();
 });
 
 // ---------------------------------------------------------------
@@ -547,7 +662,8 @@ $('btnPublicar').addEventListener('click', async () => {
     banhos: estado.banhos.map(b => ({
       nome: b.nome, custo: b.custo, foto: b.foto,
       preco: calcularPrecoComMargem((parseFloat($('fCustoPeca').value) || 0) + b.custo)
-    }))
+    })),
+    produtoExistenteId: estado.produtoExistenteId || null
   };
   if (!statusAtual.temLoginAdminSalvo){
     payload.email = $('fEmailAdmin')?.value.trim();
@@ -567,13 +683,26 @@ $('btnPublicar').addEventListener('click', async () => {
     const resp = await fetch('/api/publicar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     const r = await resp.json();
     if (!resp.ok || r.erro) throw new Error(r.erro || 'Erro desconhecido');
-    $('resultadoPublicar').innerHTML = `<div class="sucesso-box">✅ Produto salvo! ${r.fotosEnviadas} foto(s) enviada(s)${r.banhosSalvos ? `, ${r.banhosSalvos} banho(s) salvo(s)` : ''}. ${payload.ativo ? 'Já está visível no site.' : 'Entrou como rascunho — ative no admin quando quiser.'} Abre o admin do site pra conferir.</div>`;
+    const acao = r.atualizado ? 'atualizado' : 'salvo';
+    $('resultadoPublicar').innerHTML = `<div class="sucesso-box">✅ Produto ${acao}! ${r.fotosEnviadas} foto(s) enviada(s)${r.banhosSalvos ? `, ${r.banhosSalvos} banho(s) salvo(s)` : ''}. ${payload.ativo ? 'Já está visível no site.' : 'Entrou como rascunho — ative no admin quando quiser.'} Abre o admin do site pra conferir.</div>`;
     carregarStatus();
+
+    // Publicou um item da fila: marca como feito e já abre o próximo
+    // pronto sozinho, sem precisar voltar lá em cima pra escolher.
+    if (filaItemAtual){
+      filaItemAtual.status = 'publicado';
+      filaItemAtual = null;
+      renderFila();
+      const proximo = fila.find(i => i.status === 'pronto');
+      if (proximo){
+        setTimeout(() => abrirDaFila(proximo), 1200);
+      }
+    }
   } catch (err) {
     $('resultadoPublicar').innerHTML = `<div class="erro-box">Não consegui publicar: ${err.message}</div>`;
   } finally {
     $('btnPublicar').disabled = false;
-    $('btnPublicar').textContent = 'Publicar produto';
+    atualizarBotaoPublicar();
   }
 });
 

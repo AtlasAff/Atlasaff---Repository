@@ -87,19 +87,31 @@ Abre sozinho uma página no seu navegador (`http://localhost:3737`) —
 tudo roda no seu computador, só ganha uma tela em vez de responder
 perguntas no terminal. É lá que você:
 
-1. Cola o link do produto e clica em **Buscar produto** (pode demorar um
-   pouco, principalmente se tiver quilate/cor).
-2. Vê **tudo já preenchido, mas editável**: nome, descrição (com negrito/
-   itálico/lista), fotos (arrasta pra reordenar, × pra tirar alguma),
-   custo, imposto, frete, margem de lucro (o preço de venda recalcula
-   sozinho conforme você digita), tamanhos, quilates e banhos/cores.
-3. Se quiser, escreve uma instrução livre (ex: "tira o ct do nome",
+1. Cola o link do produto — ou **vários, um por linha** — e clica em
+   **Buscar produto(s)** (pode demorar um pouco, principalmente se tiver
+   quilate/cor). Com mais de um link, processa um atrás do outro sozinho
+   e mostra uma **fila** abaixo: clica num item ✅ pronto pra abrir ele no
+   formulário; ao publicar um, já abre o próximo pronto sozinho.
+2. Se esse link **já tiver sido importado antes**, aparece um aviso
+   vermelho perguntando se você quer **atualizar** aquele produto (preço/
+   estoque/fotos mais recentes do fornecedor, sem duplicar o catálogo —
+   mantém a categoria e o "ativo" que o produto já tinha, e acrescenta a
+   observação nova embaixo da antiga, sem apagar nada) ou criar um
+   produto novo separado mesmo assim.
+3. Vê **tudo já preenchido, mas editável**: nome, descrição (com negrito/
+   itálico/lista), categoria (a IA já sugere a mais provável quando tem
+   chave do Groq salva — confere/troca se não for a certa), fotos
+   (arrasta pra reordenar, × pra tirar alguma), custo, imposto, frete,
+   margem de lucro (o preço de venda recalcula sozinho conforme você
+   digita), tamanhos, quilates e banhos/cores.
+4. Se quiser, escreve uma instrução livre (ex: "tira o ct do nome",
    "mais emojis e ânimo") na caixinha **"Pedir pra IA ajustar nome/
    descrição"** e clica em Aplicar — reescreve os dois em cima do que já
    está na tela, seguindo só o que você pediu (precisa da chave do Groq
    salva).
-4. Ajusta o que quiser, marca se já quer deixar **ativo** (visível pro
-   cliente) ou deixar como rascunho, e clica em **Publicar produto**.
+5. Ajusta o que quiser, marca se já quer deixar **ativo** (visível pro
+   cliente) ou deixar como rascunho, e clica em **Publicar produto** (ou
+   **Atualizar produto**, se escolheu atualizar um já existente no passo 2).
 
 Deixa o terminal aberto enquanto usa (é ele que tá rodando o servidor
 local) — fecha com `Ctrl+C` quando terminar. Pra usar de novo depois, é
@@ -123,6 +135,18 @@ npm run importar -- "https://www.aliexpress.com/item/COLA-O-LINK-AQUI.html"
 ```
 
 (o `--` antes do link é importante, não esquece)
+
+Dá pra colar vários links de uma vez (importa um atrás do outro, cada um
+perguntando a margem separado):
+
+```
+npm run importar -- "https://.../produto1.html" "https://.../produto2.html"
+```
+
+Se o link já tiver sido importado antes, o script avisa e pergunta se
+você quer **atualizar** esse produto (preço/estoque/fotos mais recentes,
+mantendo a categoria e o "ativo" que ele já tinha) ou criar um novo
+mesmo assim.
 
 Vai aparecer no terminal o que foi encontrado (nome, quantas fotos, preço,
 variações) e o que **não** foi encontrado (esses campos você preenche na
