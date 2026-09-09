@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Importar do AliExpress — Pavan & Co.</title>
+<style>
+  :root{
+    --bordo:#6B0F1A; --bordo-escuro:#4E0A13; --creme:#FCF9F1; --creme-escuro:#EDE6D8;
+    --texto:#2B211F; --texto-suave:#6E6259; --borda:rgba(107,15,26,0.16);
+    --sucesso:#2E7D32; --erro:#B3261E; --aviso:#8A6116; --aviso-bg:#FBF1DE;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--creme-escuro);color:var(--texto);font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;padding-bottom:80px;}
+  h1,h2,h3{font-family:Georgia,'Times New Roman',serif;color:var(--bordo);margin:0;}
+  header{background:var(--bordo);color:var(--creme);padding:20px 24px;}
+  header h1{color:var(--creme);font-size:1.3rem;}
+  header p{margin:4px 0 0;font-size:0.82rem;opacity:0.85;}
+  .container{max-width:920px;margin:24px auto;padding:0 16px;}
+  .card{background:var(--creme);border:1px solid var(--borda);border-radius:8px;padding:20px 22px;margin-bottom:18px;}
+  .card h2{font-size:1.05rem;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--borda);}
+  .linha-busca{display:flex;gap:10px;}
+  .linha-busca input{flex:1;}
+  input[type=text], input[type=url], input[type=number], input[type=password], input[type=email], select, textarea{
+    width:100%;padding:9px 11px;border:1px solid var(--borda);border-radius:6px;font-size:0.9rem;font-family:inherit;background:#fff;color:var(--texto);
+  }
+  textarea{resize:vertical;}
+  label{display:block;font-size:0.78rem;font-weight:bold;color:var(--texto-suave);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.02em;}
+  .campo{margin-bottom:14px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+  button{cursor:pointer;font-family:inherit;font-size:0.88rem;border-radius:6px;border:1px solid var(--bordo);padding:9px 16px;background:var(--bordo);color:var(--creme);font-weight:bold;}
+  button:hover{background:var(--bordo-escuro);}
+  button.outline{background:transparent;color:var(--bordo);}
+  button.outline:hover{background:rgba(107,15,26,0.06);}
+  button:disabled{opacity:0.5;cursor:not-allowed;}
+  button.chip-x{padding:2px 7px;font-size:0.75rem;border-radius:12px;background:#fff;color:var(--bordo);border:1px solid var(--borda);font-weight:normal;}
+  .toolbar{display:flex;gap:6px;margin-bottom:6px;}
+  .toolbar button{padding:5px 11px;background:#fff;color:var(--bordo);}
+  #descricaoEdit{min-height:120px;padding:10px 12px;border:1px solid var(--borda);border-radius:6px;background:#fff;}
+  #descricaoEdit p{margin:0 0 10px;}
+  .fotos-grid{display:flex;flex-wrap:wrap;gap:10px;}
+  .foto-item{position:relative;width:88px;height:88px;border-radius:6px;overflow:hidden;border:1px solid var(--borda);}
+  .foto-item img{width:100%;height:100%;object-fit:cover;display:block;}
+  .foto-item button{position:absolute;top:2px;right:2px;padding:1px 6px;font-size:0.7rem;background:rgba(179,38,30,0.9);border:none;}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+  .chip{background:#fff;border:1px solid var(--borda);border-radius:16px;padding:5px 8px 5px 12px;font-size:0.82rem;display:flex;align-items:center;gap:8px;}
+  .add-linha{display:flex;gap:8px;align-items:flex-end;}
+  .add-linha .campo{flex:1;margin-bottom:0;}
+  .aviso-box{background:var(--aviso-bg);color:var(--aviso);border-radius:6px;padding:10px 12px;font-size:0.82rem;white-space:pre-line;}
+  .erro-box{background:#FBEAE9;color:var(--erro);border-radius:6px;padding:10px 12px;font-size:0.85rem;}
+  .sucesso-box{background:#E8F3E8;color:var(--sucesso);border-radius:6px;padding:12px 14px;font-size:0.9rem;}
+  .status-pill{display:inline-block;padding:3px 10px;border-radius:12px;font-size:0.72rem;font-weight:bold;}
+  .status-ok{background:#E8F3E8;color:var(--sucesso);}
+  .status-ruim{background:#FBEAE9;color:var(--erro);}
+  #carregando{display:none;text-align:center;padding:40px 0;color:var(--texto-suave);}
+  #carregando .spinner{width:34px;height:34px;border:3px solid var(--borda);border-top-color:var(--bordo);border-radius:50%;margin:0 auto 12px;animation:girar 0.8s linear infinite;}
+  @keyframes girar{to{transform:rotate(360deg);}}
+  #formulario, #resultadoBusca{display:none;}
+  .rodape-fixo{position:fixed;bottom:0;left:0;right:0;background:var(--creme);border-top:1px solid var(--borda);padding:12px 16px;display:flex;justify-content:flex-end;gap:10px;align-items:center;box-shadow:0 -2px 8px rgba(0,0,0,0.06);}
+  .preco-preview{font-family:Georgia,serif;font-size:1.1rem;color:var(--bordo);margin-right:auto;}
+  small.dica{display:block;color:var(--texto-suave);font-size:0.76rem;margin-top:4px;font-weight:normal;text-transform:none;letter-spacing:0;}
+  .checkbox-linha{display:flex;align-items:center;gap:8px;font-weight:normal;text-transform:none;font-size:0.85rem;color:var(--texto);}
+  .checkbox-linha input{width:auto;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Pavan &amp; Co. — Importar do AliExpress</h1>
+  <p>Roda no seu computador. Cola o link, revisa tudo, publica quando quiser.</p>
+</header>
+
+<div class="container">
+
+  <div class="card" id="cardStatus">
+    <h2>Status</h2>
+    <p id="statusTexto">Verificando...</p>
+  </div>
+
+  <div class="card">
+    <h2>1. Colar o link do produto</h2>
+    <div class="linha-busca">
+      <input type="url" id="inputLink" placeholder="https://www.aliexpress.com/item/...">
+      <button id="btnBuscar">Buscar produto</button>
+    </div>
+    <div id="erroBusca" style="margin-top:10px;"></div>
+  </div>
+
+  <div id="carregando">
+    <div class="spinner"></div>
+    <p>Abrindo a página, lendo tudo, clicando nas variações se tiver quilate/cor...<br>Pode demorar um pouco, principalmente com bastante variação.</p>
+  </div>
+
+  <form id="formulario">
+
+    <div class="card">
+      <h2>2. Revisa e edita</h2>
+
+      <div class="campo">
+        <label for="fNome">Nome do produto</label>
+        <input type="text" id="fNome">
+      </div>
+
+      <div class="grid2">
+        <div class="campo">
+          <label for="fCategoria">Categoria</label>
+          <select id="fCategoria"></select>
+        </div>
+        <div class="campo">
+          <label for="fLinkFornecedor">Link do fornecedor</label>
+          <input type="url" id="fLinkFornecedor">
+        </div>
+      </div>
+
+      <div class="campo">
+        <label for="descricaoEdit">Descrição</label>
+        <div class="toolbar">
+          <button type="button" data-cmd="bold"><b>N</b></button>
+          <button type="button" data-cmd="italic"><i>I</i></button>
+          <button type="button" data-cmd="insertUnorderedList">Lista</button>
+        </div>
+        <div id="descricaoEdit" contenteditable="true"></div>
+      </div>
+
+      <div class="campo">
+        <label>Fotos <small class="dica">clica no × pra remover uma; só são enviadas de verdade quando você publica</small></label>
+        <div class="fotos-grid" id="fotosGrid"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>3. Custo, imposto e preço</h2>
+      <div class="grid3">
+        <div class="campo">
+          <label for="fCustoPeca">Custo da peça (R$)</label>
+          <input type="number" step="0.01" id="fCustoPeca">
+        </div>
+        <div class="campo">
+          <label for="fCustoImposto">Imposto (R$)</label>
+          <input type="number" step="0.01" id="fCustoImposto">
+        </div>
+        <div class="campo">
+          <label for="fCustoFrete">Frete (R$)</label>
+          <input type="number" step="0.01" id="fCustoFrete" value="0">
+        </div>
+      </div>
+      <div class="grid3">
+        <div class="campo">
+          <label for="fMargem">Margem de lucro (%)</label>
+          <input type="number" step="1" id="fMargem">
+        </div>
+        <div class="campo">
+          <label for="fPreco">Preço de venda (R$) <small class="dica">calculado da margem, mas edita à vontade</small></label>
+          <input type="number" step="0.01" id="fPreco">
+        </div>
+        <div class="campo">
+          <label for="fEstoque">Estoque</label>
+          <input type="number" step="1" id="fEstoque">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>4. Tamanhos, quilates e cores</h2>
+
+      <div class="campo">
+        <label>Tamanhos disponíveis <small class="dica">já convertidos pra numeração BR</small></label>
+        <div class="chips" id="tamanhosChips"></div>
+        <div class="add-linha" style="margin-top:8px;">
+          <div class="campo"><input type="text" id="novoTamanho" placeholder="Ex: 18"></div>
+          <button type="button" class="outline" id="btnAddTamanho">+ Adicionar</button>
+        </div>
+      </div>
+
+      <div class="campo">
+        <label>Quilates <small class="dica">custo original de cada um — o preço de venda usa a margem lá em cima</small></label>
+        <div class="chips" id="quilatesChips"></div>
+        <div class="add-linha" style="margin-top:8px;">
+          <div class="campo"><input type="text" id="novoQuilateValor" placeholder="Ex: 1ct"></div>
+          <div class="campo"><input type="number" step="0.01" id="novoQuilateCusto" placeholder="Custo R$"></div>
+          <button type="button" class="outline" id="btnAddQuilate">+ Adicionar</button>
+        </div>
+      </div>
+
+      <div class="campo">
+        <label>Banhos / cores <small class="dica">diferença de custo sobre a peça base — precisa de foto pra ser salvo</small></label>
+        <div class="chips" id="banhosChips"></div>
+        <div class="add-linha" style="margin-top:8px;">
+          <div class="campo"><input type="text" id="novoBanhoNome" placeholder="Ex: Ouro 18k"></div>
+          <div class="campo"><input type="number" step="0.01" id="novoBanhoCusto" placeholder="Diferença R$" value="0"></div>
+          <div class="campo"><input type="url" id="novoBanhoFoto" placeholder="URL da foto"></div>
+          <button type="button" class="outline" id="btnAddBanho">+ Adicionar</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>5. Antes de publicar</h2>
+
+      <div class="campo">
+        <label for="fObservacoes">Observações internas <small class="dica">nunca aparece no site — o que precisar de atenção já vem preenchido aqui</small></label>
+        <textarea id="fObservacoes" rows="4"></textarea>
+      </div>
+
+      <div class="campo checkbox-linha">
+        <input type="checkbox" id="fAtivo">
+        <label for="fAtivo" style="margin:0;text-transform:none;font-weight:normal;">Já deixar visível pro cliente (senão entra como rascunho, você ativa depois no admin)</label>
+      </div>
+
+      <div id="loginBox"></div>
+
+      <div id="resultadoPublicar" style="margin-top:12px;"></div>
+    </div>
+
+  </form>
+</div>
+
+<div class="rodape-fixo" id="rodape" style="display:none;">
+  <span class="preco-preview" id="precoPreview"></span>
+  <button type="button" class="outline" id="btnCancelar">Cancelar / buscar outro</button>
+  <button type="button" id="btnPublicar">Publicar produto</button>
+</div>
+
+<script>
+const API = '';
+let estado = { fotos: [], tamanhos: [], quilates: [], banhos: [], custoPeca: 0, custoImposto: 0 };
+let statusAtual = {};
+
+function $(id){ return document.getElementById(id); }
+function formatarR$(n){ return 'R$' + (Number(n) || 0).toFixed(2).replace('.', ','); }
+// Foto que já é nossa (Supabase Storage) carrega direto; foto externa
+// (AliExpress) passa pelo servidor — evita bloqueio de hotlink.
+function urlImagem(u){
+  if (!u) return '';
+  if (u.includes('supabase.co/storage')) return u;
+  return `/api/imagem-proxy?url=${encodeURIComponent(u)}`;
+}
+
+async function carregarStatus(){
+  const r = await fetch('/api/status').then(r => r.json());
+  statusAtual = r;
+  const partes = [];
+  partes.push(`Sessão do AliExpress: <span class="status-pill ${r.temSessaoAliExpress ? 'status-ok' : 'status-ruim'}">${r.temSessaoAliExpress ? 'OK' : 'falta rodar "npm run login"'}</span>`);
+  partes.push(`Login do admin salvo: <span class="status-pill ${r.temLoginAdminSalvo ? 'status-ok' : 'status-ruim'}">${r.temLoginAdminSalvo ? 'sim' : 'não'}</span>`);
+  partes.push(`Chave do Groq (IA) salva: <span class="status-pill ${r.temChaveGroq ? 'status-ok' : 'status-ruim'}">${r.temChaveGroq ? 'sim' : 'não, sem formatação automática'}</span>`);
+  $('statusTexto').innerHTML = partes.join(' &nbsp;·&nbsp; ');
+  $('btnBuscar').disabled = !r.temSessaoAliExpress;
+  montarLoginBox();
+}
+
+async function carregarCategorias(selecionar){
+  const cats = await fetch('/api/categorias').then(r => r.json());
+  $('fCategoria').innerHTML = cats.map(c => `<option value="${c.slug}">${c.nome}</option>`).join('');
+  if (selecionar) $('fCategoria').value = selecionar;
+}
+
+function montarLoginBox(){
+  if (statusAtual.temLoginAdminSalvo){
+    $('loginBox').innerHTML = `<p style="font-size:0.85rem;color:var(--texto-suave);">Vai usar o login de admin salvo localmente. <a href="#" id="linkTrocarLogin">Usar outro?</a></p>`;
+    document.getElementById('linkTrocarLogin').addEventListener('click', (e) => {
+      e.preventDefault();
+      statusAtual.temLoginAdminSalvo = false;
+      montarLoginBox();
+    });
+  } else {
+    $('loginBox').innerHTML = `
+      <div class="grid2">
+        <div class="campo"><label for="fEmailAdmin">E-mail do admin</label><input type="email" id="fEmailAdmin"></div>
+        <div class="campo"><label for="fSenhaAdmin">Senha</label><input type="password" id="fSenhaAdmin"></div>
+      </div>
+      <div class="campo checkbox-linha">
+        <input type="checkbox" id="fSalvarLogin" checked>
+        <label for="fSalvarLogin" style="margin:0;text-transform:none;font-weight:normal;">Salvar esse login localmente pra não pedir de novo</label>
+      </div>`;
+  }
+}
+
+// ---------------------------------------------------------------
+// BUSCAR
+$('btnBuscar').addEventListener('click', async () => {
+  const link = $('inputLink').value.trim();
+  if (!link){ $('erroBusca').innerHTML = '<div class="erro-box">Cola o link do produto primeiro.</div>'; return; }
+  $('erroBusca').innerHTML = '';
+  $('formulario').style.display = 'none';
+  $('rodape').style.display = 'none';
+  $('carregando').style.display = 'block';
+  $('btnBuscar').disabled = true;
+
+  try {
+    const resp = await fetch('/api/buscar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ link }) });
+    const dados = await resp.json();
+    if (!resp.ok || dados.erro){ throw new Error(dados.erro || 'Erro desconhecido'); }
+    preencherFormulario(dados);
+  } catch (err) {
+    $('erroBusca').innerHTML = `<div class="erro-box">Não consegui buscar: ${err.message}</div>`;
+  } finally {
+    $('carregando').style.display = 'none';
+    $('btnBuscar').disabled = false;
+  }
+});
+
+function preencherFormulario(dados){
+  $('fNome').value = dados.nomeIA || dados.nomeOriginal || '';
+  $('descricaoEdit').innerHTML = dados.descricaoIA || dados.descricaoOriginal || '';
+  $('fLinkFornecedor').value = dados.link || '';
+
+  estado.custoPeca = dados.custoPeca || 0;
+  estado.custoImposto = dados.custoImposto;
+  $('fCustoPeca').value = estado.custoPeca;
+  $('fCustoImposto').value = dados.custoImposto ?? '';
+  $('fCustoFrete').value = 0;
+  $('fMargem').value = '';
+  $('fPreco').value = 0;
+
+  const estoqueNum = (dados.estoque || '').match(/\d+/);
+  $('fEstoque').value = estoqueNum ? estoqueNum[0] : '';
+
+  estado.fotos = [...(dados.fotos || [])];
+  renderFotos();
+
+  estado.tamanhos = [...(dados.tamanhosBR || [])];
+  renderTamanhos();
+
+  estado.quilates = (dados.quilates || []).map(q => ({ valor: q.valor, custo: q.custo }));
+  renderQuilates();
+
+  estado.banhos = (dados.banhos || []).map(b => ({ nome: b.nome, custo: b.custo, foto: b.foto }));
+  renderBanhos();
+
+  const avisos = [];
+  if (dados.avisos?.length) avisos.push(`Não encontrado na página: ${dados.avisos.join(', ')}.`);
+  if (dados.avisoTamanho) avisos.push(dados.avisoTamanho);
+  if (dados.avisosMatriz?.length) avisos.push(`Matriz de quilate/banho: ${dados.avisosMatriz.join('; ')}.`);
+  if (dados.erroIA) avisos.push(`IA não formatou nome/descrição: ${dados.erroIA} (ficou o texto original).`);
+  if (dados.precosPorVariacao?.length) avisos.push(`Preço muda por variação mas não deu pra separar sozinho: ${dados.precosPorVariacao.map(v => v.nome).join(', ')}.`);
+  avisos.push(`Importado do AliExpress em ${new Date().toLocaleString('pt-BR')}.`);
+  $('fObservacoes').value = avisos.join('\n');
+
+  carregarCategorias();
+  atualizarPrecoPreview();
+  $('formulario').style.display = 'block';
+  $('rodape').style.display = 'flex';
+  window.scrollTo({ top: $('formulario').offsetTop - 20, behavior: 'smooth' });
+}
+
+// ---------------------------------------------------------------
+// FOTOS
+function renderFotos(){
+  $('fotosGrid').innerHTML = estado.fotos.map((url, i) => `
+    <div class="foto-item">
+      <img src="${urlImagem(url)}" alt="">
+      <button type="button" data-i="${i}">×</button>
+    </div>`).join('') || '<p style="color:var(--texto-suave);font-size:0.85rem;">Nenhuma foto encontrada.</p>';
+  $('fotosGrid').querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => { estado.fotos.splice(Number(btn.dataset.i), 1); renderFotos(); });
+  });
+}
+
+// ---------------------------------------------------------------
+// TAMANHOS
+function renderTamanhos(){
+  $('tamanhosChips').innerHTML = estado.tamanhos.map((t, i) => `
+    <span class="chip">${t} <button type="button" class="chip-x" data-i="${i}">×</button></span>`).join('');
+  $('tamanhosChips').querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => { estado.tamanhos.splice(Number(btn.dataset.i), 1); renderTamanhos(); });
+  });
+}
+$('btnAddTamanho').addEventListener('click', () => {
+  const v = $('novoTamanho').value.trim();
+  if (!v || estado.tamanhos.includes(v)) return;
+  estado.tamanhos.push(v);
+  $('novoTamanho').value = '';
+  renderTamanhos();
+});
+
+// ---------------------------------------------------------------
+// QUILATES
+function calcularPrecoComMargem(custo){
+  const margem = parseFloat($('fMargem').value) || 0;
+  if (!margem) return 0;
+  const taxaImposto = (estado.custoPeca > 0 && estado.custoImposto) ? estado.custoImposto / estado.custoPeca : 0;
+  return Math.round(custo * (1 + taxaImposto) * (1 + margem / 100) * 100) / 100;
+}
+function renderQuilates(){
+  $('quilatesChips').innerHTML = estado.quilates.map((q, i) => `
+    <span class="chip">${q.valor} — custo ${formatarR$(q.custo)} → venda ${formatarR$(calcularPrecoComMargem(q.custo))} <button type="button" class="chip-x" data-i="${i}">×</button></span>`).join('');
+  $('quilatesChips').querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => { estado.quilates.splice(Number(btn.dataset.i), 1); renderQuilates(); });
+  });
+}
+$('btnAddQuilate').addEventListener('click', () => {
+  const valor = $('novoQuilateValor').value.trim();
+  const custo = parseFloat($('novoQuilateCusto').value);
+  if (!valor || isNaN(custo)) return;
+  estado.quilates.push({ valor, custo });
+  $('novoQuilateValor').value = ''; $('novoQuilateCusto').value = '';
+  renderQuilates();
+});
+
+// ---------------------------------------------------------------
+// BANHOS
+function renderBanhos(){
+  $('banhosChips').innerHTML = estado.banhos.map((b, i) => `
+    <span class="chip">
+      ${b.foto ? `<img src="${urlImagem(b.foto)}" alt="" style="width:24px;height:24px;border-radius:4px;object-fit:cover;">` : '<span style="color:var(--erro);font-size:0.75rem;">sem foto</span>'}
+      ${b.nome} (${b.custo >= 0 ? '+' : ''}${formatarR$(b.custo)})
+      <button type="button" class="chip-x" data-i="${i}">×</button>
+    </span>`).join('');
+  $('banhosChips').querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => { estado.banhos.splice(Number(btn.dataset.i), 1); renderBanhos(); });
+  });
+}
+$('btnAddBanho').addEventListener('click', () => {
+  const nome = $('novoBanhoNome').value.trim();
+  const custo = parseFloat($('novoBanhoCusto').value) || 0;
+  const foto = $('novoBanhoFoto').value.trim() || null;
+  if (!nome) return;
+  estado.banhos.push({ nome, custo, foto });
+  $('novoBanhoNome').value = ''; $('novoBanhoCusto').value = ''; $('novoBanhoFoto').value = '';
+  renderBanhos();
+});
+
+// ---------------------------------------------------------------
+// PREÇO / MARGEM
+function atualizarPrecoPreview(){
+  const custo = parseFloat($('fCustoPeca').value) || 0;
+  const imposto = parseFloat($('fCustoImposto').value) || 0;
+  const frete = parseFloat($('fCustoFrete').value) || 0;
+  const margem = parseFloat($('fMargem').value) || 0;
+  estado.custoPeca = custo;
+  estado.custoImposto = imposto;
+  if (margem){
+    const precoFinal = (custo + imposto + frete) * (1 + margem / 100);
+    $('fPreco').value = precoFinal.toFixed(2);
+  }
+  $('precoPreview').textContent = `Preço de venda: ${formatarR$($('fPreco').value)}`;
+  renderQuilates();
+}
+['fCustoPeca', 'fCustoImposto', 'fCustoFrete', 'fMargem'].forEach(id => {
+  $(id).addEventListener('input', atualizarPrecoPreview);
+});
+$('fPreco').addEventListener('input', () => {
+  $('precoPreview').textContent = `Preço de venda: ${formatarR$($('fPreco').value)}`;
+});
+
+// ---------------------------------------------------------------
+// TOOLBAR DA DESCRIÇÃO
+document.querySelectorAll('.toolbar button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.execCommand(btn.dataset.cmd, false, null);
+    $('descricaoEdit').focus();
+  });
+});
+
+// ---------------------------------------------------------------
+// CANCELAR
+$('btnCancelar').addEventListener('click', () => {
+  $('formulario').style.display = 'none';
+  $('rodape').style.display = 'none';
+  $('inputLink').value = '';
+  $('erroBusca').innerHTML = '';
+});
+
+// ---------------------------------------------------------------
+// PUBLICAR
+$('btnPublicar').addEventListener('click', async () => {
+  $('resultadoPublicar').innerHTML = '';
+  const payload = {
+    nome: $('fNome').value.trim(),
+    descricao: $('descricaoEdit').innerHTML.trim(),
+    fotos: estado.fotos,
+    linkFornecedor: $('fLinkFornecedor').value.trim(),
+    observacoes: $('fObservacoes').value.trim(),
+    categoria: $('fCategoria').value,
+    ativo: $('fAtivo').checked,
+    preco: $('fPreco').value,
+    custoPeca: $('fCustoPeca').value,
+    custoImposto: $('fCustoImposto').value,
+    margemLucro: $('fMargem').value,
+    estoque: $('fEstoque').value,
+    tamanhos: estado.tamanhos,
+    quilates: estado.quilates.map(q => ({ valor: q.valor, custo: q.custo, preco: calcularPrecoComMargem(q.custo) })),
+    banhos: estado.banhos.map(b => ({
+      nome: b.nome, custo: b.custo, foto: b.foto,
+      preco: calcularPrecoComMargem((parseFloat($('fCustoPeca').value) || 0) + b.custo)
+    }))
+  };
+  if (!statusAtual.temLoginAdminSalvo){
+    payload.email = $('fEmailAdmin')?.value.trim();
+    payload.senha = $('fSenhaAdmin')?.value;
+    payload.salvarLogin = $('fSalvarLogin')?.checked;
+    if (!payload.email || !payload.senha){
+      $('resultadoPublicar').innerHTML = '<div class="erro-box">Preenche e-mail e senha do admin.</div>';
+      return;
+    }
+  }
+  if (!payload.nome){ $('resultadoPublicar').innerHTML = '<div class="erro-box">Precisa de um nome pro produto.</div>'; return; }
+  if (!payload.categoria){ $('resultadoPublicar').innerHTML = '<div class="erro-box">Escolhe uma categoria.</div>'; return; }
+
+  $('btnPublicar').disabled = true;
+  $('btnPublicar').textContent = 'Publicando...';
+  try {
+    const resp = await fetch('/api/publicar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const r = await resp.json();
+    if (!resp.ok || r.erro) throw new Error(r.erro || 'Erro desconhecido');
+    $('resultadoPublicar').innerHTML = `<div class="sucesso-box">✅ Produto salvo! ${r.fotosEnviadas} foto(s) enviada(s)${r.banhosSalvos ? `, ${r.banhosSalvos} banho(s) salvo(s)` : ''}. ${payload.ativo ? 'Já está visível no site.' : 'Entrou como rascunho — ative no admin quando quiser.'} Abre o admin do site pra conferir.</div>`;
+    carregarStatus();
+  } catch (err) {
+    $('resultadoPublicar').innerHTML = `<div class="erro-box">Não consegui publicar: ${err.message}</div>`;
+  } finally {
+    $('btnPublicar').disabled = false;
+    $('btnPublicar').textContent = 'Publicar produto';
+  }
+});
+
+carregarStatus();
+carregarCategorias();
+</script>
+</body>
+</html>

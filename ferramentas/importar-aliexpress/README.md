@@ -56,7 +56,37 @@ como você sempre faz. Depois de logado, volta pro terminal e aperta Enter
 Isso salva sua sessão numa pasta local — só precisa repetir esse passo de
 vez em quando (quando a sessão expirar, alguns meses depois).
 
-## Passo 6 — Importar um produto
+## Passo 6 — Usar (recomendado: a interface visual)
+
+```
+npm run interface
+```
+
+Abre sozinho uma página no seu navegador (`http://localhost:3737`) —
+tudo roda no seu computador, só ganha uma tela em vez de responder
+perguntas no terminal. É lá que você:
+
+1. Cola o link do produto e clica em **Buscar produto** (pode demorar um
+   pouco, principalmente se tiver quilate/cor).
+2. Vê **tudo já preenchido, mas editável**: nome, descrição (com negrito/
+   itálico/lista), fotos (clica no × pra tirar alguma), custo, imposto,
+   frete, margem de lucro (o preço de venda recalcula sozinho conforme
+   você digita), tamanhos, quilates e banhos/cores.
+3. Ajusta o que quiser, marca se já quer deixar **ativo** (visível pro
+   cliente) ou deixar como rascunho, e clica em **Publicar produto**.
+
+Deixa o terminal aberto enquanto usa (é ele que tá rodando o servidor
+local) — fecha com `Ctrl+C` quando terminar. Pra usar de novo depois, é
+só rodar `npm run interface` outra vez.
+
+A chave do Groq e o login do admin, se já estiverem salvos
+(`.credenciais.json`), são usados automaticamente — a interface mostra um
+resumo do que já está salvo lá em cima.
+
+### Alternativa: modo terminal
+
+Se preferir sem interface (ou pra rodar em lote, script, etc.), o jeito
+antigo continua funcionando igual:
 
 Copia o link do produto no AliExpress e roda, **com o link entre aspas**
 (o link do AliExpress costuma ter `&` no meio, que o terminal do Windows
@@ -122,3 +152,5 @@ Quando estiver tudo certo, marca como **ativo** e salva — aí sim aparece no s
 - **Trava ou dá erro estranho** → o AliExpress pode ter bloqueado momentaneamente. Espera um pouco e tenta de novo, ou usa o link de outro produto pra testar.
 - **"arraste pra verificar" dá erro / não deixa passar** → o AliExpress detectou que é um navegador automatizado. Fecha tudo, espera uns minutos e roda `npm run login` de novo — às vezes é só tentar de novo que passa. Se continuar sempre dando erro, avisa o Claude.
 - **Erro dizendo que não achou o "chrome"** → você precisa ter o Google Chrome instalado (não Edge, não Firefox) — [google.com/chrome](https://www.google.com/chrome/).
+- **A interface não abriu sozinha no navegador** → copia `http://localhost:3737` (aparece no terminal) e cola na barra de endereço do navegador na mão.
+- **"porta já em uso" ao rodar `npm run interface`** → já tem uma janela dessa ferramenta aberta em algum lugar (ou outro programa usando a mesma porta) — fecha a outra janela/terminal e tenta de novo.
