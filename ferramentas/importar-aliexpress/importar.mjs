@@ -39,6 +39,18 @@ const ARQUIVO_SESSAO = path.join(__dirname, '.sessao-aliexpress.json');
 const SUPABASE_URL = 'https://pqhdtteeukfcjstfsnkn.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxaGR0dGVldWtmY2pzdGZzbmtuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzNzc0MTAsImV4cCI6MjEwMTk1MzQxMH0.VwOKgaNEmKaT-xGqF-S0Cr2mY9i4O_4eIFkqpdv0KiY';
 
+// Converte um preço no formato brasileiro ("R$149,14", "R$1.234,56") pro
+// número puro que o banco espera (149.14, 1234.56). Se não conseguir
+// entender o texto, devolve null — melhor deixar vazio do que salvar
+// errado.
+function paraNumero(precoTexto){
+  if (!precoTexto) return null;
+  const limpo = precoTexto.replace(/[^\d.,]/g, '');
+  const normalizado = limpo.replace(/\./g, '').replace(',', '.');
+  const n = parseFloat(normalizado);
+  return Number.isFinite(n) ? n : null;
+}
+
 async function perguntar(pergunta, opts = {}){
   const rl = createInterface({ input: stdin, output: stdout });
   const resposta = await rl.question(pergunta);
@@ -284,6 +296,11 @@ async function modoImportar(url){
     process.exit(1);
   }
 
+  // Preço vem como texto formatado (ex: "R$149,14") — converte pro número
+  // puro que o banco espera. Se não der pra entender, fica 0 mesmo (fácil
+  // de notar no admin que precisa preencher na mão) em vez de travar.
+  const precoNumero = paraNumero(preco) ?? 0;
+
   // Cria o produto como RASCUNHO (ativo:false — não aparece pro cliente
   // até você revisar e ativar no admin). link_fornecedor já vem
   // preenchido com o link original, pra você conferir a página de novo
@@ -298,7 +315,10 @@ async function modoImportar(url){
     link_fornecedor: url,
     categoria: categoriaProvisoria,
     ativo: false,
-    preco: 0 // obrigatório no banco — ajusta na calculadora do admin antes de ativar
+    // preço do AliExpress é só referência (frete, taxa, margem — nada
+    // disso é preço final de venda) — ajusta na calculadora do admin
+    // antes de ativar, mesmo já vindo preenchido.
+    preco: precoNumero
   });
 
   if (erroInsert){
