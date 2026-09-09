@@ -123,8 +123,17 @@
         <div id="descricaoEdit" contenteditable="true"></div>
       </div>
 
+      <div class="campo" style="background:var(--creme-escuro);padding:10px 12px;border-radius:6px;">
+        <label for="instrucaoIA">Pedir pra IA ajustar nome/descrição <small class="dica">ex: "tira o ct do nome", "mais emojis e ânimo", "dá mais destaque no material" — reescreve os dois de novo em cima do que já está na tela</small></label>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="instrucaoIA" placeholder="O que você quer mudar?">
+          <button type="button" class="outline" id="btnRegenerar">Aplicar</button>
+        </div>
+        <div id="erroRegenerar" style="margin-top:6px;"></div>
+      </div>
+
       <div class="campo">
-        <label>Fotos <small class="dica">clica no × pra remover uma; só são enviadas de verdade quando você publica</small></label>
+        <label>Fotos <small class="dica">arrasta pra reordenar; clica no × pra remover uma. Só são enviadas de verdade quando você publica</small></label>
         <div class="fotos-grid" id="fotosGrid"></div>
       </div>
     </div>
@@ -322,7 +331,10 @@ function preencherFormulario(dados){
   estado.tamanhos = [...(dados.tamanhosBR || [])];
   renderTamanhos();
 
-  estado.quilates = (dados.quilates || []).map(q => ({ valor: q.valor, custo: q.custo }));
+  // custoComImposto (quando o AliExpress mostrou o imposto de verdade
+  // daquele quilate específico) vem junto e some se você editar o custo
+  // na mão — mantido só pros que vieram intactos da busca.
+  estado.quilates = (dados.quilates || []).map(q => ({ valor: q.valor, custo: q.custo, custoComImposto: q.custoComImposto }));
   renderQuilates();
 
   estado.banhos = (dados.banhos || []).map(b => ({ nome: b.nome, custo: b.custo, foto: b.foto }));
@@ -345,15 +357,36 @@ function preencherFormulario(dados){
 }
 
 // ---------------------------------------------------------------
-// FOTOS
+// FOTOS (arrasta pra reordenar, × pra remover)
+let fotoArrastada = null;
 function renderFotos(){
   $('fotosGrid').innerHTML = estado.fotos.map((url, i) => `
-    <div class="foto-item">
+    <div class="foto-item" draggable="true" data-i="${i}" title="Arrasta pra reordenar">
       <img src="${urlImagem(url)}" alt="">
       <button type="button" data-i="${i}">×</button>
     </div>`).join('') || '<p style="color:var(--texto-suave);font-size:0.85rem;">Nenhuma foto encontrada.</p>';
-  $('fotosGrid').querySelectorAll('button').forEach(btn => {
-    btn.addEventListener('click', () => { estado.fotos.splice(Number(btn.dataset.i), 1); renderFotos(); });
+
+  $('fotosGrid').querySelectorAll('.foto-item button').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      estado.fotos.splice(Number(btn.dataset.i), 1);
+      renderFotos();
+    });
+  });
+
+  $('fotosGrid').querySelectorAll('.foto-item').forEach(item => {
+    item.addEventListener('dragstart', () => { fotoArrastada = Number(item.dataset.i); item.style.opacity = '0.4'; });
+    item.addEventListener('dragend', () => { item.style.opacity = ''; });
+    item.addEventListener('dragover', (e) => e.preventDefault());
+    item.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const destino = Number(item.dataset.i);
+      if (fotoArrastada === null || fotoArrastada === destino) return;
+      const [movida] = estado.fotos.splice(fotoArrastada, 1);
+      estado.fotos.splice(destino, 0, movida);
+      fotoArrastada = null;
+      renderFotos();
+    });
   });
 }
 
@@ -376,15 +409,19 @@ $('btnAddTamanho').addEventListener('click', () => {
 
 // ---------------------------------------------------------------
 // QUILATES
-function calcularPrecoComMargem(custo){
+// custoComImposto (quando veio junto): imposto real lido daquele quilate
+// específico na busca — mais preciso que aproximar pela proporção do
+// produto base (o imposto real não é proporcional ao valor).
+function calcularPrecoComMargem(custo, custoComImposto){
   const margem = parseFloat($('fMargem').value) || 0;
   if (!margem) return 0;
   const taxaImposto = (estado.custoPeca > 0 && estado.custoImposto) ? estado.custoImposto / estado.custoPeca : 0;
-  return Math.round(custo * (1 + taxaImposto) * (1 + margem / 100) * 100) / 100;
+  const custoBaseComImposto = custoComImposto != null ? Number(custoComImposto) : custo * (1 + taxaImposto);
+  return Math.round(custoBaseComImposto * (1 + margem / 100) * 100) / 100;
 }
 function renderQuilates(){
   $('quilatesChips').innerHTML = estado.quilates.map((q, i) => `
-    <span class="chip">${q.valor} — custo ${formatarR$(q.custo)} → venda ${formatarR$(calcularPrecoComMargem(q.custo))} <button type="button" class="chip-x" data-i="${i}">×</button></span>`).join('');
+    <span class="chip">${q.valor} — custo ${formatarR$(q.custo)} → venda ${formatarR$(calcularPrecoComMargem(q.custo, q.custoComImposto))} <button type="button" class="chip-x" data-i="${i}">×</button></span>`).join('');
   $('quilatesChips').querySelectorAll('button').forEach(btn => {
     btn.addEventListener('click', () => { estado.quilates.splice(Number(btn.dataset.i), 1); renderQuilates(); });
   });
@@ -445,6 +482,32 @@ $('fPreco').addEventListener('input', () => {
 });
 
 // ---------------------------------------------------------------
+// REGENERAR COM IA (aplica uma instrução em cima do que já está na tela)
+$('btnRegenerar').addEventListener('click', async () => {
+  const instrucao = $('instrucaoIA').value.trim();
+  $('erroRegenerar').innerHTML = '';
+  if (!instrucao){ $('erroRegenerar').innerHTML = '<div class="erro-box">Escreve o que você quer mudar.</div>'; return; }
+  $('btnRegenerar').disabled = true;
+  $('btnRegenerar').textContent = 'Pensando...';
+  try {
+    const resp = await fetch('/api/regenerar', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nome: $('fNome').value, descricao: $('descricaoEdit').innerHTML, instrucao })
+    });
+    const r = await resp.json();
+    if (!resp.ok || r.erro) throw new Error(r.erro || 'Erro desconhecido');
+    $('fNome').value = r.nome || $('fNome').value;
+    if (r.descricao) $('descricaoEdit').innerHTML = r.descricao;
+    $('instrucaoIA').value = '';
+  } catch (err) {
+    $('erroRegenerar').innerHTML = `<div class="erro-box">Não consegui aplicar: ${err.message}</div>`;
+  } finally {
+    $('btnRegenerar').disabled = false;
+    $('btnRegenerar').textContent = 'Aplicar';
+  }
+});
+
+// ---------------------------------------------------------------
 // TOOLBAR DA DESCRIÇÃO
 document.querySelectorAll('.toolbar button').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -480,7 +543,7 @@ $('btnPublicar').addEventListener('click', async () => {
     margemLucro: $('fMargem').value,
     estoque: $('fEstoque').value,
     tamanhos: estado.tamanhos,
-    quilates: estado.quilates.map(q => ({ valor: q.valor, custo: q.custo, preco: calcularPrecoComMargem(q.custo) })),
+    quilates: estado.quilates.map(q => ({ valor: q.valor, custo: q.custo, custoComImposto: q.custoComImposto, preco: calcularPrecoComMargem(q.custo, q.custoComImposto) })),
     banhos: estado.banhos.map(b => ({
       nome: b.nome, custo: b.custo, foto: b.foto,
       preco: calcularPrecoComMargem((parseFloat($('fCustoPeca').value) || 0) + b.custo)

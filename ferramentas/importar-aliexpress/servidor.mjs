@@ -19,7 +19,7 @@ import {
   __dirname, ARQUIVO_SESSAO,
   SUPABASE_URL, SUPABASE_ANON_KEY,
   carregarCredenciais, salvarCredenciais,
-  abrirNavegador, extrairDadosProduto, formatarComIA,
+  abrirNavegador, extrairDadosProduto, formatarComIA, revisarComIA,
   converterTamanhosParaBR, paraNumero, extrairValorReais, baixarESubirFoto,
   montarMatrizes
 } from './importar.mjs';
@@ -156,6 +156,37 @@ async function handleBuscar(req, res){
 }
 
 // ---------------------------------------------------------------
+// POST /api/regenerar { nome, descricao, instrucao } — revisa o nome/
+// descrição que já estão na tela (editados ou não) seguindo uma instrução
+// livre (ex: "tira o ct do nome", "mais emoji"). Precisa de chave do Groq
+// salva — sem chave, devolve erro claro em vez de travar/tentar sem IA.
+async function handleRegenerar(req, res){
+  let corpo;
+  try {
+    corpo = await lerCorpoJSON(req);
+  } catch (err) {
+    return responderJSON(res, 400, { erro: 'JSON inválido: ' + err.message });
+  }
+  if (!corpo.instrucao?.trim()){
+    return responderJSON(res, 400, { erro: 'Escreve o que você quer mudar.' });
+  }
+  const credenciais = await carregarCredenciais();
+  if (!credenciais.chaveGroq){
+    return responderJSON(res, 400, { erro: 'Sem chave do Groq salva — roda uma importação com a chave preenchida uma vez pra ela ficar salva, ou usa o script de terminal.' });
+  }
+  try {
+    const resultado = await revisarComIA({
+      nomeAtual: corpo.nome || '',
+      descricaoAtual: corpo.descricao || '',
+      instrucao: corpo.instrucao.trim()
+    }, credenciais.chaveGroq);
+    responderJSON(res, 200, resultado);
+  } catch (err) {
+    responderJSON(res, 500, { erro: err.message });
+  }
+}
+
+// ---------------------------------------------------------------
 // POST /api/publicar — recebe o formulário já editado pelo usuário e
 // salva de verdade: loga como admin, sobe as fotos (produto + banhos que
 // ainda não estão no nosso Storage) e insere o produto.
@@ -216,7 +247,11 @@ async function handlePublicar(req, res){
   const taxaImpostoAprox = (custoPecaNumero > 0 && custoImpostoNumero) ? custoImpostoNumero / custoPecaNumero : 0;
   const margemNumero = Number(corpo.margemLucro) || null;
   const { matrizPrecos, matrizCustos } = montarMatrizes({
-    quilatesCustos: (corpo.quilates || []).map(q => ({ valor: q.valor, custo: Number(q.custo) || 0 })),
+    quilatesCustos: (corpo.quilates || []).map(q => ({
+      valor: q.valor,
+      custo: Number(q.custo) || 0,
+      custoComImposto: q.custoComImposto != null ? Number(q.custoComImposto) : null
+    })),
     banhosCustos: banhosFinal.map(b => ({ nome: b.nome, custo: b.custo })),
     custoPecaBase: custoPecaNumero,
     taxaImposto: taxaImpostoAprox,
@@ -272,6 +307,8 @@ const servidor = http.createServer(async (req, res) => {
       await handleCategorias(req, res);
     } else if (req.method === 'POST' && url.pathname === '/api/buscar'){
       await handleBuscar(req, res);
+    } else if (req.method === 'POST' && url.pathname === '/api/regenerar'){
+      await handleRegenerar(req, res);
     } else if (req.method === 'POST' && url.pathname === '/api/publicar'){
       await handlePublicar(req, res);
     } else {

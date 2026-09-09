@@ -196,6 +196,19 @@ async function lerPrecoAtual(page){
   } catch { return null; }
 }
 
+// O imposto de importação NÃO é proporcional ao valor (a regra real —
+// Remessa Conforme — tem um desconto FIXO de US$30 acima de US$50, então
+// quanto maior o valor, MAIOR a fatia de imposto, não a mesma fração) —
+// por isso lê o imposto de verdade que o próprio AliExpress mostra pra
+// CADA combinação clicada, em vez de aproximar pela proporção do produto
+// base (isso já rendeu um valor errado pra menos num teste real).
+async function lerImpostoAtual(page){
+  try {
+    const t = await page.locator('[class*="vat-installment--item"]').first().textContent({ timeout: 2000 });
+    return extrairValorReais(t);
+  } catch { return null; }
+}
+
 // Tenta achar a foto principal mostrada NA TELA agora (depois de um
 // clique de variação) — diferente das fotos do produto (essas vêm prontas
 // escondidas no JS da página e não mudam quando clica numa cor). Isso
@@ -231,8 +244,9 @@ async function capturarMatrizVariacoes(page, variacoes){
       if (!clicou){ avisos.push(`Não consegui clicar em "${combo.valorOriginal}"`); continue; }
       const preco = await lerPrecoAtual(page);
       if (preco === null){ avisos.push(`Não consegui ler o preço de "${combo.valorOriginal}"`); continue; }
+      const imposto = await lerImpostoAtual(page);
       const foto = await fotoAtualDaVariante(page);
-      resultados.push({ ...combo, preco, foto });
+      resultados.push({ ...combo, preco, foto, custoComImposto: imposto !== null ? preco + imposto : null });
     }
     if (!resultados.length) return { quilatesCustos: [], banhosCustos: [], avisos };
 
@@ -241,7 +255,7 @@ async function capturarMatrizVariacoes(page, variacoes){
     const nomesBanho = Object.keys(porBanho);
     const banhoRef = nomesBanho[0];
 
-    const quilatesCustos = porBanho[banhoRef].map(r => ({ valor: r.quilate, custo: r.preco }));
+    const quilatesCustos = porBanho[banhoRef].map(r => ({ valor: r.quilate, custo: r.preco, custoComImposto: r.custoComImposto }));
     const banhosCustos = [];
     for (const nomeBanho of nomesBanho){
       if (nomeBanho === banhoRef) continue;
@@ -268,19 +282,22 @@ async function capturarMatrizVariacoes(page, variacoes){
   // banho limpo, cada um clicado de propósito.
   const { grupoQuilate, grupoBanho } = classificacao;
 
-  async function precoNoQuilate(valorQuilate){
+  async function precoEImpostoNoQuilate(valorQuilate){
     const clicou = await clicarOpcaoVariacao(page, valorQuilate);
-    if (!clicou) return null;
-    return lerPrecoAtual(page);
+    if (!clicou) return { preco: null, custoComImposto: null };
+    const preco = await lerPrecoAtual(page);
+    if (preco === null) return { preco: null, custoComImposto: null };
+    const imposto = await lerImpostoAtual(page);
+    return { preco, custoComImposto: imposto !== null ? preco + imposto : null };
   }
 
   if (!grupoBanho){
     // só quilate, sem cor/banho pra variar
     const quilatesCustos = [];
     for (const valor of grupoQuilate.valores){
-      const preco = await precoNoQuilate(valor);
+      const { preco, custoComImposto } = await precoEImpostoNoQuilate(valor);
       if (preco === null){ avisos.push(`Não consegui ler o preço do quilate "${valor}"`); continue; }
-      quilatesCustos.push({ valor: inicioQuilate(valor) || valor, custo: preco });
+      quilatesCustos.push({ valor: inicioQuilate(valor) || valor, custo: preco, custoComImposto });
     }
     return { quilatesCustos, banhosCustos: [], avisos };
   }
@@ -295,9 +312,9 @@ async function capturarMatrizVariacoes(page, variacoes){
     const foto = await fotoAtualDaVariante(page);
     const itens = [];
     for (const valorQuilate of grupoQuilate.valores){
-      const preco = await precoNoQuilate(valorQuilate);
+      const { preco, custoComImposto } = await precoEImpostoNoQuilate(valorQuilate);
       if (preco === null){ avisos.push(`Não consegui ler o preço de "${nomeBanho}" + "${valorQuilate}"`); continue; }
-      itens.push({ quilate: valorQuilate, preco });
+      itens.push({ quilate: valorQuilate, preco, custoComImposto });
     }
     if (itens.length) porBanho[nomeBanho] = { itens, foto };
   }
@@ -306,7 +323,7 @@ async function capturarMatrizVariacoes(page, variacoes){
   if (!nomesBanho.length) return { quilatesCustos: [], banhosCustos: [], avisos };
 
   const banhoRef = nomesBanho[0];
-  const quilatesCustos = porBanho[banhoRef].itens.map(i => ({ valor: inicioQuilate(i.quilate) || i.quilate, custo: i.preco }));
+  const quilatesCustos = porBanho[banhoRef].itens.map(i => ({ valor: inicioQuilate(i.quilate) || i.quilate, custo: i.preco, custoComImposto: i.custoComImposto }));
   const banhosCustos = [];
   for (const nomeBanho of nomesBanho){
     if (nomeBanho === banhoRef) continue;
@@ -337,8 +354,15 @@ async function capturarMatrizVariacoes(page, variacoes){
 // num teste: produto com matriz vazia sempre mostrava o preço base,
 // mesmo escolhendo um quilate bem mais caro). Mesmo formato que o
 // admin.html calcula sozinho ao salvar (calcularMatrizPrecos/Custos) —
-// só que aqui usa o imposto de verdade (proporcional ao custo), não a
-// fórmula por % de ICMS.
+// só que aqui usa o imposto de verdade que o AliExpress mostrou (quando
+// disponível por quilate — ver custoComImposto em capturarMatrizVariacoes)
+// em vez de aproximar todo mundo pela mesma proporção do produto base
+// (o imposto real NÃO é proporcional ao valor — regra Remessa Conforme
+// tem um desconto fixo de US$30 acima de US$50, então valores maiores
+// pagam uma fatia maior de imposto, não a mesma fração; aproximar pela
+// proporção do mais barato SUBESTIMA o imposto dos quilates maiores —
+// bug real encontrado num teste). O delta do banho continua aproximado
+// pela proporção (costuma ser pequeno ou zero, erro pouco relevante ali).
 export function montarMatrizes({ quilatesCustos, banhosCustos, custoPecaBase, taxaImposto, margemNumero }){
   if (!quilatesCustos.length && !banhosCustos.length) return { matrizPrecos: [], matrizCustos: [] };
   const quilates = quilatesCustos.length ? quilatesCustos : [{ valor: null, custo: custoPecaBase }];
@@ -347,9 +371,15 @@ export function montarMatrizes({ quilatesCustos, banhosCustos, custoPecaBase, ta
   const matrizPrecos = [];
   const matrizCustos = [];
   for (const q of quilates){
+    // Se lemos o imposto real desse quilate específico na página, usa
+    // ele; senão cai na aproximação por proporção (mesmo comportamento
+    // de antes).
+    const custoQuilateComImposto = q.custoComImposto != null
+      ? Number(q.custoComImposto)
+      : (Number(q.custo) || 0) * (1 + (taxaImposto || 0));
     for (const b of banhos){
-      const custoCombinado = (Number(q.custo) || 0) + (Number(b.custo) || 0);
-      const custoTotal = Math.round(custoCombinado * (1 + (taxaImposto || 0)) * 100) / 100;
+      const custoBanhoComImposto = (Number(b.custo) || 0) * (1 + (taxaImposto || 0));
+      const custoTotal = Math.round((custoQuilateComImposto + custoBanhoComImposto) * 100) / 100;
       const preco = margemNumero ? Math.round(custoTotal * (1 + margemNumero / 100) * 100) / 100 : 0;
       matrizCustos.push({ quilate: q.valor ?? null, banho: b.nome ?? null, custo: custoTotal });
       matrizPrecos.push({ quilate: q.valor ?? null, banho: b.nome ?? null, preco });
@@ -368,7 +398,9 @@ export async function baixarESubirFoto(sb, urlFoto, pasta){
     if (!resp.ok) throw new Error(`status ${resp.status}`);
     const bytes = new Uint8Array(await resp.arrayBuffer());
     const extensao = urlFoto.split('.').pop().split(/[?#]/)[0].slice(0, 5) || 'jpg';
-    const nomeArquivo = `${pasta}/aliexpress-${crypto.randomUUID()}.${extensao}`;
+    // Nome aleatório, sem mencionar o fornecedor — alguém inspecionando a
+    // foto no site não pode ver de onde ela veio.
+    const nomeArquivo = `${pasta}/${crypto.randomUUID()}.${extensao}`;
     const { error: erroUpload } = await sb.storage.from('produtos').upload(nomeArquivo, bytes, {
       contentType: resp.headers.get('content-type') || 'image/jpeg'
     });
@@ -711,6 +743,15 @@ DESCRIÇÃO (HTML): ${descricaoOriginal || '(sem descrição)'}
 Responda SOMENTE com um JSON válido nesse formato, sem nenhum texto antes ou depois (o valor de "descricao" é uma string HTML, como descrito acima):
 {"nome": "...", "descricao": "<p><strong>...</strong> ...</p>"}`;
 
+  const resultado = await chamarGroqJSON(prompt, chaveApi);
+  if (!resultado?.nome) throw new Error('Groq não devolveu um nome');
+  return { nome: resultado.nome.trim(), descricao: (resultado.descricao || descricaoOriginal || '').trim() };
+}
+
+// Chamada crua à API da Groq pedindo resposta em JSON — usada tanto pela
+// formatação inicial (formatarComIA) quanto pela revisão com instrução
+// (revisarComIA), pra não duplicar a parte de rede/erro.
+async function chamarGroqJSON(prompt, chaveApi){
   const resposta = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -731,10 +772,32 @@ Responda SOMENTE com um JSON válido nesse formato, sem nenhum texto antes ou de
   const corpo = await resposta.json();
   const texto = corpo?.choices?.[0]?.message?.content;
   if (!texto) throw new Error('Groq não devolveu texto nenhum');
+  return JSON.parse(texto);
+}
 
-  const resultado = JSON.parse(texto);
+// Pega o nome/descrição JÁ FORMATADOS (o que tá na tela agora, editado ou
+// não) e uma instrução livre da pessoa (ex: "dá mais destaque no ct",
+// "tira o ct do nome", "escreve com mais ânimo e emojis") — pede pra IA
+// REVISAR em cima disso, não gerar do zero de novo. Continua seguindo o
+// mesmo padrão de nome/descrição (só a instrução muda o que for pedido).
+export async function revisarComIA({ nomeAtual, descricaoAtual, instrucao }, chaveApi){
+  const prompt = `Você já formatou o nome e a descrição de um produto da Pavan & Co. (loja de joias) seguindo esse padrão:
+
+PADRÃO DO NOME: [Tipo de peça] + [Material/Pedra] + [Detalhe técnico opcional], até 6 palavras, só a primeira letra maiúscula.
+PADRÃO DA DESCRIÇÃO: HTML com 2 a 4 tópicos em <p>, cada um começando com <strong>frase curta</strong>, tom caloroso, sem inventar informação.
+
+Nome atual: ${nomeAtual}
+Descrição atual (HTML): ${descricaoAtual || '(sem descrição)'}
+
+Agora aplica esse pedido específico da pessoa que tá revisando (só isso — não muda mais nada além do que foi pedido, mantém o resto igual):
+"${instrucao}"
+
+Responda SOMENTE com um JSON válido, no mesmo formato de antes:
+{"nome": "...", "descricao": "<p><strong>...</strong> ...</p>"}`;
+
+  const resultado = await chamarGroqJSON(prompt, chaveApi);
   if (!resultado?.nome) throw new Error('Groq não devolveu um nome');
-  return { nome: resultado.nome.trim(), descricao: (resultado.descricao || descricaoOriginal || '').trim() };
+  return { nome: resultado.nome.trim(), descricao: (resultado.descricao || descricaoAtual || '').trim() };
 }
 
 /* ============================================================
@@ -952,16 +1015,19 @@ async function modoImportar(url){
 
   // Se achou quilate/banho E você deu uma margem, calcula o preço de
   // venda de cada opção também — mesma ideia da calculadora do admin
-  // (custo + imposto + margem). O imposto de cada opção é aproximado
-  // pela MESMA proporção imposto/custo do produto base (não dá pra
-  // reler o imposto de cada combinação sem clicar de novo só pra isso,
-  // já foram cliques demais) — é uma estimativa, revisa no admin.
+  // (custo + imposto + margem). Usa o imposto REAL lido em cada quilate
+  // (custoComImposto) quando disponível; só aproxima pela proporção do
+  // produto base quando não conseguiu ler (ou pro delta do banho, que
+  // costuma ser pequeno/zero).
   const taxaImpostoAprox = (custoPecaNumero > 0 && custoImpostoNumero) ? custoImpostoNumero / custoPecaNumero : 0;
   const precoComMargem = (custo) => margemNumero
     ? Math.round(custo * (1 + taxaImpostoAprox) * (1 + margemNumero / 100) * 100) / 100
     : 0;
+  const precoComMargemDoQuilate = (q) => margemNumero
+    ? Math.round((q.custoComImposto != null ? Number(q.custoComImposto) : q.custo * (1 + taxaImpostoAprox)) * (1 + margemNumero / 100) * 100) / 100
+    : 0;
 
-  const quilatesDisponiveis = (matrizVariacoes?.quilatesCustos || []).map(q => ({ valor: q.valor, preco: precoComMargem(q.custo) }));
+  const quilatesDisponiveis = (matrizVariacoes?.quilatesCustos || []).map(q => ({ valor: q.valor, preco: precoComMargemDoQuilate(q) }));
   const quilatesCustosFinal = (matrizVariacoes?.quilatesCustos || []).map(q => ({ valor: q.valor, custo: q.custo }));
   const banhosDisponiveis = banhosComFoto.map(b => ({ nome: b.nome, preco: precoComMargem(custoPecaNumero + b.custo), foto_url: b.fotoUrl }));
   const banhosCustosFinal = banhosComFoto.map(b => ({ nome: b.nome, custo: b.custo }));
@@ -971,7 +1037,7 @@ async function modoImportar(url){
   // base) — é o campo que resolverPrecoVariante() (shared.js) usa de
   // verdade, não só quilates_disponiveis/banhos_disponiveis.
   const { matrizPrecos, matrizCustos } = montarMatrizes({
-    quilatesCustos: quilatesCustosFinal,
+    quilatesCustos: matrizVariacoes?.quilatesCustos || [], // usa a versão com custoComImposto, não a "limpa" (quilatesCustosFinal)
     banhosCustos: banhosCustosFinal,
     custoPecaBase: custoPecaNumero,
     taxaImposto: taxaImpostoAprox,

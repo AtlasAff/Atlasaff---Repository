@@ -90,10 +90,15 @@ perguntas no terminal. É lá que você:
 1. Cola o link do produto e clica em **Buscar produto** (pode demorar um
    pouco, principalmente se tiver quilate/cor).
 2. Vê **tudo já preenchido, mas editável**: nome, descrição (com negrito/
-   itálico/lista), fotos (clica no × pra tirar alguma), custo, imposto,
-   frete, margem de lucro (o preço de venda recalcula sozinho conforme
-   você digita), tamanhos, quilates e banhos/cores.
-3. Ajusta o que quiser, marca se já quer deixar **ativo** (visível pro
+   itálico/lista), fotos (arrasta pra reordenar, × pra tirar alguma),
+   custo, imposto, frete, margem de lucro (o preço de venda recalcula
+   sozinho conforme você digita), tamanhos, quilates e banhos/cores.
+3. Se quiser, escreve uma instrução livre (ex: "tira o ct do nome",
+   "mais emojis e ânimo") na caixinha **"Pedir pra IA ajustar nome/
+   descrição"** e clica em Aplicar — reescreve os dois em cima do que já
+   está na tela, seguindo só o que você pediu (precisa da chave do Groq
+   salva).
+4. Ajusta o que quiser, marca se já quer deixar **ativo** (visível pro
    cliente) ou deixar como rascunho, e clica em **Publicar produto**.
 
 Deixa o terminal aberto enquanto usa (é ele que tá rodando o servidor
