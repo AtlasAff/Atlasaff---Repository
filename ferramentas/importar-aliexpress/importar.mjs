@@ -58,6 +58,24 @@ export async function salvarCredenciais(dados){
 export const SUPABASE_URL = 'https://pqhdtteeukfcjstfsnkn.supabase.co';
 export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxaGR0dGVldWtmY2pzdGZzbmtuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzNzc0MTAsImV4cCI6MjEwMTk1MzQxMH0.VwOKgaNEmKaT-xGqF-S0Cr2mY9i4O_4eIFkqpdv0KiY';
 
+// Checa se esse link já foi importado antes — usa uma função do banco
+// (produto_por_link_fornecedor) que devolve só o mínimo (id/nome/
+// categoria/ativo), sem precisar estar logado como admin ainda (link_fornecedor
+// em si continua escondido do público, só essa checagem pontual é liberada).
+// Roda ANTES de abrir o navegador/AliExpress de propósito — sem sentido
+// gastar 1+ minuto clicando em variações pra descobrir só depois que já
+// existe.
+export async function buscarProdutoExistente(sb, link){
+  if (!link) return null;
+  try {
+    const { data, error } = await sb.rpc('produto_por_link_fornecedor', { p_link: link }).maybeSingle();
+    if (error) return null;
+    return data || null;
+  } catch {
+    return null;
+  }
+}
+
 // Mesma tabela de conversão de tamanho de anel EUA -> BR já usada no
 // admin do site (admin.html, CONVERSAO_TAMANHO_EUA_BR) — o AliExpress
 // sempre mostra tamanho americano, o site só guarda/mostra o BR
@@ -800,6 +818,32 @@ Responda SOMENTE com um JSON válido, no mesmo formato de antes:
   return { nome: resultado.nome.trim(), descricao: (resultado.descricao || descricaoAtual || '').trim() };
 }
 
+// Sugere qual categoria já cadastrada na loja combina melhor com o nome
+// do produto (evita sempre cair na "categoria provisória" genérica que
+// precisa trocar na mão toda vez). Só sugere — nunca decide sozinho:
+// devolve o slug escolhido, ou null se não tiver certeza suficiente ou
+// se algo der errado (nesse caso quem chamou cai no comportamento de
+// sempre, sem essa sugestão).
+export async function sugerirCategoria({ nome, categorias }, chaveApi){
+  if (!categorias?.length) return null;
+  const lista = categorias.map(c => `${c.slug}: ${c.nome}`).join('\n');
+  const prompt = `Uma loja de joias (Pavan & Co.) tem essas categorias cadastradas (formato "slug: nome"):
+${lista}
+
+Produto: "${nome}"
+
+Qual dessas categorias combina melhor com esse produto? Responda SOMENTE com um JSON válido usando o "slug" exato de uma das categorias acima (nunca invente um slug que não esteja na lista):
+{"categoria": "slug-exato-da-lista"}`;
+
+  try {
+    const resultado = await chamarGroqJSON(prompt, chaveApi);
+    const slug = resultado?.categoria;
+    return categorias.some(c => c.slug === slug) ? slug : null;
+  } catch {
+    return null;
+  }
+}
+
 /* ============================================================
    IMPORTAR UM PRODUTO
    ============================================================ */
@@ -807,6 +851,28 @@ async function modoImportar(url){
   if (!existsSync(ARQUIVO_SESSAO)){
     console.error('Ainda não tem sessão salva. Roda "npm run login" primeiro.');
     process.exit(1);
+  }
+
+  // sb criado logo aqui (não precisa de login pra isso — createClient só
+  // monta o objeto) pra já poder checar se esse link já foi importado
+  // antes, ANTES de gastar 1+ minuto abrindo o navegador e clicando em
+  // variação — sem sentido descobrir isso só depois.
+  const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  let produtoExistenteId = null;
+  const jaExiste = await buscarProdutoExistente(sb, url);
+  if (jaExiste){
+    console.log(`\n⚠️  Esse link já foi importado antes: "${jaExiste.nome}" (${jaExiste.ativo ? 'ativo no site' : 'rascunho'}, criado em ${new Date(jaExiste.criado_em).toLocaleDateString('pt-BR')}).`);
+    const escolha = (await perguntar('O que você quer fazer? [A]tualizar esse produto com os dados mais recentes / [N]ovo produto mesmo assim / [C]ancelar (Enter = Atualizar): ')).trim().toLowerCase();
+    if (escolha === 'c' || escolha === 'cancelar'){
+      console.log('Cancelado.');
+      return;
+    }
+    if (escolha !== 'n' && escolha !== 'novo'){
+      produtoExistenteId = jaExiste.id;
+      console.log('Vou atualizar o produto existente com os dados mais recentes do fornecedor.');
+    } else {
+      console.log('Beleza, vai criar um produto novo separado.');
+    }
   }
 
   console.log('Abrindo a página do produto...');
@@ -847,6 +913,20 @@ async function modoImportar(url){
     } catch (err) {
       console.log(`Não consegui formatar com IA (${err.message}) — seguindo com o texto original do fornecedor.`);
     }
+  }
+
+  // Categorias ativas buscadas cedo — usadas tanto pra sugestão da IA
+  // aqui embaixo quanto, mais adiante, como fallback "provisória" se
+  // nada tiver sido escolhido. Se já vai ATUALIZAR um produto existente,
+  // não faz sentido sugerir categoria nova — a categoria que o produto já
+  // tem é usada nesse caso (ver mais abaixo).
+  const { data: categoriasAtivas } = await sb.from('categorias').select('slug, nome').eq('ativa', true).order('ordem');
+  let categoriaSugerida = null;
+  if (chaveGroq && !produtoExistenteId && categoriasAtivas?.length){
+    try {
+      categoriaSugerida = await sugerirCategoria({ nome, categorias: categoriasAtivas }, chaveGroq);
+      if (categoriaSugerida) console.log(`Categoria sugerida pela IA: "${categoriaSugerida}" — confere/troca no admin se não for essa mesmo.`);
+    } catch { /* sugestão é só um extra, nunca trava a importação */ }
   }
 
   console.log(`\nCusto da peça (fornecedor): ${preco || '(não encontrado)'} — isso é CUSTO, não preço de venda; vai pro campo "Custo da peça" do admin, o preço de venda fica 0 até você rodar a calculadora de margem`);
@@ -920,7 +1000,6 @@ async function modoImportar(url){
   // usa direto; senão pergunta. Se o login salvo não funcionar mais
   // (ex: senha foi trocada), pede de novo em vez de travar.
   console.log('\nAgora loga como admin pra salvar o rascunho na loja:');
-  const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   let email = credenciais.email;
   let senha = credenciais.senha;
   let usandoSalvo = Boolean(email && senha);
@@ -952,6 +1031,18 @@ async function modoImportar(url){
     credenciais.senha = senha;
     await salvarCredenciais(credenciais);
     console.log(`(login salvo em ${path.basename(ARQUIVO_CREDENCIAIS)} pra não perguntar de novo)`);
+  }
+
+  // Atualizando um produto existente: busca o registro completo agora
+  // que já está logado como admin (produtos_admin() devolve tudo,
+  // inclusive observacoes_internas/categoria/ativo, que não são públicos)
+  // — a categoria e o "ativo" atuais do produto são preservados (não
+  // sobrescreve pra "provisória"/rascunho à toa), e as observações novas
+  // são ACRESCENTADAS embaixo das antigas, não substituem.
+  let produtoExistenteAtual = null;
+  if (produtoExistenteId){
+    const { data } = await sb.rpc('produtos_admin').select('*').eq('id', produtoExistenteId).maybeSingle();
+    produtoExistenteAtual = data || null;
   }
 
   // Junta tudo que merece revisão manual num campo de observação — assim
@@ -998,12 +1089,11 @@ async function modoImportar(url){
 
   // "categoria" é obrigatória no banco e não dá pra adivinhar direito só
   // pelo scraping (o AliExpress não separa por essas categorias) — usa a
-  // primeira categoria ativa da loja só pra passar da validação, você
-  // troca pela certa na revisão. select público normal (mesma consulta
-  // que o site inteiro já usa em carregarCategorias()), não precisa de
-  // login pra isso.
-  const { data: categorias } = await sb.from('categorias').select('slug').eq('ativa', true).order('ordem').limit(1);
-  const categoriaProvisoria = categorias?.[0]?.slug || null;
+  // sugestão da IA (categoriaSugerida, se teve) ou, sem isso, a primeira
+  // categoria ativa da loja só pra passar da validação, você troca pela
+  // certa na revisão. Atualizando um produto existente, a categoria que
+  // ele já tem prevalece (ver produtoExistenteAtual mais abaixo).
+  const categoriaProvisoria = categoriaSugerida || categoriasAtivas?.[0]?.slug || null;
   if (!categoriaProvisoria){
     console.error('\nNão achei nenhuma categoria ativa na loja pra usar como provisória — cadastra uma categoria no admin antes de importar.');
     process.exit(1);
@@ -1066,26 +1156,25 @@ async function modoImportar(url){
   if (!matrizVariacoes && precosPorVariacao.length){
     observacoesAuto.push(`Preço muda por variação mas não deu pra separar quilate/banho sozinho: ${precosPorVariacao.map(v => v.nome).join(', ')} — confere e cadastra na mão se for o caso.`);
   }
-  observacoesAuto.push(`Importado do AliExpress em ${new Date().toLocaleString('pt-BR')}.`);
-  const observacoesInternas = observacoesAuto.join('\n');
+  observacoesAuto.push(`${produtoExistenteId ? 'Atualizado' : 'Importado'} do AliExpress em ${new Date().toLocaleString('pt-BR')}.`);
+  // Atualizando: acrescenta embaixo do que já tinha (não apaga anotação
+  // sua de antes). Criando novo: só o que essa importação achou mesmo.
+  const observacoesInternas = produtoExistenteAtual?.observacoes_internas
+    ? `${produtoExistenteAtual.observacoes_internas}\n\n${observacoesAuto.join('\n')}`
+    : observacoesAuto.join('\n');
 
-  // Cria o produto como RASCUNHO (ativo:false — não aparece pro cliente
-  // até você revisar e ativar no admin). Se você pulou a margem acima, o
-  // preço de venda entra ZERADO de propósito — mais seguro que arriscar
-  // vender pelo preço de custo sem querer. link_fornecedor já vem
-  // preenchido com o link original, pra você conferir a página de novo
-  // se precisar. Sem ".select()" no final de propósito: a leitura direta
-  // da tabela produtos é restrita mesmo pra admin (o site normalmente lê
-  // produto por uma função própria, não direto na tabela) — o insert em
-  // si funciona igual, só não confirma o retorno.
-  const { error: erroInsert } = await sb.from('produtos').insert({
+  // Categoria e "ativo": atualizando um produto existente, os dois ficam
+  // como já estavam (nunca reseta uma peça ativa pra rascunho, nem troca
+  // a categoria que você já tinha escolhido à toa).
+  const categoriaFinal = produtoExistenteAtual?.categoria || categoriaProvisoria;
+
+  const dadosProduto = {
     nome: nome || '(sem nome — importação parcial, preencher)',
     descricao: descricao || null,
     fotos: urlsFinal,
     link_fornecedor: url,
     observacoes_internas: observacoesInternas,
-    categoria: categoriaProvisoria,
-    ativo: false,
+    categoria: categoriaFinal,
     preco: precoFinalNumero ?? 0,
     custo_peca: custoPecaNumero,
     ...(custoImpostoNumero !== null ? { custo_imposto: custoImpostoNumero } : {}),
@@ -1095,15 +1184,29 @@ async function modoImportar(url){
     ...(quilatesDisponiveis.length ? { quilates_disponiveis: quilatesDisponiveis, quilates_custos: quilatesCustosFinal } : {}),
     ...(banhosDisponiveis.length ? { banhos_disponiveis: banhosDisponiveis, banhos_custos: banhosCustosFinal } : {}),
     ...(matrizPrecos.length ? { matriz_precos: matrizPrecos, matriz_custos: matrizCustos } : {})
-  });
+  };
 
-  if (erroInsert){
-    console.error('\nDeu erro ao salvar o rascunho:', erroInsert.message);
+  // Sem ".select()" no final de propósito: a leitura direta da tabela
+  // produtos é restrita mesmo pra admin (o site normalmente lê produto
+  // por uma função própria, não direto na tabela) — insert/update
+  // funcionam igual, só não confirmam o retorno.
+  //
+  // Produto NOVO entra como RASCUNHO (ativo:false — não aparece pro
+  // cliente até você revisar e ativar no admin). Se você pulou a margem
+  // acima, o preço de venda entra ZERADO de propósito — mais seguro que
+  // arriscar vender pelo preço de custo sem querer. Produto EXISTENTE
+  // mantém o "ativo" que já tinha (não mexe nisso ao atualizar).
+  const { error: erroSalvar } = produtoExistenteId
+    ? await sb.from('produtos').update(dadosProduto).eq('id', produtoExistenteId)
+    : await sb.from('produtos').insert({ ...dadosProduto, ativo: false });
+
+  if (erroSalvar){
+    console.error(`\nDeu erro ao ${produtoExistenteId ? 'atualizar' : 'salvar'} o produto:`, erroSalvar.message);
     process.exit(1);
   }
 
-  console.log(`\n✅ Rascunho criado: "${nome || '(sem nome)'}"`);
-  console.log(`Categoria provisória: "${categoriaProvisoria}" — troca pela certa na revisão.`);
+  console.log(produtoExistenteId ? `\n✅ Produto atualizado: "${nome || '(sem nome)'}"` : `\n✅ Rascunho criado: "${nome || '(sem nome)'}"`);
+  console.log(`Categoria: "${categoriaFinal}"${produtoExistenteAtual ? '' : ' (provisória — troca pela certa na revisão)'}.`);
   if (quilatesDisponiveis.length) console.log(`Quilates salvos: ${quilatesDisponiveis.length} opção(ões).`);
   if (banhosDisponiveis.length) console.log(`Banhos/cores salvos (com foto): ${banhosDisponiveis.length} opção(ões).`);
   console.log(precoFinalNumero
@@ -1122,12 +1225,19 @@ if (ehExecutadoDireto){
   const args = process.argv.slice(2);
   if (args.includes('--login')){
     await modoLogin();
-  } else if (args[0]){
-    await modoImportar(args[0]);
+  } else if (args.length){
+    // Vários links de uma vez: importa um atrás do outro, na ordem —
+    // cada um já pergunta a margem/duplicidade dele próprio, igual a um
+    // link só, só não precisa ficar rodando o comando de novo pra cada.
+    for (const [i, url] of args.entries()){
+      if (args.length > 1) console.log(`\n\n========== Produto ${i + 1}/${args.length} ==========`);
+      await modoImportar(url);
+    }
   } else {
     console.log('Uso:');
-    console.log('  npm run login                    -> loga na sua conta AliExpress (faz de vez em quando)');
-    console.log('  npm run importar -- <link>       -> importa um produto');
-    console.log('  npm run interface                -> abre a interface visual no navegador');
+    console.log('  npm run login                              -> loga na sua conta AliExpress (faz de vez em quando)');
+    console.log('  npm run importar -- <link>                 -> importa um produto');
+    console.log('  npm run importar -- <link1> <link2> ...    -> importa vários, um atrás do outro');
+    console.log('  npm run interface                          -> abre a interface visual no navegador');
   }
 }
