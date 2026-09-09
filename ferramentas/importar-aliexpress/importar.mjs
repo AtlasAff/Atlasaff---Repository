@@ -224,17 +224,17 @@ async function extrairDadosProduto(page){
 }
 
 /* ============================================================
-   FORMATAR NOME/DESCRIÇÃO COM IA (Gemini, opcional) — pega o texto cru
+   FORMATAR NOME/DESCRIÇÃO COM IA (Groq, opcional) — pega o texto cru
    do fornecedor (cheio de palavra-chave repetida) e devolve um nome
    seguindo o padrão da loja + uma descrição em parágrafos curtos, sem
    inventar informação nova. Passo opcional: se não tiver chave, o
    produto entra igual, só sem essa reescrita.
 
-   Troca o valor de MODELO_GEMINI aqui embaixo se um dia der erro 404 —
+   Troca o valor de MODELO_GROQ aqui embaixo se um dia der erro 404 —
    modelos saem de linha de vez em quando; a lista atual fica em
-   https://aistudio.google.com/
+   https://console.groq.com/docs/models
    ============================================================ */
-const MODELO_GEMINI = 'gemini-2.5-flash';
+const MODELO_GROQ = 'llama-3.3-70b-versatile';
 
 async function formatarComIA({ nomeOriginal, descricaoOriginal }, chaveApi){
   const prompt = `Você ajuda a Pavan & Co., uma loja de joias, a transformar anúncios de fornecedor (texto cheio de palavra-chave repetida, tipo AliExpress) em nome e descrição limpos pro site.
@@ -259,28 +259,29 @@ DESCRIÇÃO: ${descricaoOriginal || '(sem descrição)'}
 Responda SOMENTE com um JSON válido nesse formato, sem nenhum texto antes ou depois:
 {"nome": "...", "descricao": "..."}`;
 
-  const resposta = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${MODELO_GEMINI}:generateContent?key=${encodeURIComponent(chaveApi)}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { responseMimeType: 'application/json' }
-      })
-    }
-  );
+  const resposta = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${chaveApi}`
+    },
+    body: JSON.stringify({
+      model: MODELO_GROQ,
+      messages: [{ role: 'user', content: prompt }],
+      response_format: { type: 'json_object' }
+    })
+  });
 
   if (!resposta.ok){
-    throw new Error(`Gemini respondeu ${resposta.status}: ${(await resposta.text()).slice(0, 300)}`);
+    throw new Error(`Groq respondeu ${resposta.status}: ${(await resposta.text()).slice(0, 300)}`);
   }
 
   const corpo = await resposta.json();
-  const texto = corpo?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!texto) throw new Error('Gemini não devolveu texto nenhum');
+  const texto = corpo?.choices?.[0]?.message?.content;
+  if (!texto) throw new Error('Groq não devolveu texto nenhum');
 
   const resultado = JSON.parse(texto);
-  if (!resultado?.nome) throw new Error('Gemini não devolveu um nome');
+  if (!resultado?.nome) throw new Error('Groq não devolveu um nome');
   return { nome: resultado.nome.trim(), descricao: (resultado.descricao || descricaoOriginal || '').trim() };
 }
 
@@ -304,14 +305,14 @@ async function modoImportar(url){
 
   console.log(`\nNome (como veio do fornecedor): ${nome || '(não encontrado)'}`);
 
-  // Passo opcional: reescreve nome/descrição com IA (Gemini), seguindo o
-  // padrão de título da loja. Pega a chave em https://aistudio.google.com/
+  // Passo opcional: reescreve nome/descrição com IA (Groq), seguindo o
+  // padrão de título da loja. Pega a chave em https://console.groq.com/keys
   // — nunca é salva em arquivo nenhum, só usada nessa execução.
-  const chaveGemini = await perguntar('\nTem chave da API do Gemini pra formatar nome/descrição? (cola aqui ou aperta Enter pra pular): ');
-  if (chaveGemini){
+  const chaveGroq = await perguntar('\nTem chave da API do Groq pra formatar nome/descrição? (cola aqui ou aperta Enter pra pular): ');
+  if (chaveGroq){
     try {
       console.log('Formatando com IA...');
-      const formatado = await formatarComIA({ nomeOriginal: nome, descricaoOriginal: descricao }, chaveGemini);
+      const formatado = await formatarComIA({ nomeOriginal: nome, descricaoOriginal: descricao }, chaveGroq);
       nome = formatado.nome;
       descricao = formatado.descricao;
       console.log(`Nome (formatado pela IA): ${nome}`);

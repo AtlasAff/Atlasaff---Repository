@@ -72,18 +72,18 @@ Vai aparecer no terminal o que foi encontrado (nome, quantas fotos, preço,
 variações) e o que **não** foi encontrado (esses campos você preenche na
 mão depois).
 
-Antes de salvar, ele pergunta se você tem uma **chave da API do Gemini**
-(opcional) — se tiver, ele usa a IA do Google pra reescrever o nome
-(seguindo o padrão da loja: Tipo de peça + Material/Pedra + Detalhe) e
-arrumar a descrição em parágrafos, em vez de deixar o texto cru do
-AliExpress. Pra conseguir uma chave, grátis pra uso ocasional: entra em
-[aistudio.google.com](https://aistudio.google.com/), loga com sua conta
-Google, cria uma chave de API (Get API key) e cola no terminal quando
+Antes de salvar, ele pergunta se você tem uma **chave da API do Groq**
+(opcional) — se tiver, ele usa a IA pra reescrever o nome (seguindo o
+padrão da loja: Tipo de peça + Material/Pedra + Detalhe) e arrumar a
+descrição em parágrafos, em vez de deixar o texto cru do AliExpress. Pra
+conseguir uma chave, grátis pra uso ocasional: entra em
+[console.groq.com/keys](https://console.groq.com/keys), loga (dá pra usar
+conta Google) e cria uma chave (Create API Key) — cola no terminal quando
 pedir. Se não tiver ou não quiser usar, é só apertar Enter e pular —
 o produto entra do mesmo jeito, só com o texto original.
 
 No fim, vai pedir seu e-mail e senha de admin do site — é só pra salvar
-o produto, não fica guardado em lugar nenhum (a chave do Gemini também
+o produto, não fica guardado em lugar nenhum (a chave do Groq também
 não fica guardada, só é usada naquela hora).
 
 ## Passo 7 — Terminar no site
