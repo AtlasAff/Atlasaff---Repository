@@ -183,7 +183,14 @@ async function extrairDadosProduto(page){
   }) || [];
 
   const descricao = await tentarCadeia('descrição/especificações',
-    async () => limpar(await page.locator('[class*="seo-sellpoints--sellerPoint"]').first().textContent({ timeout: 3000 })),
+    // Cada tópico da descrição fica num <li> separado — pega cada um
+    // individualmente e junta com quebra de parágrafo de verdade, em vez
+    // de ler o bloco inteiro de uma vez (que virava uma parede de texto só).
+    async () => {
+      const itens = await page.locator('[class*="seo-sellpoints--sellerPoint"] li').allTextContents();
+      const paragrafos = itens.map(limpar).filter(Boolean);
+      return paragrafos.length ? paragrafos.join('\n\n') : null;
+    },
     () => dados?.descriptionModule?.description ||
       (dados?.specsModule?.props || []).map(p => `${p.attrName}: ${p.attrValue}`).join('\n')
   );
@@ -217,6 +224,67 @@ async function extrairDadosProduto(page){
 }
 
 /* ============================================================
+   FORMATAR NOME/DESCRIÇÃO COM IA (Gemini, opcional) — pega o texto cru
+   do fornecedor (cheio de palavra-chave repetida) e devolve um nome
+   seguindo o padrão da loja + uma descrição em parágrafos curtos, sem
+   inventar informação nova. Passo opcional: se não tiver chave, o
+   produto entra igual, só sem essa reescrita.
+
+   Troca o valor de MODELO_GEMINI aqui embaixo se um dia der erro 404 —
+   modelos saem de linha de vez em quando; a lista atual fica em
+   https://aistudio.google.com/
+   ============================================================ */
+const MODELO_GEMINI = 'gemini-2.5-flash';
+
+async function formatarComIA({ nomeOriginal, descricaoOriginal }, chaveApi){
+  const prompt = `Você ajuda a Pavan & Co., uma loja de joias, a transformar anúncios de fornecedor (texto cheio de palavra-chave repetida, tipo AliExpress) em nome e descrição limpos pro site.
+
+PADRÃO DO NOME (sempre seguir):
+[Tipo de peça] + [Material/Pedra] + [Detalhe técnico opcional]
+- Tipo de peça sempre primeiro (Anel, Aliança, Brinco, Colar, Pulseira...), é a palavra que a busca do site usa pra encontrar o produto
+- Nunca usar nome de modelo/marca do fornecedor (ex: "PJ31", "Kosbpin", "BIJOX STORY")
+- Nunca usar palavras de venda genéricas ("para mulheres", "presente perfeito", "moda")
+- Curto: até 6 palavras. Só a primeira letra maiúscula (nada de Título Em Cada Palavra)
+Exemplos já usados na loja (siga esse tom): "Brincos de Moissanite", "Anel Solitário Moissanite 3.6ct"
+
+PADRÃO DA DESCRIÇÃO:
+- 2 a 4 parágrafos curtos, tom caloroso e direto, sem exagero de vendedor
+- Mantém as informações técnicas reais que vieram no texto original (material, quilates, tamanho, certificação) — NUNCA inventa informação nova
+- Corta repetição e frases de venda genéricas
+
+Texto original do fornecedor:
+NOME: ${nomeOriginal}
+DESCRIÇÃO: ${descricaoOriginal || '(sem descrição)'}
+
+Responda SOMENTE com um JSON válido nesse formato, sem nenhum texto antes ou depois:
+{"nome": "...", "descricao": "..."}`;
+
+  const resposta = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${MODELO_GEMINI}:generateContent?key=${encodeURIComponent(chaveApi)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { responseMimeType: 'application/json' }
+      })
+    }
+  );
+
+  if (!resposta.ok){
+    throw new Error(`Gemini respondeu ${resposta.status}: ${(await resposta.text()).slice(0, 300)}`);
+  }
+
+  const corpo = await resposta.json();
+  const texto = corpo?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!texto) throw new Error('Gemini não devolveu texto nenhum');
+
+  const resultado = JSON.parse(texto);
+  if (!resultado?.nome) throw new Error('Gemini não devolveu um nome');
+  return { nome: resultado.nome.trim(), descricao: (resultado.descricao || descricaoOriginal || '').trim() };
+}
+
+/* ============================================================
    IMPORTAR UM PRODUTO
    ============================================================ */
 async function modoImportar(url){
@@ -231,11 +299,28 @@ async function modoImportar(url){
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await page.waitForTimeout(2500); // dá tempo do JS da página terminar de montar tudo
 
-  const { nome, descricao, fotos, preco, variacoes, avisos } = await extrairDadosProduto(page);
+  let { nome, descricao, fotos, preco, variacoes, avisos } = await extrairDadosProduto(page);
   await browser.close();
 
-  console.log(`\nNome: ${nome || '(não encontrado)'}`);
-  console.log(`Preço listado: ${preco || '(não encontrado)'} — confere/ajusta no admin, não é necessariamente o preço de fábrica`);
+  console.log(`\nNome (como veio do fornecedor): ${nome || '(não encontrado)'}`);
+
+  // Passo opcional: reescreve nome/descrição com IA (Gemini), seguindo o
+  // padrão de título da loja. Pega a chave em https://aistudio.google.com/
+  // — nunca é salva em arquivo nenhum, só usada nessa execução.
+  const chaveGemini = await perguntar('\nTem chave da API do Gemini pra formatar nome/descrição? (cola aqui ou aperta Enter pra pular): ');
+  if (chaveGemini){
+    try {
+      console.log('Formatando com IA...');
+      const formatado = await formatarComIA({ nomeOriginal: nome, descricaoOriginal: descricao }, chaveGemini);
+      nome = formatado.nome;
+      descricao = formatado.descricao;
+      console.log(`Nome (formatado pela IA): ${nome}`);
+    } catch (err) {
+      console.log(`Não consegui formatar com IA (${err.message}) — seguindo com o texto original do fornecedor.`);
+    }
+  }
+
+  console.log(`\nPreço listado: ${preco || '(não encontrado)'} — confere/ajusta no admin, não é necessariamente o preço de fábrica`);
   console.log(`Fotos encontradas: ${fotos.length}`);
   if (variacoes.length){
     console.log('Variações encontradas (mapeia pra quilate/banho/tamanho na mão no admin):');
