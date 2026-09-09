@@ -1368,16 +1368,6 @@
         </div>
 
         <div class="form-campo">
-          <label>Quilate(s) disponíveis <span style="font-weight:400;color:var(--texto-suave);">(coloque o custo original de cada um no AliExpress — o preço de venda é calculado sozinho com a margem de lucro lá embaixo; deixe vazio se a peça não varia)</span></label>
-          <div class="quilates-add-linha">
-            <input type="text" id="fQuilateNovo" placeholder="Ex: 1ct (6.5mm)">
-            <input type="number" id="fQuilateCustoNovo" step="0.01" placeholder="Custo original (R$)" style="max-width:150px;">
-            <button type="button" class="btn-admin btn-admin-outline" id="btnAdicionarQuilate">+ Adicionar</button>
-          </div>
-          <div class="tamanhos-multi" id="quilatesMulti" style="margin-top:10px;"></div>
-        </div>
-
-        <div class="form-campo">
           <label>Tamanhos disponíveis (marque como aparece no AliExpress — <span style="font-weight:400;color:var(--texto-suave);">é convertido pra numeração BR sozinho, o site nunca mostra o tamanho americano</span>)</label>
           <div class="tamanhos-multi" id="tamanhosMulti"></div>
         </div>
@@ -1418,62 +1408,58 @@
         <h3>Preço e estoque</h3>
 
         <div class="calc-lucro-box">
-          <p class="calc-lucro-titulo">Calculadora de preço <span>(uso interno — o cliente nunca vê isso)</span></p>
-          <div class="form-linha cols-3">
+          <p class="calc-lucro-titulo">Valor único <span id="valorUnicoAviso" style="display:none;font-weight:400;">(com quilate cadastrado ali embaixo, quem manda no preço real de cada quilate é o valor dele — isso aqui só vale pra peça sem essa variação)</span></p>
+          <div class="form-linha cols-2">
             <div class="form-campo">
-              <label for="fCustoPeca">Custo da peça (R$) <span id="fCustoPecaAviso" style="display:none;font-weight:400;color:var(--texto-suave);">(com quilate cadastrado, quem manda no preço real é o custo de cada quilate ali embaixo — isso aqui só ajuda a estimar lucro no Financeiro)</span></label>
+              <label for="fCustoPeca">Valor (R$)</label>
               <input type="number" id="fCustoPeca" step="0.01" placeholder="Ex: 25.00">
             </div>
             <div class="form-campo">
-              <label for="fCotacaoDolar">Cotação do dólar (R$) <span id="fCotacaoDolarStatus" style="font-weight:400;color:var(--texto-suave);"></span></label>
-              <div style="display:flex;gap:6px;">
-                <input type="number" id="fCotacaoDolar" step="0.01" placeholder="Buscando...">
-                <button type="button" class="btn-admin btn-admin-outline" id="btnAtualizarCotacao" title="Buscar cotação de hoje" style="padding:10px 12px;">↻</button>
-              </div>
+              <label for="fCustoImposto">Taxa (R$) <span style="font-weight:400;color:var(--texto-suave);">(digite na mão — deixe em branco se não usa)</span></label>
+              <input type="number" id="fCustoImposto" step="0.01" placeholder="Ex: 35.80">
             </div>
-            <div class="form-campo">
-              <label for="fIcmsPct">ICMS (%) <span style="font-weight:400;color:var(--texto-suave);">— SP, fixo</span></label>
-              <input type="number" id="fIcmsPct" step="0.1" value="18">
-            </div>
-          </div>
-          <div class="form-linha cols-3">
-            <div class="form-campo">
-              <label for="fCustoImposto" id="fCustoImpostoLabel">Imposto calculado (R$) <span style="font-weight:400;color:var(--texto-suave);">(automático)</span></label>
-              <input type="number" id="fCustoImposto" step="0.01" readonly style="background:var(--cinza-bg);">
-              <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:0.78rem;color:var(--texto-suave);margin-top:6px;">
-                <input type="checkbox" id="fImpostoManual" style="width:auto;">
-                Já sei o valor exato (ex: o próprio AliExpress já mostrou na compra) — digitar direto em vez de calcular por %
-              </label>
-            </div>
-            <div class="form-campo">
-              <label for="fCustoFrete">Frete (R$)</label>
-              <input type="number" id="fCustoFrete" step="0.01" placeholder="Ex: 12.00">
-            </div>
-            <div class="form-campo">
-              <label for="fMargemLucro">Margem de lucro (%)</label>
-              <input type="number" id="fMargemLucro" step="0.1" placeholder="Ex: 150">
-            </div>
-          </div>
-          <p style="font-size:0.74rem;color:var(--texto-suave);margin:-4px 0 12px;">
-            Regra Remessa Conforme: até US$50 só ICMS; acima de US$50, Imposto de Importação (60% − US$30) + ICMS sobre o total.
-            O ICMS real varia por estado (17–20%) — isso aqui é uma estimativa.
-          </p>
-          <div class="calc-lucro-resultado" id="calcLucroResultado" style="display:none;">
-            <div><span>Lucro por peça</span><strong id="calcLucroValor"></strong></div>
           </div>
         </div>
 
-        <div class="form-linha cols-2">
+        <div class="form-campo" style="margin-top:22px;">
+          <label>Preço por quilate <span style="font-weight:400;color:var(--texto-suave);">(opcional — cada quilate cadastrado aqui passa a mandar no preço daquele quilate, em vez do valor único acima; a descrição aparece pro cliente, embaixo do valor, quando ele escolhe esse quilate)</span></label>
+          <div class="quilates-add-linha" style="flex-wrap:wrap;">
+            <input type="text" id="fQuilateNovo" placeholder="Ex: 1ct (6.5mm)" style="min-width:130px;">
+            <input type="number" id="fQuilateCustoNovo" step="0.01" placeholder="Valor (R$)" style="max-width:120px;">
+            <input type="number" id="fQuilateTaxaNovo" step="0.01" placeholder="Taxa (R$)" style="max-width:120px;">
+            <input type="text" id="fQuilateDescricaoNovo" placeholder="Descrição pro cliente (opcional)" style="flex:1;min-width:180px;">
+            <button type="button" class="btn-admin btn-admin-outline" id="btnAdicionarQuilate">+ Adicionar</button>
+          </div>
+          <div class="tamanhos-multi" id="quilatesMulti" style="margin-top:10px;"></div>
+        </div>
+
+        <div class="form-campo" style="margin-top:22px;">
+          <label>Frete <span style="font-weight:400;color:var(--texto-suave);">(o que o fornecedor cobra pra você importar a peça — soma no custo, não é o frete que o cliente vê no site)</span></label>
+          <label class="checkbox-linha"><input type="checkbox" id="fFreteGratisFornecedor" checked> Grátis (fornecedor não cobra)</label>
+          <div class="form-campo" id="campoFreteCobrado" style="display:none;margin-top:8px;">
+            <input type="number" id="fCustoFrete" step="0.01" placeholder="Ex: 12.00">
+          </div>
+        </div>
+
+        <div class="form-linha cols-2" style="margin-top:22px;">
+          <div class="form-campo">
+            <label for="fMargemLucro">Lucro que você quer receber (%)</label>
+            <input type="number" id="fMargemLucro" step="0.1" placeholder="Ex: 150">
+          </div>
           <div class="form-campo">
             <label for="fPreco">Preço de venda (R$) * <span id="fPrecoNota" style="font-weight:400;color:var(--texto-suave);">(calculado sozinho acima — pode editar na mão também)</span></label>
             <input type="number" id="fPreco" step="0.01" required placeholder="Ex: 589.00">
           </div>
+        </div>
+        <div class="calc-lucro-resultado" id="calcLucroResultado" style="display:none;">
+          <div><span>Lucro por peça</span><strong id="calcLucroValor"></strong></div>
+        </div>
+
+        <div class="form-linha cols-2" style="margin-top:22px;">
           <div class="form-campo">
             <label for="fEstoque">Estoque</label>
             <input type="number" id="fEstoque" placeholder="Ex: 10">
           </div>
-        </div>
-        <div class="form-linha cols-2">
           <div class="form-campo">
             <label for="fEstoqueMinimo">Avisar quando o estoque chegar em <span style="font-weight:400;color:var(--texto-suave);">(mostra um alerta no painel)</span></label>
             <input type="number" id="fEstoqueMinimo" placeholder="Ex: 5" value="5">
@@ -3364,12 +3350,13 @@ document.querySelectorAll('#tamanhosMulti button').forEach(btn => {
 });
 
 // Quilate(s) disponíveis — cada um com o próprio preço (diferente do
-// tamanho de aro, que não muda preço). Admin digita valor + preço e
-// adiciona o custo original; o preço de venda é calculado sozinho com a
-// margem de lucro. quilatesFormAtual guarda [{valor, custo, preco}, ...].
+// tamanho de aro, que não muda preço). Admin digita valor, taxa (sempre
+// na mão) e uma descrição opcional (essa sim visível pro cliente,
+// embaixo do valor, quando ele escolhe esse quilate no site).
+// quilatesFormAtual guarda [{valor, custo, taxa, descricao, preco}, ...].
 function renderQuilatesMulti(){
   document.getElementById('quilatesMulti').innerHTML = quilatesFormAtual.map((q, i) => `
-    <button type="button" class="quilate-chip" data-i="${i}" title="Clique pra remover">${q.valor} — custo ${formatarPreco(q.custo)} → venda ${formatarPreco(q.preco)} ×</button>
+    <button type="button" class="quilate-chip" data-i="${i}" title="Clique pra remover">${q.valor} — valor ${formatarPreco(q.custo)} + taxa ${formatarPreco(q.taxa)} → venda ${formatarPreco(q.preco)}${q.descricao ? ` · "${q.descricao}"` : ''} ×</button>
   `).join('');
   document.querySelectorAll('#quilatesMulti .quilate-chip').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -3380,27 +3367,27 @@ function renderQuilatesMulti(){
   atualizarCampoPrecoBase();
 }
 
-// Com quilate cadastrado, cada tamanho já tem seu próprio custo e preço
+// Com quilate cadastrado, cada um já tem seu próprio valor/taxa e preço
 // de venda (calculado acima, na lista de quilates) — o preço final de
-// verdade nunca vem do "Custo da peça" nesse caso (ver calcularMatrizPrecos).
+// verdade nunca vem do "Valor único" nesse caso (ver calcularMatrizPrecos).
 // Só falta o site ter ALGUM preço pra mostrar na vitrine antes da pessoa
-// escolher o tamanho — por isso "Preço de venda" trava automaticamente no
+// escolher o quilate — por isso "Preço de venda" trava automaticamente no
 // valor do quilate mais barato, em vez de deixar o admin digitar um valor
-// solto que poderia não bater com nenhum tamanho de verdade (e por tabela
-// aparecer errado num cupom mostrado antes de escolher o tamanho).
+// solto que poderia não bater com nenhum quilate de verdade (e por tabela
+// aparecer errado num cupom mostrado antes de escolher o quilate).
 function atualizarCampoPrecoBase(){
-  const avisoCustoPeca = document.getElementById('fCustoPecaAviso');
+  const avisoValorUnico = document.getElementById('valorUnicoAviso');
   const precoInput = document.getElementById('fPreco');
   const precoNota = document.getElementById('fPrecoNota');
 
   if (quilatesFormAtual.length){
-    avisoCustoPeca.style.display = 'inline';
+    avisoValorUnico.style.display = 'inline';
     const maisBarato = Math.min(...quilatesFormAtual.map(q => q.preco));
     precoInput.value = maisBarato.toFixed(2);
     precoInput.readOnly = true;
-    precoNota.textContent = '(travado no preço do quilate mais barato — é o que aparece na vitrine antes da pessoa escolher o tamanho)';
+    precoNota.textContent = '(travado no preço do quilate mais barato — é o que aparece na vitrine antes da pessoa escolher o quilate)';
   } else {
-    avisoCustoPeca.style.display = 'none';
+    avisoValorUnico.style.display = 'none';
     precoInput.readOnly = false;
     precoNota.textContent = '(calculado sozinho acima — pode editar na mão também)';
   }
@@ -3408,16 +3395,22 @@ function atualizarCampoPrecoBase(){
 function adicionarQuilate(){
   const inputValor = document.getElementById('fQuilateNovo');
   const inputCusto = document.getElementById('fQuilateCustoNovo');
+  const inputTaxa = document.getElementById('fQuilateTaxaNovo');
+  const inputDescricao = document.getElementById('fQuilateDescricaoNovo');
   const valor = inputValor.value.trim();
   const custo = parseFloat(inputCusto.value);
   if (!valor || !custo || quilatesFormAtual.some(q => q.valor === valor)) return;
-  quilatesFormAtual.push({ valor, custo, preco: calcularPrecoFinal(custo) });
+  const taxa = parseFloat(inputTaxa.value) || 0;
+  const descricao = inputDescricao.value.trim();
+  quilatesFormAtual.push({ valor, custo, taxa, descricao, preco: calcularPrecoFinal(custo, taxa) });
   inputValor.value = '';
   inputCusto.value = '';
+  inputTaxa.value = '';
+  inputDescricao.value = '';
   renderQuilatesMulti();
 }
 document.getElementById('btnAdicionarQuilate').addEventListener('click', adicionarQuilate);
-['fQuilateNovo', 'fQuilateCustoNovo'].forEach(id => {
+['fQuilateNovo', 'fQuilateCustoNovo', 'fQuilateTaxaNovo', 'fQuilateDescricaoNovo'].forEach(id => {
   document.getElementById(id).addEventListener('keydown', (e) => {
     if (e.key === 'Enter'){ e.preventDefault(); adicionarQuilate(); }
   });
@@ -3490,7 +3483,8 @@ function atualizarPrecoBanho(chave){
   const extra = parseFloat(input.value) || 0;
   if (extra === 0){ span.textContent = 'sem diferença de preço'; return; }
   const custoPecaBase = parseFloat(document.getElementById('fCustoPeca').value) || 0;
-  const diferenca = calcularPrecoFinal(custoPecaBase + extra) - calcularPrecoFinal(custoPecaBase);
+  const taxaPecaBase = parseFloat(document.getElementById('fCustoImposto').value) || 0;
+  const diferenca = calcularPrecoFinal(custoPecaBase + extra, taxaPecaBase) - calcularPrecoFinal(custoPecaBase, taxaPecaBase);
   span.textContent = `+ ${formatarPreco(diferenca)} no preço final`;
 }
 
@@ -3530,20 +3524,20 @@ async function enviarBanhosEObterDados(categoria){
     // preço de venda de verdade de cada combinação vem de matriz_precos,
     // calculado em calcularMatrizPrecos() na hora de salvar o produto.
     const custoPecaBaseRef = parseFloat(document.getElementById('fCustoPeca').value) || 0;
-    disponiveis.push({ nome, preco: calcularPrecoFinal(custoPecaBaseRef + custo), foto_url });
+    const taxaPecaBaseRef = parseFloat(document.getElementById('fCustoImposto').value) || 0;
+    disponiveis.push({ nome, preco: calcularPrecoFinal(custoPecaBaseRef + custo, taxaPecaBaseRef), foto_url });
     custos.push({ nome, custo });
   }
   return { disponiveis, custos };
 }
 
 /* ============================================================
-   CALCULADORA DE PREÇO — custo + imposto (calculado sozinho pela
-   regra real da Remessa Conforme, não é fixo) + frete + margem%
-   já CALCULA E JOGA o preço de venda direto no campo Preço (não é
-   só uma sugestão) e mostra o lucro. A mesma margem/cotação/ICMS
-   também recalcula o preço de cada quilate automaticamente, cada
-   um com o IMPOSTO PRÓPRIO calculado em cima do custo dele — não
-   um imposto fixo herdado do produto base.
+   CALCULADORA DE PREÇO — tudo digitado na mão (valor, taxa e frete),
+   nada calculado sozinho. Valor + taxa + frete + margem% já CALCULA E
+   JOGA o preço de venda direto no campo Preço (não é só uma sugestão)
+   e mostra o lucro. A mesma margem/frete também recalcula o preço de
+   cada quilate automaticamente, cada um com a TAXA PRÓPRIA que foi
+   digitada pra ele — não uma taxa herdada do valor único.
    Uso interno — esses campos nunca são expostos nas consultas
    públicas do site.
    ============================================================ */
@@ -3551,71 +3545,35 @@ function margemAtual(){
   return parseFloat(document.getElementById('fMargemLucro').value) || 0;
 }
 
-// Busca a cotação do dólar do dia sozinha (AwesomeAPI, pública e gratuita)
-async function buscarCotacaoDolar(){
-  const status = document.getElementById('fCotacaoDolarStatus');
-  status.textContent = '(buscando...)';
-  try {
-    const resp = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL');
-    const dados = await resp.json();
-    const cotacao = parseFloat(dados.USDBRL.ask);
-    document.getElementById('fCotacaoDolar').value = cotacao.toFixed(2);
-    status.textContent = '(atualizada agora)';
-    atualizarCalcLucro();
-  } catch {
-    status.textContent = '(não consegui buscar — preencha na mão)';
-  }
-}
-document.getElementById('btnAtualizarCotacao').addEventListener('click', buscarCotacaoDolar);
-
-// Regra "Remessa Conforme": até US$50 só ICMS; acima de US$50, Imposto de
-// Importação (60% do valor, com desconto de US$30) + ICMS sobre o total.
-function calcularImpostoImportacao(custoBRL, cotacaoDolar, icmsPct){
-  if (!custoBRL || !cotacaoDolar || !icmsPct) return 0;
-  const valorUsd = custoBRL / cotacaoDolar;
-  const icms = icmsPct / 100;
-  if (valorUsd <= 50){
-    return custoBRL * icms;
-  }
-  const iiUsd = Math.max(0, valorUsd * 0.6 - 30);
-  const iiBRL = iiUsd * cotacaoDolar;
-  const icmsBRL = (custoBRL + iiBRL) * icms;
-  return iiBRL + icmsBRL;
-}
-
-// Preço de venda final pra QUALQUER custo de origem (produto base ou um
-// quilate específico) — inclui o imposto calculado pra ESSE custo + o
-// frete + a margem, tudo puxando os valores atuais da calculadora.
-function calcularPrecoFinal(custo){
-  const cotacao = parseFloat(document.getElementById('fCotacaoDolar').value) || 0;
-  const icmsPct = parseFloat(document.getElementById('fIcmsPct').value) || 0;
+// Preço de venda final a partir de um valor e da taxa PRÓPRIA dele
+// (sempre digitada na mão por quem chamou) — soma valor + taxa + frete
+// e aplica a margem.
+function calcularPrecoFinal(custo, taxa){
   const custoFrete = parseFloat(document.getElementById('fCustoFrete').value) || 0;
-  const imposto = calcularImpostoImportacao(custo, cotacao, icmsPct);
-  return (custo + imposto + custoFrete) * (1 + margemAtual() / 100);
+  return (custo + (taxa || 0) + custoFrete) * (1 + margemAtual() / 100);
 }
 
 // ============================================================
 // MATRIZ DE PREÇOS (quilate × banho) — fonte única de verdade do preço
 // de venda pra qualquer combinação de variante. Cada quilate cadastrado
-// já é um custo TOTAL (peça + pedra daquele tamanho, substitui a peça
-// base) e cada banho é um custo EXTRA (delta, soma em cima do que já
-// tá selecionado). O imposto é calculado UMA VEZ em cima do custo
-// combinado (quilate + banho), não separado por peça — assim o site
-// nunca precisa "escolher" entre o preço do quilate ou o do banho, só
-// busca a combinação certa aqui.
+// já é um valor TOTAL (peça + pedra daquele tamanho, substitui a peça
+// base) com a taxa PRÓPRIA dele (sempre digitada na mão) e cada banho
+// é um valor EXTRA (delta, soma em cima do que já tá selecionado, sem
+// taxa própria — banho não tem campo de taxa, só o quilate/valor único).
 function calcularMatrizPrecos(quilates, banhosCustos){
   if (!quilates.length && !banhosCustos.length) return []; // sem variante nenhuma, usa o preço base (fPreco) direto
   const custoPecaBase = parseFloat(document.getElementById('fCustoPeca').value) || 0;
+  const taxaPecaBase = parseFloat(document.getElementById('fCustoImposto').value) || 0;
   const bases = quilates.length
-    ? quilates.map(q => ({ quilate: q.valor, custo: q.custo }))
-    : [{ quilate: null, custo: custoPecaBase }];
+    ? quilates.map(q => ({ quilate: q.valor, custo: q.custo, taxa: q.taxa || 0 }))
+    : [{ quilate: null, custo: custoPecaBase, taxa: taxaPecaBase }];
   const extras = banhosCustos.length
     ? banhosCustos.map(b => ({ banho: b.nome, extra: b.custo || 0 }))
     : [{ banho: null, extra: 0 }];
   const matriz = [];
   for (const base of bases){
     for (const extra of extras){
-      matriz.push({ quilate: base.quilate, banho: extra.banho, preco: calcularPrecoFinal(base.custo + extra.extra) });
+      matriz.push({ quilate: base.quilate, banho: extra.banho, preco: calcularPrecoFinal(base.custo + extra.extra, base.taxa) });
     }
   }
   return matriz;
@@ -3629,21 +3587,18 @@ function calcularMatrizPrecos(quilates, banhosCustos){
 function calcularMatrizCustos(quilates, banhosCustos){
   if (!quilates.length && !banhosCustos.length) return [];
   const custoPecaBase = parseFloat(document.getElementById('fCustoPeca').value) || 0;
-  const cotacao = parseFloat(document.getElementById('fCotacaoDolar').value) || 0;
-  const icmsPct = parseFloat(document.getElementById('fIcmsPct').value) || 0;
+  const taxaPecaBase = parseFloat(document.getElementById('fCustoImposto').value) || 0;
   const custoFrete = parseFloat(document.getElementById('fCustoFrete').value) || 0;
   const bases = quilates.length
-    ? quilates.map(q => ({ quilate: q.valor, custo: q.custo }))
-    : [{ quilate: null, custo: custoPecaBase }];
+    ? quilates.map(q => ({ quilate: q.valor, custo: q.custo, taxa: q.taxa || 0 }))
+    : [{ quilate: null, custo: custoPecaBase, taxa: taxaPecaBase }];
   const extras = banhosCustos.length
     ? banhosCustos.map(b => ({ banho: b.nome, extra: b.custo || 0 }))
     : [{ banho: null, extra: 0 }];
   const matriz = [];
   for (const base of bases){
     for (const extra of extras){
-      const custoCombinado = base.custo + extra.extra;
-      const imposto = calcularImpostoImportacao(custoCombinado, cotacao, icmsPct);
-      matriz.push({ quilate: base.quilate, banho: extra.banho, custo: custoCombinado + imposto + custoFrete });
+      matriz.push({ quilate: base.quilate, banho: extra.banho, custo: base.custo + extra.extra + base.taxa + custoFrete });
     }
   }
   return matriz;
@@ -3651,24 +3606,11 @@ function calcularMatrizCustos(quilates, banhosCustos){
 
 function atualizarCalcLucro(){
   const custoPeca = parseFloat(document.getElementById('fCustoPeca').value) || 0;
-  const cotacao = parseFloat(document.getElementById('fCotacaoDolar').value) || 0;
-  const icmsPct = parseFloat(document.getElementById('fIcmsPct').value) || 0;
+  const impostoDigitado = parseFloat(document.getElementById('fCustoImposto').value) || 0;
   const custoFrete = parseFloat(document.getElementById('fCustoFrete').value) || 0;
   const margem = margemAtual();
 
-  // Modo manual: em vez de calcular o imposto por %, usa o valor que foi
-  // digitado direto no campo (ex: o valor exato que o AliExpress já
-  // mostrou na compra) — não sobrescreve o que a pessoa digitou.
-  const impostoManual = document.getElementById('fImpostoManual').checked;
-  let impostoCalculado;
-  if (impostoManual){
-    impostoCalculado = parseFloat(document.getElementById('fCustoImposto').value) || 0;
-  } else {
-    impostoCalculado = calcularImpostoImportacao(custoPeca, cotacao, icmsPct);
-    document.getElementById('fCustoImposto').value = custoPeca ? impostoCalculado.toFixed(2) : '';
-  }
-
-  const custoTotal = custoPeca + impostoCalculado + custoFrete;
+  const custoTotal = custoPeca + impostoDigitado + custoFrete;
   const resultado = document.getElementById('calcLucroResultado');
 
   if (custoTotal > 0 && margem > 0){
@@ -3681,38 +3623,30 @@ function atualizarCalcLucro(){
     resultado.style.display = 'none';
   }
 
-  // Recalcula o preço de venda de cada quilate já cadastrado, com o
-  // imposto PRÓPRIO de cada um (não herdado do produto base).
+  // Recalcula o preço de venda de cada quilate já cadastrado (a taxa de
+  // cada um fica como foi digitada, só o preço final é que reflete o
+  // frete/margem atuais).
   if (quilatesFormAtual.length){
-    quilatesFormAtual.forEach(q => { q.preco = calcularPrecoFinal(q.custo); });
+    quilatesFormAtual.forEach(q => { q.preco = calcularPrecoFinal(q.custo, q.taxa); });
     renderQuilatesMulti();
   }
   document.querySelectorAll('#banhoOpcoes .banho-check:checked').forEach(chk => {
     atualizarPrecoBanho(chk.getAttribute('data-chave'));
   });
 }
-['fCustoPeca', 'fCotacaoDolar', 'fIcmsPct', 'fCustoFrete', 'fMargemLucro', 'fCustoImposto'].forEach(id => {
+['fCustoPeca', 'fCustoFrete', 'fMargemLucro', 'fCustoImposto'].forEach(id => {
   document.getElementById(id).addEventListener('input', atualizarCalcLucro);
 });
 
-// Alterna entre imposto calculado por % (padrão) e imposto digitado na
-// mão — quando ligado, libera o campo pra editar e desativa o % (ele para
-// de ser usado no cálculo). Usado tanto pelo checkbox quanto ao abrir um
-// produto já salvo (ver populaFormularioProduto mais abaixo).
-function aplicarModoImposto(manual){
-  const campoImposto = document.getElementById('fCustoImposto');
-  document.getElementById('fImpostoManual').checked = manual;
-  campoImposto.readOnly = !manual;
-  campoImposto.style.background = manual ? '' : 'var(--cinza-bg)';
-  document.getElementById('fIcmsPct').disabled = manual;
-  document.getElementById('fCustoImpostoLabel').innerHTML = manual
-    ? 'Imposto (R$) <span style="font-weight:400;color:var(--texto-suave);">(digitado na mão)</span>'
-    : 'Imposto calculado (R$) <span style="font-weight:400;color:var(--texto-suave);">(automático)</span>';
-}
-document.getElementById('fImpostoManual').addEventListener('change', function(){
-  aplicarModoImposto(this.checked);
+// Frete: "grátis" zera e esconde o campo de valor; desmarcado mostra o
+// campo pra digitar quanto o fornecedor cobra.
+function aplicarModoFrete(){
+  const gratis = document.getElementById('fFreteGratisFornecedor').checked;
+  document.getElementById('campoFreteCobrado').style.display = gratis ? 'none' : 'block';
+  if (gratis) document.getElementById('fCustoFrete').value = '';
   atualizarCalcLucro();
-});
+}
+document.getElementById('fFreteGratisFornecedor').addEventListener('change', aplicarModoFrete);
 
 document.getElementById('formatoAdminPills').innerHTML = Object.keys(FOTOS_FORMATO).map(f => `
   <button type="button" class="formato-admin-pill" data-formato="${f}">
@@ -3764,15 +3698,14 @@ document.querySelectorAll('.editor-toolbar button').forEach(btn => {
   });
 });
 
-function abrirModalProduto(produto){
+async function abrirModalProduto(produto){
   const form = document.getElementById('formProduto');
   form.reset();
   // contenteditable não é campo de formulário de verdade — form.reset()
   // não limpa ele sozinho, precisa zerar na mão.
   document.getElementById('fDescricao').innerHTML = '';
-  // form.reset() desmarca o checkbox do imposto manual, mas não desfaz o
-  // readonly/disabled que a gente muda na mão — volta pro modo automático.
-  aplicarModoImposto(false);
+  document.getElementById('fFreteGratisFornecedor').checked = true;
+  aplicarModoFrete();
   fotosFormAtual = [];
   videoFormAtual = null;
   tamanhosFormAtual = new Set();
@@ -3798,11 +3731,23 @@ function abrirModalProduto(produto){
     document.getElementById('fMaterial').value = produto.material_aro || 'Prata 925';
     document.getElementById('fPedra').value = produto.pedra_central || 'Sem pedra';
     document.getElementById('fBanho').value = produto.banho || 'Sem banho';
+
+    document.getElementById('fCustoPeca').value = produto.custo_peca ?? '';
+    document.getElementById('fCustoImposto').value = produto.custo_imposto != null ? Number(produto.custo_imposto).toFixed(2) : '';
+    document.getElementById('fMargemLucro').value = produto.margem_lucro ?? '';
+    const temFrete = produto.custo_frete != null && Number(produto.custo_frete) > 0;
+    document.getElementById('fFreteGratisFornecedor').checked = !temFrete;
+    document.getElementById('fCustoFrete').value = temFrete ? Number(produto.custo_frete).toFixed(2) : '';
+    aplicarModoFrete();
+
     // Junta o preço público (quilates_disponiveis) com o custo privado
-    // (quilates_custos), casando pelo "valor" de cada opção.
+    // (quilates_custos), casando pelo "valor" de cada opção — taxa
+    // sempre vem do que foi salvo (sem fórmula nenhuma pra recalcular).
     quilatesFormAtual = (produto.quilates_disponiveis || []).map(q => {
       const custoInfo = (produto.quilates_custos || []).find(c => c.valor === q.valor);
-      return { valor: q.valor, preco: q.preco, custo: custoInfo ? custoInfo.custo : 0 };
+      const custo = custoInfo ? Number(custoInfo.custo) : 0;
+      const taxa = custoInfo && custoInfo.taxa != null ? Number(custoInfo.taxa) : 0;
+      return { valor: q.valor, custo, taxa, descricao: q.descricao || '', preco: q.preco };
     });
     renderQuilatesMulti();
     // Cada cor salva "casa" com a checkbox do preset de mesmo nome, ou
@@ -3838,26 +3783,7 @@ function abrirModalProduto(produto){
     document.getElementById('fPreco').value = produto.preco || '';
     document.getElementById('fEstoque').value = produto.estoque || '';
     document.getElementById('fEstoqueMinimo').value = produto.estoque_minimo ?? 5;
-    document.getElementById('fCustoPeca').value = produto.custo_peca ?? '';
-    document.getElementById('fCotacaoDolar').value = produto.cotacao_dolar ?? '';
-    document.getElementById('fIcmsPct').value = produto.icms_pct ?? 18;
-    document.getElementById('fCustoFrete').value = produto.custo_frete ?? '';
-    document.getElementById('fMargemLucro').value = produto.margem_lucro ?? '';
-
-    // O imposto salvo não é um campo "de origem" (não sabemos se veio do
-    // cálculo por % ou foi digitado na mão) — se ele não bate com o que a
-    // fórmula por % daria pra esse custo (fora uma margem de arredondamento),
-    // assume que foi digitado na mão da última vez e já abre nesse modo.
-    const impostoSalvo = produto.custo_imposto;
-    const impostoPorFormula = calcularImpostoImportacao(
-      parseFloat(document.getElementById('fCustoPeca').value) || 0,
-      parseFloat(document.getElementById('fCotacaoDolar').value) || 0,
-      parseFloat(document.getElementById('fIcmsPct').value) || 0
-    );
-    const pareceManual = impostoSalvo != null && Math.abs(Number(impostoSalvo) - impostoPorFormula) > 0.02;
-    aplicarModoImposto(pareceManual);
-    if (pareceManual) document.getElementById('fCustoImposto').value = Number(impostoSalvo).toFixed(2);
-    atualizarCalcLucro(); // se for automático, recalcula o imposto; se for manual, usa o valor que acabou de entrar no campo
+    atualizarCalcLucro(); // usa os valores (taxa incluída) que acabaram de entrar nos campos
     document.getElementById('fLinkFornecedor').value = produto.link_fornecedor || '';
     document.getElementById('fObservacoes').value = produto.observacoes_internas || '';
     document.getElementById('fDestaque').checked = !!produto.destaque;
@@ -3881,8 +3807,6 @@ function abrirModalProduto(produto){
   }
   renderFotosPreview();
   renderVideoPreview();
-  document.getElementById('fCotacaoDolarStatus').textContent = '';
-  if (!document.getElementById('fCotacaoDolar').value) buscarCotacaoDolar();
   document.getElementById('modalProduto').classList.add('show');
 }
 
@@ -4073,8 +3997,8 @@ document.getElementById('formProduto').addEventListener('submit', async (e) => {
       banho: document.getElementById('fBanho').value,
       // Divide em público (valor + preço de venda, o site mostra) e privado
       // (valor + custo original — nunca sai do admin, é só sua referência).
-      quilates_disponiveis: quilatesFormAtual.map(q => ({ valor: q.valor, preco: q.preco })),
-      quilates_custos: quilatesFormAtual.map(q => ({ valor: q.valor, custo: q.custo })),
+      quilates_disponiveis: quilatesFormAtual.map(q => ({ valor: q.valor, preco: q.preco, descricao: q.descricao || '' })),
+      quilates_custos: quilatesFormAtual.map(q => ({ valor: q.valor, custo: q.custo, taxa: q.taxa || 0 })),
       banhos_disponiveis: banhosDisp,
       banhos_custos: banhosCustos,
       // Preço de venda de cada combinação quilate × banho, já calculado
@@ -4095,8 +4019,6 @@ document.getElementById('formProduto').addEventListener('submit', async (e) => {
       estoque_minimo: parseInt(document.getElementById('fEstoqueMinimo').value) || 5,
       custo_peca: document.getElementById('fCustoPeca').value ? parseFloat(document.getElementById('fCustoPeca').value) : null,
       custo_imposto: document.getElementById('fCustoImposto').value ? parseFloat(document.getElementById('fCustoImposto').value) : null,
-      cotacao_dolar: document.getElementById('fCotacaoDolar').value ? parseFloat(document.getElementById('fCotacaoDolar').value) : null,
-      icms_pct: document.getElementById('fIcmsPct').value ? parseFloat(document.getElementById('fIcmsPct').value) : null,
       custo_frete: document.getElementById('fCustoFrete').value ? parseFloat(document.getElementById('fCustoFrete').value) : null,
       margem_lucro: document.getElementById('fMargemLucro').value ? parseFloat(document.getElementById('fMargemLucro').value) : null,
       link_fornecedor: document.getElementById('fLinkFornecedor').value.trim() || null,

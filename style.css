@@ -1642,6 +1642,7 @@
 .tamanho-wrap h4{ font-size: 0.86rem; font-weight:600; margin-bottom: 10px; overflow-wrap: anywhere; }
 .link-guia-tamanho{ font-size: 0.78rem; color: var(--bordo); text-decoration:underline; white-space:nowrap; }
 .tamanho-pills{ display:flex; flex-wrap:wrap; gap: 8px; }
+.quilate-descricao{ font-size: 0.82rem; color: var(--texto-suave); margin-top: 10px; }
 .tamanho-pill{
   min-width: 42px;
   padding: 9px 12px;
