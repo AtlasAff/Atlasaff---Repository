@@ -1581,6 +1581,24 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="shared.js"></script>
 <script>
+// Trava a rolagem do body enquanto QUALQUER modal estiver aberto — o CSS
+// "body:has(.modal-overlay.show)" já faz isso, mas :has() não existe em
+// versões mais antigas do Safari/iOS, e é justamente lá que o bug de
+// rolagem vazando por trás do modal aparece. Isso aqui cobre esse caso:
+// observa a classe de cada .modal-overlay (várias telas abrem/fecham modal
+// direto com classList.add/remove('show'), sem passar por um lugar só) e
+// aplica overflow:hidden no body sempre que algum estiver com "show".
+(function(){
+  function atualizarTravaFundoModal(){
+    const algumModalAberto = document.querySelector('.modal-overlay.show');
+    document.body.style.overflow = algumModalAberto ? 'hidden' : '';
+  }
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    new MutationObserver(atualizarTravaFundoModal).observe(overlay, { attributes: true, attributeFilter: ['class'] });
+  });
+  atualizarTravaFundoModal();
+})();
+
 const SENHA_ADMIN = null; // não usado mais — login agora é via Supabase Auth (sb.auth)
 
 document.getElementById('btnEntrarAdmin').addEventListener('click', tentarLogin);
