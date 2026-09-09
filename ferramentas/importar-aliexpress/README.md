@@ -100,7 +100,7 @@ Abre o admin do site normalmente, acha o produto na lista (ele entra
 link do fornecedor). Revisa:
 
 - Categoria
-- Quilate / banho (as variações que apareceram no terminal te dão uma pista de quais existem — tamanho de anel já vem convertido pra numeração BR e preenchido sozinho, não precisa mexer)
+- Quilate / banho (as variações que apareceram no terminal te dão uma pista de quais existem — tamanho de anel já vem convertido pra numeração BR e preenchido sozinho, não precisa mexer). Se o terminal avisou que o preço muda por variação, cadastra como quilate no admin (cada quilate tem seu próprio custo lá) em vez de só banho/cor
 - **Preço de venda** (o produto entra com preço **zerado** de propósito — o valor do AliExpress vai pro campo "Custo da peça", nunca pro preço de venda. O imposto também já vem preenchido, com o valor exato que o próprio AliExpress mostrou. Roda a calculadora de margem do admin pra gerar o preço final antes de ativar)
 - Fotos (confere se vieram certas)
 

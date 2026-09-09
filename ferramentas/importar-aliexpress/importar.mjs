@@ -313,12 +313,13 @@ async function extrairDadosProduto(page){
   const variacoes = await tentarCadeia('variações (tamanho/cor/etc — precisa mapear na mão)', async () => {
     // Cada grupo de variação (tamanho, cor metálica etc.) é um bloco com
     // um título ("Tamanho:", "Cor metálica:...") e, dentro, uma opção por
-    // elemento com o valor certinho no atributo title="" — não depende de
-    // ler o texto visível (que às vezes vem com espaço/lixo junto).
+    // elemento — às vezes texto simples (com o valor certinho no
+    // atributo title=""), às vezes um "quadradinho" de imagem (aí o valor
+    // vem no alt="" da <img> lá dentro, o div em si não tem title).
     const grupos = await page.evaluate(() => {
       const valoresDe = (container) => [...new Set(
-        [...container.querySelectorAll('[class*="sku-item--text"]')]
-          .map(el => (el.getAttribute('title') || el.textContent || '').trim())
+        [...container.querySelectorAll('[class*="sku-item--text"], [class*="sku-item--image"]')]
+          .map(el => (el.getAttribute('title') || el.querySelector('img')?.getAttribute('alt') || el.textContent || '').trim())
           .filter(Boolean)
       )];
 
@@ -353,6 +354,32 @@ async function extrairDadosProduto(page){
     return grupos;
   }) || [];
 
+  // Em alguns produtos, cada opção de uma variação (fora tamanho) tem um
+  // PREÇO DIFERENTE (ex: "Silver-1CT" custa mais que "Silver-0.5CT" — o
+  // fornecedor só não separou "quilate" de "cor" direito). Clica em cada
+  // opção de cada grupo (menos tamanho — são muitas opções e raramente
+  // mudam preço) e registra o preço mostrado depois do clique. Só é
+  // reportado se os preços realmente vierem diferentes; se der erro em
+  // alguma opção específica, pula ela e segue nas outras.
+  const precosPorVariacao = [];
+  for (const grupo of variacoes){
+    if (/tamanho/i.test(grupo.nome) || grupo.valores.length < 2) continue;
+    const precos = {};
+    for (const valor of grupo.valores){
+      try {
+        const valorEscapado = valor.replace(/"/g, '\\"');
+        await page.locator(`[data-sku-col][title="${valorEscapado}"], [data-sku-col]:has(img[alt="${valorEscapado}"])`)
+          .first().click({ timeout: 3000 });
+        await page.waitForTimeout(700); // dá tempo do preço na tela atualizar depois do clique
+        const t = await page.locator('[class*="price-default--current"]').first().textContent({ timeout: 3000 });
+        precos[valor] = limpar(t);
+      } catch { /* essa opção específica não deu — pula, não trava as outras */ }
+    }
+    if (new Set(Object.values(precos)).size > 1){
+      precosPorVariacao.push({ nome: grupo.nome, precos });
+    }
+  }
+
   // Quando algum campo importante não foi achado, salva um "raio-x" da
   // página (o que estava escondido no JavaScript + a página já renderizada
   // na tela) numa pasta local — não vai pro site nem pro GitHub, é só pra
@@ -369,7 +396,7 @@ async function extrairDadosProduto(page){
     } catch { /* isso é só um extra, não pode travar a importação por causa disso */ }
   }
 
-  return { nome, descricao, fotos, preco, variacoes, avisos, impostoEstimado, estoque };
+  return { nome, descricao, fotos, preco, variacoes, avisos, impostoEstimado, estoque, precosPorVariacao };
 }
 
 /* ============================================================
@@ -454,7 +481,7 @@ async function modoImportar(url){
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await page.waitForTimeout(2500); // dá tempo do JS da página terminar de montar tudo
 
-  let { nome, descricao, fotos, preco, variacoes, avisos, impostoEstimado, estoque } = await extrairDadosProduto(page);
+  let { nome, descricao, fotos, preco, variacoes, avisos, impostoEstimado, estoque, precosPorVariacao } = await extrairDadosProduto(page);
   await browser.close();
 
   console.log(`\nNome (como veio do fornecedor): ${nome || '(não encontrado)'}`);
@@ -495,6 +522,13 @@ async function modoImportar(url){
   if (variacoes.length){
     console.log('Variações encontradas (mapeia quilate/banho na mão no admin):');
     variacoes.forEach(v => console.log(`  - ${v.nome}: ${v.valores.join(', ')}`));
+  }
+  if (precosPorVariacao.length){
+    console.log('\n⚠️  O preço muda dependendo da opção escolhida nessas variações (pode ser quilate disfarçado de cor — confere e cadastra como quilate no admin se for o caso):');
+    precosPorVariacao.forEach(v => {
+      console.log(`  "${v.nome}":`);
+      Object.entries(v.precos).forEach(([valor, p]) => console.log(`    - ${valor}: ${p}`));
+    });
   }
 
   // Tamanho de anel é o único tipo de variação que dá pra converter e
