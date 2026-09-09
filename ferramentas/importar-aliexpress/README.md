@@ -82,6 +82,11 @@ conta Google) e cria uma chave (Create API Key) — cola no terminal quando
 pedir. Se não tiver ou não quiser usar, é só apertar Enter e pular —
 o produto entra do mesmo jeito, só com o texto original.
 
+Também pergunta quantos % de lucro você quer aplicar (opcional) — se
+responder, já mostra o preço de venda final e salva ele direto no
+produto; se pular (Enter), o preço de venda entra zerado e você calcula
+depois no admin.
+
 No fim, vai pedir seu e-mail e senha de admin do site pra salvar o
 produto. Na primeira vez que você preencher a chave do Groq e o login do
 admin, eles ficam salvos num arquivo local (`.credenciais.json`, dentro

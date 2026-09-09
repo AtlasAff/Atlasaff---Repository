@@ -547,6 +547,29 @@ async function modoImportar(url){
     console.log(`\n⚠️  Não consegui achar: ${avisos.join(', ')} — fica vazio, preenche na mão.`);
   }
 
+  // O preço do AliExpress é CUSTO, não preço de venda — vai pro campo
+  // "custo_peca" do admin, nunca pro "preco" (esse é o que aparece pro
+  // cliente!). O imposto que o próprio AliExpress mostra ("R$35,20+ em
+  // impostos estimados") também vira custo, evitando calcular por % de
+  // ICMS (que nem sempre bate com o valor real cobrado).
+  const custoPecaNumero = paraNumero(preco) ?? 0;
+  const custoImpostoNumero = extrairValorReais(impostoEstimado);
+  const custoTotalEstimado = custoPecaNumero + (custoImpostoNumero || 0);
+
+  // Passo opcional: pergunta a margem de lucro e já mostra o preço de
+  // venda final, igual a calculadora do admin faz (mesma conta: custo +
+  // imposto, vezes a margem). Se pular (Enter), o produto entra com
+  // preço ZERADO — mais seguro que arriscar um preço errado sozinho — e
+  // você roda a calculadora depois, no admin.
+  console.log(`\nCusto estimado (peça + imposto): R$${custoTotalEstimado.toFixed(2).replace('.', ',')}`);
+  const margemTexto = await perguntar('Quantos % de lucro você quer aplicar? (Enter pra pular e decidir depois no admin): ');
+  const margemNumero = margemTexto ? parseFloat(margemTexto.replace(',', '.')) : null;
+  let precoFinalNumero = null;
+  if (margemNumero && custoTotalEstimado > 0){
+    precoFinalNumero = custoTotalEstimado * (1 + margemNumero / 100);
+    console.log(`Com ${margemNumero}% de lucro, o preço de venda ficaria: R$${precoFinalNumero.toFixed(2).replace('.', ',')} (confere/ajusta no admin antes de ativar)`);
+  }
+
   // Login do admin — se já tem e-mail/senha salvos de uma vez anterior,
   // usa direto; senão pergunta. Se o login salvo não funcionar mais
   // (ex: senha foi trocada), pede de novo em vez de travar.
@@ -622,31 +645,19 @@ async function modoImportar(url){
     process.exit(1);
   }
 
-  // IMPORTANTE: o preço do AliExpress é CUSTO, não preço de venda — vai
-  // pro campo "custo_peca" (que o admin já tem, junto com custo_imposto/
-  // custo_frete/margem_lucro), nunca pro campo "preco" (esse é o que
-  // aparece pro cliente!). "preco" fica 0 até você rodar a calculadora de
-  // margem no admin — assim é impossível ativar sem querer vendendo pelo
-  // preço de custo.
-  const custoPecaNumero = paraNumero(preco) ?? 0;
-
-  // O imposto que o próprio AliExpress mostra ("R$35,20+ em impostos
-  // estimados") também vai preenchido, direto no campo de custo — evita
-  // ter que calcular por % de ICMS (que nem sempre bate com o valor real).
-  const custoImpostoNumero = extrairValorReais(impostoEstimado);
-
   // Estoque vem como texto ("Apenas 7 restante(s)") — extrai só o número.
   const estoqueMatch = estoque?.match(/\d+/);
   const estoqueNumero = estoqueMatch ? parseInt(estoqueMatch[0], 10) : null;
 
   // Cria o produto como RASCUNHO (ativo:false — não aparece pro cliente
-  // até você revisar e ativar no admin, com preço de venda ainda ZERADO
-  // de propósito). link_fornecedor já vem preenchido com o link original,
-  // pra você conferir a página de novo se precisar. Sem ".select()" no
-  // final de propósito: a leitura direta da tabela produtos é restrita
-  // mesmo pra admin (o site normalmente lê produto por uma função
-  // própria, não direto na tabela) — o insert em si funciona igual, só
-  // não confirma o retorno.
+  // até você revisar e ativar no admin). Se você pulou a margem acima, o
+  // preço de venda entra ZERADO de propósito — mais seguro que arriscar
+  // vender pelo preço de custo sem querer. link_fornecedor já vem
+  // preenchido com o link original, pra você conferir a página de novo
+  // se precisar. Sem ".select()" no final de propósito: a leitura direta
+  // da tabela produtos é restrita mesmo pra admin (o site normalmente lê
+  // produto por uma função própria, não direto na tabela) — o insert em
+  // si funciona igual, só não confirma o retorno.
   const { error: erroInsert } = await sb.from('produtos').insert({
     nome: nome || '(sem nome — importação parcial, preencher)',
     descricao: descricao || null,
@@ -654,9 +665,10 @@ async function modoImportar(url){
     link_fornecedor: url,
     categoria: categoriaProvisoria,
     ativo: false,
-    preco: 0,
+    preco: precoFinalNumero ?? 0,
     custo_peca: custoPecaNumero,
     ...(custoImpostoNumero !== null ? { custo_imposto: custoImpostoNumero } : {}),
+    ...(margemNumero ? { margem_lucro: margemNumero } : {}),
     ...(estoqueNumero !== null ? { estoque: estoqueNumero } : {}),
     ...(tamanhosBR.length ? { tamanhos_disponiveis: tamanhosBR } : {})
   });
@@ -668,7 +680,9 @@ async function modoImportar(url){
 
   console.log(`\n✅ Rascunho criado: "${nome || '(sem nome)'}"`);
   console.log(`Categoria provisória: "${categoriaProvisoria}" — troca pela certa na revisão.`);
-  console.log('⚠️  Preço de venda ainda está ZERADO de propósito — abre o admin, acha esse produto na lista (aparece como inativo, com o ícone 🔗) e roda a calculadora de margem (custo + imposto já vieram preenchidos) antes de ativar.');
+  console.log(precoFinalNumero
+    ? `Preço de venda: R$${precoFinalNumero.toFixed(2).replace('.', ',')} (${margemNumero}% de lucro) — confere no admin antes de ativar.`
+    : '⚠️  Preço de venda ainda está ZERADO de propósito — abre o admin, acha esse produto na lista (aparece como inativo, com o ícone 🔗) e roda a calculadora de margem (custo + imposto já vieram preenchidos) antes de ativar.');
 }
 
 /* ============================================================
