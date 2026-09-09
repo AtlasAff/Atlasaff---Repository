@@ -281,7 +281,12 @@ function ativarToggleSenha(){
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.setAttribute('aria-label', 'Mostrar senha');
-    btn.style.cssText = 'position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;padding:6px;cursor:pointer;color:#6E6259;display:flex;align-items:center;line-height:0;';
+    // width/height fixos e explícitos aqui são importantes: em qualquer
+    // página que tenha uma regra tipo ".algumaCoisa button{ width:100% }"
+    // (ex: o botão "Entrar" da tela de login do admin), sem isso esse
+    // botão de olho herdava esse width:100% e esticava por cima do campo
+    // inteiro — parecia "torto" e roubava o clique de digitar a senha.
+    btn.style.cssText = 'position:absolute;right:6px;top:50%;transform:translateY(-50%);width:30px;height:30px;background:none;border:none;padding:6px;cursor:pointer;color:#6E6259;display:flex;align-items:center;justify-content:center;line-height:0;';
     btn.innerHTML = ICONE_OLHO_ABERTO;
     btn.addEventListener('click', () => {
       const mostrando = input.type === 'text';
