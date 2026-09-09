@@ -1027,8 +1027,20 @@ async function modoImportar(url){
     ? Math.round((q.custoComImposto != null ? Number(q.custoComImposto) : q.custo * (1 + taxaImpostoAprox)) * (1 + margemNumero / 100) * 100) / 100
     : 0;
 
-  const quilatesDisponiveis = (matrizVariacoes?.quilatesCustos || []).map(q => ({ valor: q.valor, preco: precoComMargemDoQuilate(q) }));
-  const quilatesCustosFinal = (matrizVariacoes?.quilatesCustos || []).map(q => ({ valor: q.valor, custo: q.custo }));
+  // Taxa de cada quilate, separada do custo (o admin agora tem um campo
+  // de "Taxa (R$)" próprio por quilate, digitado na mão — antes só
+  // existia combinado dentro de custoComImposto). Usa a taxa REAL lida
+  // na página desse quilate específico quando deu certo; só aproxima
+  // pela proporção do produto base (mesmo fallback de sempre) quando não
+  // leu — nesse caso completa/confere na mão no admin antes de ativar.
+  const taxaDoQuilate = (q) => Math.round((
+    q.custoComImposto != null
+      ? Number(q.custoComImposto) - Number(q.custo)
+      : (Number(q.custo) || 0) * taxaImpostoAprox
+  ) * 100) / 100;
+
+  const quilatesDisponiveis = (matrizVariacoes?.quilatesCustos || []).map(q => ({ valor: q.valor, preco: precoComMargemDoQuilate(q), descricao: '' }));
+  const quilatesCustosFinal = (matrizVariacoes?.quilatesCustos || []).map(q => ({ valor: q.valor, custo: q.custo, taxa: taxaDoQuilate(q) }));
   const banhosDisponiveis = banhosComFoto.map(b => ({ nome: b.nome, preco: precoComMargem(custoPecaNumero + b.custo), foto_url: b.fotoUrl }));
   const banhosCustosFinal = banhosComFoto.map(b => ({ nome: b.nome, custo: b.custo }));
 
