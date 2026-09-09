@@ -448,6 +448,11 @@
   }
 
   /* ---------- MODAL FORMULÁRIO ---------- */
+  /* Trava a rolagem da página de trás enquanto um modal tá aberto — sem
+     isso, no Safari do iPhone, rolar dentro do modal às vezes rola a
+     página de trás junto, e as duas ficam "grudadas" uma em cima da
+     outra na tela (parece um bug de fundo transparente, mas é isso). */
+  body:has(.modal-overlay.show){ overflow:hidden; }
   .modal-overlay{
     display:none;
     position:fixed; inset:0;
@@ -456,6 +461,7 @@
     align-items:flex-start;
     justify-content:center;
     overflow-y:auto;
+    -webkit-overflow-scrolling: touch;
     padding: 30px 16px;
   }
   .modal-overlay.show{ display:flex; }
