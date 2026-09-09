@@ -118,9 +118,18 @@ function traduzirNomeBanho(nomeOriginal){
 //    (ex: "Silver-1CT") — separa cada valor em (cor, quilate) por regex.
 //  - "nenhum": não deu pra separar com segurança (não mexe em nada,
 //    melhor não arriscar dado errado do que inventar uma estrutura).
+// Acha o "Nct" no COMEÇO de um valor, mesmo com mais coisa depois (ex:
+// "0.5ct 5mm" — o diâmetro da pedra em mm, informação redundante que dá
+// pra descartar) — devolve só o quilate normalizado ("0.5ct") ou null se
+// nem o começo bater.
+function inicioQuilate(valor){
+  const m = valor.trim().match(/^(\d+(?:[.,]\d+)?)\s*ct\b/i);
+  return m ? `${m[1].replace(',', '.')}ct` : null;
+}
+
 function classificarGruposVariacao(variacoes){
   const semTamanho = variacoes.filter(v => !/tamanho/i.test(v.nome) && v.valores.length);
-  const ehQuilatePuro = (v) => v.valores.every(x => /^\d+(?:[.,]\d+)?\s*ct$/i.test(x.trim()));
+  const ehQuilatePuro = (v) => v.valores.every(x => inicioQuilate(x));
 
   const grupoQuilate = semTamanho.find(ehQuilatePuro);
   if (grupoQuilate){
@@ -271,7 +280,7 @@ async function capturarMatrizVariacoes(page, variacoes){
     for (const valor of grupoQuilate.valores){
       const preco = await precoNoQuilate(valor);
       if (preco === null){ avisos.push(`Não consegui ler o preço do quilate "${valor}"`); continue; }
-      quilatesCustos.push({ valor, custo: preco });
+      quilatesCustos.push({ valor: inicioQuilate(valor) || valor, custo: preco });
     }
     return { quilatesCustos, banhosCustos: [], avisos };
   }
@@ -297,7 +306,7 @@ async function capturarMatrizVariacoes(page, variacoes){
   if (!nomesBanho.length) return { quilatesCustos: [], banhosCustos: [], avisos };
 
   const banhoRef = nomesBanho[0];
-  const quilatesCustos = porBanho[banhoRef].itens.map(i => ({ valor: i.quilate, custo: i.preco }));
+  const quilatesCustos = porBanho[banhoRef].itens.map(i => ({ valor: inicioQuilate(i.quilate) || i.quilate, custo: i.preco }));
   const banhosCustos = [];
   for (const nomeBanho of nomesBanho){
     if (nomeBanho === banhoRef) continue;
@@ -480,7 +489,13 @@ async function extrairDadosProduto(page){
   const estoque = await (async () => {
     try {
       const t = await page.locator('[class*="quantity--info"]').first().textContent({ timeout: 2000 });
-      return limpar(t);
+      const limpo = limpar(t);
+      // Às vezes esse mesmo bloco mostra um AVISO DE LIMITE DE COMPRA
+      // ("Limite de 1 peça(s) por cliente") em vez do estoque real —
+      // não é a mesma coisa, ignora nesse caso (senão salva um número
+      // de estoque errado, tipo "1" quando na real tem bem mais).
+      if (limpo && /limite/i.test(limpo)) return null;
+      return limpo;
     } catch { return null; }
   })();
 
