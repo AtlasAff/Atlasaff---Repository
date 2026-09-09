@@ -231,10 +231,11 @@ async function extrairDadosProduto(page){
    produto entra igual, só sem essa reescrita.
 
    Troca o valor de MODELO_GROQ aqui embaixo se um dia der erro 404 —
-   modelos saem de linha de vez em quando; a lista atual fica em
-   https://console.groq.com/docs/models
+   modelos saem de linha de vez em quando (e alguns, como os "Llama",
+   pedem plano empresarial — usa um com preço público normal na lista em
+   https://console.groq.com/docs/models, tipo os "openai/gpt-oss-*")
    ============================================================ */
-const MODELO_GROQ = 'llama-3.3-70b-versatile';
+const MODELO_GROQ = 'openai/gpt-oss-120b';
 
 async function formatarComIA({ nomeOriginal, descricaoOriginal }, chaveApi){
   const prompt = `Você ajuda a Pavan & Co., uma loja de joias, a transformar anúncios de fornecedor (texto cheio de palavra-chave repetida, tipo AliExpress) em nome e descrição limpos pro site.
