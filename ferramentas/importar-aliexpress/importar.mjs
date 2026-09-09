@@ -328,6 +328,36 @@ async function capturarMatrizVariacoes(page, variacoes){
   return { quilatesCustos, banhosCustos, avisos };
 }
 
+// Monta a matriz preço/custo por combinação de quilate × banho — é o
+// campo que o SITE usa de verdade pra saber o preço quando o cliente
+// escolhe uma opção (resolverPrecoVariante(), em shared.js). SEM isso, o
+// preço mostrado no site NUNCA muda quando o cliente troca de quilate/
+// cor, mesmo com quilates_disponiveis/banhos_disponiveis preenchidos —
+// vira bug real de precificação, não só cosmético (bug real encontrado
+// num teste: produto com matriz vazia sempre mostrava o preço base,
+// mesmo escolhendo um quilate bem mais caro). Mesmo formato que o
+// admin.html calcula sozinho ao salvar (calcularMatrizPrecos/Custos) —
+// só que aqui usa o imposto de verdade (proporcional ao custo), não a
+// fórmula por % de ICMS.
+export function montarMatrizes({ quilatesCustos, banhosCustos, custoPecaBase, taxaImposto, margemNumero }){
+  if (!quilatesCustos.length && !banhosCustos.length) return { matrizPrecos: [], matrizCustos: [] };
+  const quilates = quilatesCustos.length ? quilatesCustos : [{ valor: null, custo: custoPecaBase }];
+  const banhos = banhosCustos.length ? banhosCustos : [{ nome: null, custo: 0 }];
+
+  const matrizPrecos = [];
+  const matrizCustos = [];
+  for (const q of quilates){
+    for (const b of banhos){
+      const custoCombinado = (Number(q.custo) || 0) + (Number(b.custo) || 0);
+      const custoTotal = Math.round(custoCombinado * (1 + (taxaImposto || 0)) * 100) / 100;
+      const preco = margemNumero ? Math.round(custoTotal * (1 + margemNumero / 100) * 100) / 100 : 0;
+      matrizCustos.push({ quilate: q.valor ?? null, banho: b.nome ?? null, custo: custoTotal });
+      matrizPrecos.push({ quilate: q.valor ?? null, banho: b.nome ?? null, preco });
+    }
+  }
+  return { matrizPrecos, matrizCustos };
+}
+
 // Baixa uma foto de uma URL externa e sobe pro mesmo bucket que o admin
 // usa pra upload manual — reaproveitado tanto pras fotos principais do
 // produto quanto pras fotos de cada banho/cor. Devolve a URL pública, ou
@@ -936,6 +966,18 @@ async function modoImportar(url){
   const banhosDisponiveis = banhosComFoto.map(b => ({ nome: b.nome, preco: precoComMargem(custoPecaNumero + b.custo), foto_url: b.fotoUrl }));
   const banhosCustosFinal = banhosComFoto.map(b => ({ nome: b.nome, custo: b.custo }));
 
+  // CRÍTICO: sem isso, o site nunca muda o preço mostrado quando o
+  // cliente escolhe um quilate/banho diferente (sempre mostra o preço
+  // base) — é o campo que resolverPrecoVariante() (shared.js) usa de
+  // verdade, não só quilates_disponiveis/banhos_disponiveis.
+  const { matrizPrecos, matrizCustos } = montarMatrizes({
+    quilatesCustos: quilatesCustosFinal,
+    banhosCustos: banhosCustosFinal,
+    custoPecaBase: custoPecaNumero,
+    taxaImposto: taxaImpostoAprox,
+    margemNumero
+  });
+
   // Junta o resto do que já foi avisado ao longo da importação — tudo
   // isso fica só no campo de observação (aba Fornecedor no admin,
   // 📝 aparece na listagem de produtos quando tem algo aqui), não no
@@ -973,7 +1015,8 @@ async function modoImportar(url){
     ...(estoqueNumero !== null ? { estoque: estoqueNumero } : {}),
     ...(tamanhosBR.length ? { tamanhos_disponiveis: tamanhosBR } : {}),
     ...(quilatesDisponiveis.length ? { quilates_disponiveis: quilatesDisponiveis, quilates_custos: quilatesCustosFinal } : {}),
-    ...(banhosDisponiveis.length ? { banhos_disponiveis: banhosDisponiveis, banhos_custos: banhosCustosFinal } : {})
+    ...(banhosDisponiveis.length ? { banhos_disponiveis: banhosDisponiveis, banhos_custos: banhosCustosFinal } : {}),
+    ...(matrizPrecos.length ? { matriz_precos: matrizPrecos, matriz_custos: matrizCustos } : {})
   });
 
   if (erroInsert){
