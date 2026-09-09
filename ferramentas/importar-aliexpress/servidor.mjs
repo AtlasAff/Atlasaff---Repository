@@ -276,8 +276,18 @@ async function handlePublicar(req, res){
     ...(corpo.estoque !== null && corpo.estoque !== undefined && corpo.estoque !== '' ? { estoque: Number(corpo.estoque) } : {}),
     ...(corpo.tamanhos?.length ? { tamanhos_disponiveis: corpo.tamanhos } : {}),
     ...(corpo.quilates?.length ? {
-      quilates_disponiveis: corpo.quilates.map(q => ({ valor: q.valor, preco: Number(q.preco) || 0 })),
-      quilates_custos: corpo.quilates.map(q => ({ valor: q.valor, custo: Number(q.custo) || 0 }))
+      quilates_disponiveis: corpo.quilates.map(q => ({ valor: q.valor, preco: Number(q.preco) || 0, descricao: q.descricao || '' })),
+      // Taxa separada do custo (campo próprio no admin agora, digitado na
+      // mão) — usa a taxa REAL lida naquele quilate quando veio
+      // (custoComImposto), só aproxima pela proporção do produto base
+      // quando não leu (mesmo fallback de sempre, ver montarMatrizes).
+      quilates_custos: corpo.quilates.map(q => {
+        const custo = Number(q.custo) || 0;
+        const taxa = q.custoComImposto != null
+          ? Math.round((Number(q.custoComImposto) - custo) * 100) / 100
+          : Math.round(custo * taxaImpostoAprox * 100) / 100;
+        return { valor: q.valor, custo, taxa };
+      })
     } : {}),
     ...(banhosFinal.length ? {
       banhos_disponiveis: banhosFinal.map(b => ({ nome: b.nome, preco: b.preco, foto_url: b.foto_url })),
