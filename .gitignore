@@ -6,6 +6,10 @@ node_modules/
 # sua máquina, nunca deve ir pro repositório.
 ferramentas/importar-aliexpress/.sessao-aliexpress.json
 
+# Login de admin + chave da IA salvos localmente (texto puro) pra não
+# perguntar toda hora — nunca deve ir pro repositório.
+ferramentas/importar-aliexpress/.credenciais.json
+
 # Arquivos de "raio-x" de página gerados quando algum campo não é
 # encontrado na importação — só servem pra depurar localmente.
 ferramentas/importar-aliexpress/debug/

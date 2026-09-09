@@ -82,9 +82,16 @@ conta Google) e cria uma chave (Create API Key) — cola no terminal quando
 pedir. Se não tiver ou não quiser usar, é só apertar Enter e pular —
 o produto entra do mesmo jeito, só com o texto original.
 
-No fim, vai pedir seu e-mail e senha de admin do site — é só pra salvar
-o produto, não fica guardado em lugar nenhum (a chave do Groq também
-não fica guardada, só é usada naquela hora).
+No fim, vai pedir seu e-mail e senha de admin do site pra salvar o
+produto. Na primeira vez que você preencher a chave do Groq e o login do
+admin, eles ficam salvos num arquivo local (`.credenciais.json`, dentro
+dessa mesma pasta) pra não perguntar de novo nas próximas importações.
+
+⚠️ Esse arquivo fica **só no seu computador** (nunca vai pro GitHub) mas
+guarda sua senha em texto puro, sem criptografia — não compartilha essa
+pasta com ninguém, não anexa em e-mail, não sobe em nenhum lugar. Se
+quiser trocar o que tá salvo (ex: mudou a senha do admin), é só apagar
+o arquivo `.credenciais.json` que ele pergunta de novo na próxima vez.
 
 ## Passo 7 — Terminar no site
 

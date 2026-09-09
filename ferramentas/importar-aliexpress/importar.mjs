@@ -32,6 +32,25 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ARQUIVO_SESSAO = path.join(__dirname, '.sessao-aliexpress.json');
+// Guarda e-mail/senha do admin + chave do Groq localmente pra não
+// perguntar de novo a cada importação. Fica só no seu computador (nunca
+// vai pro GitHub — já está no .gitignore) mas é TEXTO PURO, sem
+// criptografia nenhuma — não compartilha essa pasta com ninguém.
+const ARQUIVO_CREDENCIAIS = path.join(__dirname, '.credenciais.json');
+
+async function carregarCredenciais(){
+  try {
+    return JSON.parse(await readFile(ARQUIVO_CREDENCIAIS, 'utf-8'));
+  } catch {
+    return {};
+  }
+}
+
+async function salvarCredenciais(dados){
+  try {
+    await writeFile(ARQUIVO_CREDENCIAIS, JSON.stringify(dados, null, 2));
+  } catch { /* não trava a importação por causa disso */ }
+}
 
 // Mesma URL/chave pública já usadas em todo o site (shared.js) — a chave
 // "anon" é pública de propósito, quem realmente autentica é o login do
@@ -358,10 +377,23 @@ async function modoImportar(url){
 
   console.log(`\nNome (como veio do fornecedor): ${nome || '(não encontrado)'}`);
 
+  const credenciais = await carregarCredenciais();
+
   // Passo opcional: reescreve nome/descrição com IA (Groq), seguindo o
-  // padrão de título da loja. Pega a chave em https://console.groq.com/keys
-  // — nunca é salva em arquivo nenhum, só usada nessa execução.
-  const chaveGroq = await perguntar('\nTem chave da API do Groq pra formatar nome/descrição? (cola aqui ou aperta Enter pra pular): ');
+  // padrão de título da loja. Se já tem chave salva de uma vez anterior,
+  // usa ela direto; senão pergunta e, se você colar uma, salva pra não
+  // perguntar de novo.
+  let chaveGroq = credenciais.chaveGroq;
+  if (chaveGroq){
+    console.log('(usando a chave do Groq salva localmente)');
+  } else {
+    chaveGroq = await perguntar('\nTem chave da API do Groq pra formatar nome/descrição? (cola aqui ou aperta Enter pra pular): ');
+    if (chaveGroq){
+      credenciais.chaveGroq = chaveGroq;
+      await salvarCredenciais(credenciais);
+      console.log(`(chave salva em ${path.basename(ARQUIVO_CREDENCIAIS)} pra não perguntar de novo)`);
+    }
+  }
   if (chaveGroq){
     try {
       console.log('Formatando com IA...');
@@ -386,18 +418,42 @@ async function modoImportar(url){
     console.log(`\n⚠️  Não consegui achar: ${avisos.join(', ')} — fica vazio, preenche na mão.`);
   }
 
-  // Login do admin — pedido na hora, nunca salvo em arquivo nenhum.
+  // Login do admin — se já tem e-mail/senha salvos de uma vez anterior,
+  // usa direto; senão pergunta. Se o login salvo não funcionar mais
+  // (ex: senha foi trocada), pede de novo em vez de travar.
   console.log('\nAgora loga como admin pra salvar o rascunho na loja:');
-  const email = await perguntar('E-mail do admin: ');
-  const rlSenha = createInterface({ input: stdin, output: stdout });
-  const senha = await rlSenha.question('Senha: ');
-  rlSenha.close();
-
   const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  const { error: erroLogin } = await sb.auth.signInWithPassword({ email, password: senha });
+  let email = credenciais.email;
+  let senha = credenciais.senha;
+  let usandoSalvo = Boolean(email && senha);
+  if (usandoSalvo){
+    console.log('(usando login de admin salvo localmente)');
+  } else {
+    email = await perguntar('E-mail do admin: ');
+    const rlSenha = createInterface({ input: stdin, output: stdout });
+    senha = await rlSenha.question('Senha: ');
+    rlSenha.close();
+  }
+
+  let { error: erroLogin } = await sb.auth.signInWithPassword({ email, password: senha });
+  if (erroLogin && usandoSalvo){
+    console.log(`Login salvo não funcionou (${erroLogin.message}) — digita de novo:`);
+    email = await perguntar('E-mail do admin: ');
+    const rlSenha2 = createInterface({ input: stdin, output: stdout });
+    senha = await rlSenha2.question('Senha: ');
+    rlSenha2.close();
+    usandoSalvo = false;
+    ({ error: erroLogin } = await sb.auth.signInWithPassword({ email, password: senha }));
+  }
   if (erroLogin){
     console.error('Não consegui logar como admin:', erroLogin.message);
     process.exit(1);
+  }
+  if (!usandoSalvo){
+    credenciais.email = email;
+    credenciais.senha = senha;
+    await salvarCredenciais(credenciais);
+    console.log(`(login salvo em ${path.basename(ARQUIVO_CREDENCIAIS)} pra não perguntar de novo)`);
   }
 
   // Baixa as fotos e sobe pro mesmo bucket que o admin usa pra upload
@@ -442,6 +498,10 @@ async function modoImportar(url){
   // de notar no admin que precisa preencher na mão) em vez de travar.
   const precoNumero = paraNumero(preco) ?? 0;
 
+  // Estoque vem como texto ("Apenas 7 restante(s)") — extrai só o número.
+  const estoqueMatch = estoque?.match(/\d+/);
+  const estoqueNumero = estoqueMatch ? parseInt(estoqueMatch[0], 10) : null;
+
   // Cria o produto como RASCUNHO (ativo:false — não aparece pro cliente
   // até você revisar e ativar no admin). link_fornecedor já vem
   // preenchido com o link original, pra você conferir a página de novo
@@ -449,6 +509,11 @@ async function modoImportar(url){
   // da tabela produtos é restrita mesmo pra admin (o site normalmente lê
   // produto por uma função própria, não direto na tabela) — o insert em
   // si funciona igual, só não confirma o retorno.
+  //
+  // "tamanhos_disponiveis" NÃO entra aqui de propósito: o AliExpress usa
+  // numeração americana de anel (4, 5, 5.5...), diferente da numeração de
+  // aro usada no Brasil — salvar direto botaria tamanho errado pro
+  // cliente. Mapeia isso na mão (os tamanhos aparecem no terminal acima).
   const { error: erroInsert } = await sb.from('produtos').insert({
     nome: nome || '(sem nome — importação parcial, preencher)',
     descricao: descricao || null,
@@ -459,7 +524,8 @@ async function modoImportar(url){
     // preço do AliExpress é só referência (frete, taxa, margem — nada
     // disso é preço final de venda) — ajusta na calculadora do admin
     // antes de ativar, mesmo já vindo preenchido.
-    preco: precoNumero
+    preco: precoNumero,
+    ...(estoqueNumero !== null ? { estoque: estoqueNumero } : {})
   });
 
   if (erroInsert){
