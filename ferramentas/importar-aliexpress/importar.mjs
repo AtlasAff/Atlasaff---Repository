@@ -58,6 +58,41 @@ async function salvarCredenciais(dados){
 const SUPABASE_URL = 'https://pqhdtteeukfcjstfsnkn.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxaGR0dGVldWtmY2pzdGZzbmtuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzNzc0MTAsImV4cCI6MjEwMTk1MzQxMH0.VwOKgaNEmKaT-xGqF-S0Cr2mY9i4O_4eIFkqpdv0KiY';
 
+// Mesma tabela de conversão de tamanho de anel EUA -> BR já usada no
+// admin do site (admin.html, CONVERSAO_TAMANHO_EUA_BR) — o AliExpress
+// sempre mostra tamanho americano, o site só guarda/mostra o BR
+// convertido. Copiada aqui de propósito (arquivos são independentes); se
+// um dia mudar lá, muda aqui também.
+const CONVERSAO_TAMANHO_EUA_BR = {
+  "3": "4", "3.5": "6", "4": "7", "4.5": "8", "5": "9", "5.5": "11",
+  "6": "12", "6.5": "13", "7": "14", "7.5": "16", "8": "17", "8.5": "18",
+  "9": "20", "9.5": "21", "10": "22", "10.5": "23", "11": "25", "11.5": "26",
+  "12": "27", "12.5": "29", "13": "30"
+};
+
+// Acha, entre as variações encontradas, o grupo que é tamanho de anel —
+// pelo nome ("Tamanho", "Tamanho do anel"...) ou, se nenhum grupo tiver
+// nome reconhecível, pelo valor já bater com a tabela EUA (3 a 13, com
+// meios) — e converte pra numeração BR, igual o admin faz.
+function converterTamanhosParaBR(variacoes){
+  const porNome = variacoes.find(v => /tamanho/i.test(v.nome));
+  const porValor = variacoes.find(v => v.valores.some(x => CONVERSAO_TAMANHO_EUA_BR[x.trim()]));
+  const grupo = porNome || porValor;
+  if (!grupo) return { tamanhosBR: [], avisoTamanho: null };
+
+  const convertidos = [];
+  const naoReconhecidos = [];
+  grupo.valores.forEach(v => {
+    const br = CONVERSAO_TAMANHO_EUA_BR[v.trim()];
+    if (br) convertidos.push(br); else naoReconhecidos.push(v);
+  });
+  const tamanhosBR = [...new Set(convertidos)].sort((a, b) => parseFloat(a) - parseFloat(b));
+  const avisoTamanho = naoReconhecidos.length
+    ? `Não reconheci esses valores de "${grupo.nome}" (fora da tabela EUA 3-13): ${naoReconhecidos.join(', ')} — confere/adiciona na mão.`
+    : null;
+  return { tamanhosBR, avisoTamanho };
+}
+
 // Converte um preço no formato brasileiro ("R$149,14", "R$1.234,56") pro
 // número puro que o banco espera (149.14, 1234.56). Se não conseguir
 // entender o texto, devolve null — melhor deixar vazio do que salvar
@@ -448,9 +483,22 @@ async function modoImportar(url){
   if (estoque) console.log(`Estoque no fornecedor: ${estoque}`);
   console.log(`Fotos encontradas: ${fotos.length}`);
   if (variacoes.length){
-    console.log('Variações encontradas (mapeia pra quilate/banho/tamanho na mão no admin):');
+    console.log('Variações encontradas (mapeia quilate/banho na mão no admin):');
     variacoes.forEach(v => console.log(`  - ${v.nome}: ${v.valores.join(', ')}`));
   }
+
+  // Tamanho de anel é o único tipo de variação que dá pra converter e
+  // salvar sozinho com segurança (o resto — quilate, banho, cor — cada
+  // fornecedor chama diferente e não tem uma tabela fixa que sirva pra
+  // todos, por isso continuam só informativos acima).
+  const { tamanhosBR, avisoTamanho } = converterTamanhosParaBR(variacoes);
+  if (tamanhosBR.length){
+    console.log(`Tamanhos convertidos pra numeração BR (vai direto pro produto): ${tamanhosBR.join(', ')}`);
+  }
+  if (avisoTamanho){
+    console.log(`⚠️  ${avisoTamanho}`);
+  }
+
   if (avisos.length){
     console.log(`\n⚠️  Não consegui achar: ${avisos.join(', ')} — fica vazio, preenche na mão.`);
   }
@@ -546,11 +594,6 @@ async function modoImportar(url){
   // da tabela produtos é restrita mesmo pra admin (o site normalmente lê
   // produto por uma função própria, não direto na tabela) — o insert em
   // si funciona igual, só não confirma o retorno.
-  //
-  // "tamanhos_disponiveis" NÃO entra aqui de propósito: o AliExpress usa
-  // numeração americana de anel (4, 5, 5.5...), diferente da numeração de
-  // aro usada no Brasil — salvar direto botaria tamanho errado pro
-  // cliente. Mapeia isso na mão (os tamanhos aparecem no terminal acima).
   const { error: erroInsert } = await sb.from('produtos').insert({
     nome: nome || '(sem nome — importação parcial, preencher)',
     descricao: descricao || null,
@@ -562,7 +605,8 @@ async function modoImportar(url){
     // disso é preço final de venda) — ajusta na calculadora do admin
     // antes de ativar, mesmo já vindo preenchido.
     preco: precoNumero,
-    ...(estoqueNumero !== null ? { estoque: estoqueNumero } : {})
+    ...(estoqueNumero !== null ? { estoque: estoqueNumero } : {}),
+    ...(tamanhosBR.length ? { tamanhos_disponiveis: tamanhosBR } : {})
   });
 
   if (erroInsert){
