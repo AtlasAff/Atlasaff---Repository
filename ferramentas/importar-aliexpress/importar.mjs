@@ -30,15 +30,15 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ARQUIVO_SESSAO = path.join(__dirname, '.sessao-aliexpress.json');
+export const __dirname = path.dirname(fileURLToPath(import.meta.url));
+export const ARQUIVO_SESSAO = path.join(__dirname, '.sessao-aliexpress.json');
 // Guarda e-mail/senha do admin + chave do Groq localmente pra não
 // perguntar de novo a cada importação. Fica só no seu computador (nunca
 // vai pro GitHub — já está no .gitignore) mas é TEXTO PURO, sem
 // criptografia nenhuma — não compartilha essa pasta com ninguém.
-const ARQUIVO_CREDENCIAIS = path.join(__dirname, '.credenciais.json');
+export const ARQUIVO_CREDENCIAIS = path.join(__dirname, '.credenciais.json');
 
-async function carregarCredenciais(){
+export async function carregarCredenciais(){
   try {
     return JSON.parse(await readFile(ARQUIVO_CREDENCIAIS, 'utf-8'));
   } catch {
@@ -46,7 +46,7 @@ async function carregarCredenciais(){
   }
 }
 
-async function salvarCredenciais(dados){
+export async function salvarCredenciais(dados){
   try {
     await writeFile(ARQUIVO_CREDENCIAIS, JSON.stringify(dados, null, 2));
   } catch { /* não trava a importação por causa disso */ }
@@ -55,8 +55,8 @@ async function salvarCredenciais(dados){
 // Mesma URL/chave pública já usadas em todo o site (shared.js) — a chave
 // "anon" é pública de propósito, quem realmente autentica é o login do
 // admin logo abaixo, não essa chave.
-const SUPABASE_URL = 'https://pqhdtteeukfcjstfsnkn.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxaGR0dGVldWtmY2pzdGZzbmtuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzNzc0MTAsImV4cCI6MjEwMTk1MzQxMH0.VwOKgaNEmKaT-xGqF-S0Cr2mY9i4O_4eIFkqpdv0KiY';
+export const SUPABASE_URL = 'https://pqhdtteeukfcjstfsnkn.supabase.co';
+export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxaGR0dGVldWtmY2pzdGZzbmtuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzNzc0MTAsImV4cCI6MjEwMTk1MzQxMH0.VwOKgaNEmKaT-xGqF-S0Cr2mY9i4O_4eIFkqpdv0KiY';
 
 // Mesma tabela de conversão de tamanho de anel EUA -> BR já usada no
 // admin do site (admin.html, CONVERSAO_TAMANHO_EUA_BR) — o AliExpress
@@ -74,7 +74,7 @@ const CONVERSAO_TAMANHO_EUA_BR = {
 // pelo nome ("Tamanho", "Tamanho do anel"...) ou, se nenhum grupo tiver
 // nome reconhecível, pelo valor já bater com a tabela EUA (3 a 13, com
 // meios) — e converte pra numeração BR, igual o admin faz.
-function converterTamanhosParaBR(variacoes){
+export function converterTamanhosParaBR(variacoes){
   const porNome = variacoes.find(v => /tamanho/i.test(v.nome));
   const porValor = variacoes.find(v => v.valores.some(x => CONVERSAO_TAMANHO_EUA_BR[x.trim()]));
   const grupo = porNome || porValor;
@@ -157,7 +157,7 @@ function classificarGruposVariacao(variacoes){
 // número puro que o banco espera (149.14, 1234.56). Se não conseguir
 // entender o texto, devolve null — melhor deixar vazio do que salvar
 // errado.
-function paraNumero(precoTexto){
+export function paraNumero(precoTexto){
   if (!precoTexto) return null;
   const limpo = precoTexto.replace(/[^\d.,]/g, '');
   const normalizado = limpo.replace(/\./g, '').replace(',', '.');
@@ -169,7 +169,7 @@ function paraNumero(precoTexto){
 // internacional, R$35,20+ em impostos estimados.") e converte só essa
 // parte — paraNumero() sozinho quebraria aqui, porque pegaria também
 // vírgula/ponto de outras partes da frase que não são o valor.
-function extrairValorReais(texto){
+export function extrairValorReais(texto){
   if (!texto) return null;
   const m = texto.match(/R\$\s*([\d.,]+)/);
   return m ? paraNumero(m[1]) : null;
@@ -332,7 +332,7 @@ async function capturarMatrizVariacoes(page, variacoes){
 // usa pra upload manual — reaproveitado tanto pras fotos principais do
 // produto quanto pras fotos de cada banho/cor. Devolve a URL pública, ou
 // null se der qualquer erro (quem chamar decide o que fazer, não trava).
-async function baixarESubirFoto(sb, urlFoto, pasta){
+export async function baixarESubirFoto(sb, urlFoto, pasta){
   try {
     const resp = await fetch(urlFoto);
     if (!resp.ok) throw new Error(`status ${resp.status}`);
@@ -365,7 +365,7 @@ async function perguntar(pergunta, opts = {}){
 // e apaga/disfarça as marcas mais óbvias de automação antes de qualquer
 // página carregar. Não é 100% garantido (nada é), mas resolve a maioria
 // dos casos.
-async function abrirNavegador({ headless, storageState }){
+export async function abrirNavegador({ headless, storageState }){
   const browser = await chromium.launch({
     headless,
     channel: 'chrome', // precisa ter o Google Chrome instalado no Windows/Mac
@@ -413,7 +413,7 @@ async function modoLogin(){
    tentativas daquele campo falharem (uma tentativa que dá certo depois de
    outra falhar não deixa rastro de erro).
    ============================================================ */
-async function extrairDadosProduto(page){
+export async function extrairDadosProduto(page){
   const avisos = [];
 
   // A página do AliExpress é montada por JavaScript DEPOIS que ela abre
@@ -654,7 +654,7 @@ async function extrairDadosProduto(page){
    ============================================================ */
 const MODELO_GROQ = 'openai/gpt-oss-120b';
 
-async function formatarComIA({ nomeOriginal, descricaoOriginal }, chaveApi){
+export async function formatarComIA({ nomeOriginal, descricaoOriginal }, chaveApi){
   const prompt = `Você ajuda a Pavan & Co., uma loja de joias, a transformar anúncios de fornecedor (texto cheio de palavra-chave repetida, tipo AliExpress) em nome e descrição limpos pro site.
 
 PADRÃO DO NOME (sempre seguir):
@@ -991,15 +991,22 @@ async function modoImportar(url){
 }
 
 /* ============================================================
-   ENTRADA
+   ENTRADA — só roda quando esse arquivo é executado direto (npm run
+   login / npm run importar), não quando é importado por outro arquivo
+   (o servidor da interface visual importa as funções daqui sem querer
+   disparar esse modo terminal).
    ============================================================ */
-const args = process.argv.slice(2);
-if (args.includes('--login')){
-  await modoLogin();
-} else if (args[0]){
-  await modoImportar(args[0]);
-} else {
-  console.log('Uso:');
-  console.log('  npm run login                    -> loga na sua conta AliExpress (faz de vez em quando)');
-  console.log('  npm run importar -- <link>       -> importa um produto');
+const ehExecutadoDireto = process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url));
+if (ehExecutadoDireto){
+  const args = process.argv.slice(2);
+  if (args.includes('--login')){
+    await modoLogin();
+  } else if (args[0]){
+    await modoImportar(args[0]);
+  } else {
+    console.log('Uso:');
+    console.log('  npm run login                    -> loga na sua conta AliExpress (faz de vez em quando)');
+    console.log('  npm run importar -- <link>       -> importa um produto');
+    console.log('  npm run interface                -> abre a interface visual no navegador');
+  }
 }

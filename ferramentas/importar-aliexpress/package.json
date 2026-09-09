@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "login": "node importar.mjs --login",
-    "importar": "node importar.mjs"
+    "importar": "node importar.mjs",
+    "interface": "node servidor.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
