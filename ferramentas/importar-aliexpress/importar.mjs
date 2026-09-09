@@ -861,6 +861,11 @@ async function modoImportar(url){
     console.log(`(login salvo em ${path.basename(ARQUIVO_CREDENCIAIS)} pra não perguntar de novo)`);
   }
 
+  // Junta tudo que merece revisão manual num campo de observação — assim
+  // fica registrado no próprio produto (aba Fornecedor do admin), não só
+  // no terminal (que some assim que a janela fecha).
+  const observacoesAuto = [];
+
   // Baixa as fotos e sobe pro mesmo bucket que o admin usa pra upload
   // manual — mesma convenção de nome (pasta "importados/", nome
   // aleatório) pra não colidir com nada.
@@ -871,23 +876,31 @@ async function modoImportar(url){
     if (url){ urlsFinal.push(url); console.log(`  foto ${i + 1}/${fotos.length} ok`); }
     else console.log(`  foto ${i + 1}/${fotos.length} falhou — pulei essa, sobe na mão se precisar`);
   }
+  if (urlsFinal.length < fotos.length){
+    observacoesAuto.push(`${fotos.length - urlsFinal.length} foto(s) do produto falharam no upload — sobe na mão se precisar.`);
+  }
 
   // Fotos de cada banho/cor (se a matriz de variações achou alguma com
   // foto identificada) — banho sem foto fica de fora do que é salvo
   // automaticamente (o admin exige foto por banho), avisado no terminal
-  // pra você subir na mão.
+  // e nas observações pra você subir na mão.
   const banhosComFoto = [];
+  const banhosSemFoto = [];
   if (matrizVariacoes?.banhosCustos.length){
     console.log('\nBaixando e enviando fotos de cada banho/cor...');
     for (const b of matrizVariacoes.banhosCustos){
       if (!b.foto){
         console.log(`  "${b.nome}": sem foto encontrada — sobe na mão no admin se quiser cadastrar essa opção`);
+        banhosSemFoto.push(b.nome);
         continue;
       }
       const url = await baixarESubirFoto(sb, b.foto, 'importados');
       if (url){ banhosComFoto.push({ ...b, fotoUrl: url }); console.log(`  "${b.nome}": ok`); }
-      else console.log(`  "${b.nome}": falhou o upload — sobe na mão no admin se quiser cadastrar essa opção`);
+      else { console.log(`  "${b.nome}": falhou o upload — sobe na mão no admin se quiser cadastrar essa opção`); banhosSemFoto.push(b.nome); }
     }
+  }
+  if (banhosSemFoto.length){
+    observacoesAuto.push(`Banho(s) sem foto (não foram salvos, cadastra na mão se quiser): ${banhosSemFoto.join(', ')}.`);
   }
 
   // "categoria" é obrigatória no banco e não dá pra adivinhar direito só
@@ -923,6 +936,19 @@ async function modoImportar(url){
   const banhosDisponiveis = banhosComFoto.map(b => ({ nome: b.nome, preco: precoComMargem(custoPecaNumero + b.custo), foto_url: b.fotoUrl }));
   const banhosCustosFinal = banhosComFoto.map(b => ({ nome: b.nome, custo: b.custo }));
 
+  // Junta o resto do que já foi avisado ao longo da importação — tudo
+  // isso fica só no campo de observação (aba Fornecedor no admin,
+  // 📝 aparece na listagem de produtos quando tem algo aqui), não no
+  // produto público.
+  if (avisos.length) observacoesAuto.push(`Não encontrado na página: ${avisos.join(', ')}.`);
+  if (avisoTamanho) observacoesAuto.push(avisoTamanho);
+  if (matrizVariacoes?.avisos.length) observacoesAuto.push(`Matriz de quilate/banho: ${matrizVariacoes.avisos.join('; ')}.`);
+  if (!matrizVariacoes && precosPorVariacao.length){
+    observacoesAuto.push(`Preço muda por variação mas não deu pra separar quilate/banho sozinho: ${precosPorVariacao.map(v => v.nome).join(', ')} — confere e cadastra na mão se for o caso.`);
+  }
+  observacoesAuto.push(`Importado do AliExpress em ${new Date().toLocaleString('pt-BR')}.`);
+  const observacoesInternas = observacoesAuto.join('\n');
+
   // Cria o produto como RASCUNHO (ativo:false — não aparece pro cliente
   // até você revisar e ativar no admin). Se você pulou a margem acima, o
   // preço de venda entra ZERADO de propósito — mais seguro que arriscar
@@ -937,6 +963,7 @@ async function modoImportar(url){
     descricao: descricao || null,
     fotos: urlsFinal,
     link_fornecedor: url,
+    observacoes_internas: observacoesInternas,
     categoria: categoriaProvisoria,
     ativo: false,
     preco: precoFinalNumero ?? 0,
