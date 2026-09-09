@@ -473,7 +473,14 @@
     padding: 28px;
   }
   @media (max-width: 640px){
-    .modal-overlay{ padding: 0; align-items:stretch; }
+    /* NUNCA align-items:stretch aqui — isso trava a altura do .modal-card
+       no tamanho da tela (stretch = altura da linha do flex, não do
+       conteúdo) e qualquer formulário mais comprido (como o de produto)
+       passa a ser desenhado PRA FORA da caixa branca, sem fundo nenhum,
+       revelando a página de trás — foi exatamente o bug reportado. Fica
+       em flex-start (herdado da regra de cima) pra o card crescer com o
+       conteúdo de verdade, e o overflow-y:auto do overlay rola tudo. */
+    .modal-overlay{ padding: 0; }
     .modal-card{ padding: 20px 18px; min-height:100vh; border-radius:0; }
     .modal-confirma{ padding: 20px; align-items:center; }
     .modal-confirma .modal-card{ min-height:auto; border-radius: var(--radius); }
