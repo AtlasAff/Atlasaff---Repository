@@ -276,7 +276,14 @@ async function capturarMatrizVariacoes(page, variacoes){
     const quilatesCustos = porBanho[banhoRef].map(r => ({ valor: r.quilate, custo: r.preco, custoComImposto: r.custoComImposto }));
     const banhosCustos = [];
     for (const nomeBanho of nomesBanho){
-      if (nomeBanho === banhoRef) continue;
+      // O banho de REFERÊNCIA também precisa virar uma opção selecionável
+      // (custo 0, é a base) — sem isso ele nunca entra em banhos_custos e
+      // fica impossível escolher essa cor no site (bug real: um banho de
+      // verdade do fornecedor some do catálogo).
+      if (nomeBanho === banhoRef){
+        banhosCustos.push({ nome: traduzirNomeBanho(nomeBanho), custo: 0, foto: porBanho[nomeBanho][0]?.foto });
+        continue;
+      }
       const itensBanho = porBanho[nomeBanho];
       const deltas = itensBanho
         .map(r => {
@@ -344,7 +351,13 @@ async function capturarMatrizVariacoes(page, variacoes){
   const quilatesCustos = porBanho[banhoRef].itens.map(i => ({ valor: inicioQuilate(i.quilate) || i.quilate, custo: i.preco, custoComImposto: i.custoComImposto }));
   const banhosCustos = [];
   for (const nomeBanho of nomesBanho){
-    if (nomeBanho === banhoRef) continue;
+    // O banho de REFERÊNCIA também precisa virar opção selecionável
+    // (custo 0, é a base) — mesma correção do modo "combinado" acima,
+    // sem isso essa cor real do fornecedor some do catálogo.
+    if (nomeBanho === banhoRef){
+      banhosCustos.push({ nome: traduzirNomeBanho(nomeBanho), custo: 0, foto: porBanho[nomeBanho].foto });
+      continue;
+    }
     const deltas = porBanho[nomeBanho].itens
       .map(i => {
         const ref = porBanho[banhoRef].itens.find(r => r.quilate === i.quilate);
@@ -381,10 +394,14 @@ async function capturarMatrizVariacoes(page, variacoes){
 // proporção do mais barato SUBESTIMA o imposto dos quilates maiores —
 // bug real encontrado num teste). O delta do banho continua aproximado
 // pela proporção (costuma ser pequeno ou zero, erro pouco relevante ali).
-export function montarMatrizes({ quilatesCustos, banhosCustos, custoPecaBase, taxaImposto, margemNumero }){
+export function montarMatrizes({ quilatesCustos, banhosCustos, custoPecaBase, taxaImposto, margemNumero, freteNumero }){
   if (!quilatesCustos.length && !banhosCustos.length) return { matrizPrecos: [], matrizCustos: [] };
   const quilates = quilatesCustos.length ? quilatesCustos : [{ valor: null, custo: custoPecaBase }];
   const banhos = banhosCustos.length ? banhosCustos : [{ nome: null, custo: 0 }];
+  // Frete não tem imposto/proporção por quilate/banho — é um valor fixo
+  // por unidade, soma direto no custo total de cada combinação (mesma
+  // ideia do fCustoFrete na interface: some antes de aplicar a margem).
+  const frete = Number(freteNumero) || 0;
 
   const matrizPrecos = [];
   const matrizCustos = [];
@@ -397,7 +414,7 @@ export function montarMatrizes({ quilatesCustos, banhosCustos, custoPecaBase, ta
       : (Number(q.custo) || 0) * (1 + (taxaImposto || 0));
     for (const b of banhos){
       const custoBanhoComImposto = (Number(b.custo) || 0) * (1 + (taxaImposto || 0));
-      const custoTotal = Math.round((custoQuilateComImposto + custoBanhoComImposto) * 100) / 100;
+      const custoTotal = Math.round((custoQuilateComImposto + custoBanhoComImposto + frete) * 100) / 100;
       const preco = margemNumero ? Math.round(custoTotal * (1 + margemNumero / 100) * 100) / 100 : 0;
       matrizCustos.push({ quilate: q.valor ?? null, banho: b.nome ?? null, custo: custoTotal });
       matrizPrecos.push({ quilate: q.valor ?? null, banho: b.nome ?? null, preco });
