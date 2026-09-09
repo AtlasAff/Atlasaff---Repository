@@ -100,7 +100,7 @@ Abre o admin do site normalmente, acha o produto na lista (ele entra
 link do fornecedor). Revisa:
 
 - Categoria
-- Quilate / banho / tamanho (as variações que apareceram no terminal te dão uma pista de quais existem)
+- Quilate / banho (as variações que apareceram no terminal te dão uma pista de quais existem — tamanho de anel já vem convertido pra numeração BR e preenchido sozinho, não precisa mexer)
 - Preço final (usa a calculadora de margem que já existe no admin)
 - Fotos (confere se vieram certas)
 
