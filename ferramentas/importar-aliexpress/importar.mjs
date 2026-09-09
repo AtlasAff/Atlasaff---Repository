@@ -93,6 +93,57 @@ function converterTamanhosParaBR(variacoes){
   return { tamanhosBR, avisoTamanho };
 }
 
+// Mesmas cores pré-definidas do admin (admin.html, BANHO_PRESETS) — tenta
+// bater o nome que o AliExpress deu (geralmente em inglês, tipo "Silver",
+// "Rose Gold") com uma dessas; se não reconhecer, mantém o nome original
+// (o admin trata como "Outra cor" nesse caso, funciona igual, só não some
+// automaticamente marcado num preset).
+function traduzirNomeBanho(nomeOriginal){
+  const n = nomeOriginal.toLowerCase();
+  if (/rose|rosé|rosa/.test(n)) return 'Ouro Rosé';
+  if (/white|branco/.test(n)) return 'Ouro Branco';
+  if (/(black|negro|preto).*(rhod|ródio|rodio)|(rhod|ródio|rodio).*(black|negro|preto)/.test(n)) return 'Ródio negro';
+  if (/rhod|ródio|rodio/.test(n)) return 'Ródio';
+  if (/gold|dourad|ouro/.test(n)) return 'Ouro 18k';
+  if (/silver|prata/.test(n)) return 'Prata 925';
+  return nomeOriginal;
+}
+
+// Separa as variações encontradas em "quilate" (tamanho da pedra) e
+// "banho" (cor/acabamento) — os dois eixos que o admin já sabe cadastrar
+// com preço próprio por combinação:
+//  - "separado": o AliExpress já dá cada eixo num grupo próprio (o de
+//    quilate tem todo mundo no formato "1ct", "2ct"...).
+//  - "combinado": um fornecedor descuidado junta os dois numa "cor" só
+//    (ex: "Silver-1CT") — separa cada valor em (cor, quilate) por regex.
+//  - "nenhum": não deu pra separar com segurança (não mexe em nada,
+//    melhor não arriscar dado errado do que inventar uma estrutura).
+function classificarGruposVariacao(variacoes){
+  const semTamanho = variacoes.filter(v => !/tamanho/i.test(v.nome) && v.valores.length);
+  const ehQuilatePuro = (v) => v.valores.every(x => /^\d+(?:[.,]\d+)?\s*ct$/i.test(x.trim()));
+
+  const grupoQuilate = semTamanho.find(ehQuilatePuro);
+  if (grupoQuilate){
+    const grupoBanho = semTamanho.find(v => v !== grupoQuilate) || null;
+    return { modo: 'separado', grupoQuilate, grupoBanho };
+  }
+
+  const regexCombo = /^(.*?)[\s\-]*([\d.,]+)\s*ct\.?$/i;
+  for (const grupo of semTamanho){
+    const partes = grupo.valores.map(v => v.match(regexCombo));
+    if (partes.length && partes.every(Boolean)){
+      const combos = grupo.valores.map((v, i) => ({
+        valorOriginal: v,
+        banho: partes[i][1].trim() || 'Padrão',
+        quilate: `${partes[i][2].replace(',', '.')}ct`
+      }));
+      return { modo: 'combinado', grupoOriginal: grupo, combos };
+    }
+  }
+
+  return { modo: 'nenhum' };
+}
+
 // Converte um preço no formato brasileiro ("R$149,14", "R$1.234,56") pro
 // número puro que o banco espera (149.14, 1234.56). Se não conseguir
 // entender o texto, devolve null — melhor deixar vazio do que salvar
@@ -113,6 +164,181 @@ function extrairValorReais(texto){
   if (!texto) return null;
   const m = texto.match(/R\$\s*([\d.,]+)/);
   return m ? paraNumero(m[1]) : null;
+}
+
+// Clica numa opção de variação pelo valor (o mesmo valor que já vem no
+// title="" ou no alt="" da imagem, ver extração de variações acima) —
+// devolve true/false em vez de deixar o erro subir, pra quem chama poder
+// só pular essa opção específica sem travar o resto.
+async function clicarOpcaoVariacao(page, valor){
+  try {
+    const valorEscapado = valor.replace(/"/g, '\\"');
+    await page.locator(`[data-sku-col][title="${valorEscapado}"], [data-sku-col]:has(img[alt="${valorEscapado}"])`)
+      .first().click({ timeout: 3000 });
+    await page.waitForTimeout(700); // dá tempo do preço/foto na tela atualizar depois do clique
+    return true;
+  } catch { return false; }
+}
+
+async function lerPrecoAtual(page){
+  try {
+    const t = await page.locator('[class*="price-default--current"]').first().textContent({ timeout: 3000 });
+    return extrairValorReais(t);
+  } catch { return null; }
+}
+
+// Tenta achar a foto principal mostrada NA TELA agora (depois de um
+// clique de variação) — diferente das fotos do produto (essas vêm prontas
+// escondidas no JS da página e não mudam quando clica numa cor). Isso
+// aqui é mais especulativo (não tem como eu testar contra o AliExpress
+// de verdade daqui), por isso sempre com fallback: se não achar, quem
+// chamar usa uma foto padrão em vez de travar.
+async function fotoAtualDaVariante(page){
+  try {
+    const src = await page.locator('img[class*="magnifier"]').first().getAttribute('src', { timeout: 2000 });
+    if (src) return src.startsWith('http') ? src : `https:${src}`;
+  } catch { /* segue pro próximo jeito de tentar */ }
+  return null;
+}
+
+// Monta a matriz de custo por quilate/banho clicando em cada opção de
+// verdade na página (não tem como saber o preço de cada combinação sem
+// isso — o AliExpress só mostra o preço da combinação selecionada no
+// momento). Devolve null quando não dá pra separar quilate de banho com
+// segurança (quem chama cai pro modo antigo: mostra tudo cru pro admin
+// decidir na mão nesse caso).
+async function capturarMatrizVariacoes(page, variacoes){
+  const classificacao = classificarGruposVariacao(variacoes);
+  const avisos = [];
+
+  if (classificacao.modo === 'nenhum') return null;
+
+  if (classificacao.modo === 'combinado'){
+    // Um grupo só, tipo "Silver-1CT" — cada opção já é uma combinação
+    // completa, um clique único seleciona ela.
+    const resultados = [];
+    for (const combo of classificacao.combos){
+      const clicou = await clicarOpcaoVariacao(page, combo.valorOriginal);
+      if (!clicou){ avisos.push(`Não consegui clicar em "${combo.valorOriginal}"`); continue; }
+      const preco = await lerPrecoAtual(page);
+      if (preco === null){ avisos.push(`Não consegui ler o preço de "${combo.valorOriginal}"`); continue; }
+      const foto = await fotoAtualDaVariante(page);
+      resultados.push({ ...combo, preco, foto });
+    }
+    if (!resultados.length) return { quilatesCustos: [], banhosCustos: [], avisos };
+
+    const porBanho = {};
+    resultados.forEach(r => { (porBanho[r.banho] ??= []).push(r); });
+    const nomesBanho = Object.keys(porBanho);
+    const banhoRef = nomesBanho[0];
+
+    const quilatesCustos = porBanho[banhoRef].map(r => ({ valor: r.quilate, custo: r.preco }));
+    const banhosCustos = [];
+    for (const nomeBanho of nomesBanho){
+      if (nomeBanho === banhoRef) continue;
+      const itensBanho = porBanho[nomeBanho];
+      const deltas = itensBanho
+        .map(r => {
+          const ref = porBanho[banhoRef].find(x => x.quilate === r.quilate);
+          return ref ? r.preco - ref.preco : null;
+        })
+        .filter(d => d !== null);
+      const deltaMedio = deltas.length
+        ? deltas.reduce((a, b) => a + b, 0) / deltas.length
+        : itensBanho[0].preco - quilatesCustos[0].custo; // sem quilate em comum pra comparar — aproxima pelo primeiro
+      banhosCustos.push({
+        nome: traduzirNomeBanho(nomeBanho),
+        custo: Math.round(deltaMedio * 100) / 100,
+        foto: itensBanho[0].foto
+      });
+    }
+    return { quilatesCustos, banhosCustos, avisos };
+  }
+
+  // modo "separado": um grupo de quilate limpo + (opcional) um grupo de
+  // banho limpo, cada um clicado de propósito.
+  const { grupoQuilate, grupoBanho } = classificacao;
+
+  async function precoNoQuilate(valorQuilate){
+    const clicou = await clicarOpcaoVariacao(page, valorQuilate);
+    if (!clicou) return null;
+    return lerPrecoAtual(page);
+  }
+
+  if (!grupoBanho){
+    // só quilate, sem cor/banho pra variar
+    const quilatesCustos = [];
+    for (const valor of grupoQuilate.valores){
+      const preco = await precoNoQuilate(valor);
+      if (preco === null){ avisos.push(`Não consegui ler o preço do quilate "${valor}"`); continue; }
+      quilatesCustos.push({ valor, custo: preco });
+    }
+    return { quilatesCustos, banhosCustos: [], avisos };
+  }
+
+  // Os dois grupos existem: fixa cada banho e varre os quilates dentro
+  // dele — o primeiro banho vira a referência (vai pra quilates_custos),
+  // os outros viram delta (banhos_custos), comparando no mesmo quilate.
+  const porBanho = {};
+  for (const nomeBanho of grupoBanho.valores){
+    const clicouBanho = await clicarOpcaoVariacao(page, nomeBanho);
+    if (!clicouBanho){ avisos.push(`Não consegui clicar na cor/banho "${nomeBanho}"`); continue; }
+    const foto = await fotoAtualDaVariante(page);
+    const itens = [];
+    for (const valorQuilate of grupoQuilate.valores){
+      const preco = await precoNoQuilate(valorQuilate);
+      if (preco === null){ avisos.push(`Não consegui ler o preço de "${nomeBanho}" + "${valorQuilate}"`); continue; }
+      itens.push({ quilate: valorQuilate, preco });
+    }
+    if (itens.length) porBanho[nomeBanho] = { itens, foto };
+  }
+
+  const nomesBanho = Object.keys(porBanho);
+  if (!nomesBanho.length) return { quilatesCustos: [], banhosCustos: [], avisos };
+
+  const banhoRef = nomesBanho[0];
+  const quilatesCustos = porBanho[banhoRef].itens.map(i => ({ valor: i.quilate, custo: i.preco }));
+  const banhosCustos = [];
+  for (const nomeBanho of nomesBanho){
+    if (nomeBanho === banhoRef) continue;
+    const deltas = porBanho[nomeBanho].itens
+      .map(i => {
+        const ref = porBanho[banhoRef].itens.find(r => r.quilate === i.quilate);
+        return ref ? i.preco - ref.preco : null;
+      })
+      .filter(d => d !== null);
+    const deltaMedio = deltas.length
+      ? deltas.reduce((a, b) => a + b, 0) / deltas.length
+      : porBanho[nomeBanho].itens[0].preco - quilatesCustos[0].custo;
+    banhosCustos.push({
+      nome: traduzirNomeBanho(nomeBanho),
+      custo: Math.round(deltaMedio * 100) / 100,
+      foto: porBanho[nomeBanho].foto
+    });
+  }
+  return { quilatesCustos, banhosCustos, avisos };
+}
+
+// Baixa uma foto de uma URL externa e sobe pro mesmo bucket que o admin
+// usa pra upload manual — reaproveitado tanto pras fotos principais do
+// produto quanto pras fotos de cada banho/cor. Devolve a URL pública, ou
+// null se der qualquer erro (quem chamar decide o que fazer, não trava).
+async function baixarESubirFoto(sb, urlFoto, pasta){
+  try {
+    const resp = await fetch(urlFoto);
+    if (!resp.ok) throw new Error(`status ${resp.status}`);
+    const bytes = new Uint8Array(await resp.arrayBuffer());
+    const extensao = urlFoto.split('.').pop().split(/[?#]/)[0].slice(0, 5) || 'jpg';
+    const nomeArquivo = `${pasta}/aliexpress-${crypto.randomUUID()}.${extensao}`;
+    const { error: erroUpload } = await sb.storage.from('produtos').upload(nomeArquivo, bytes, {
+      contentType: resp.headers.get('content-type') || 'image/jpeg'
+    });
+    if (erroUpload) throw erroUpload;
+    const { data: urlData } = sb.storage.from('produtos').getPublicUrl(nomeArquivo);
+    return urlData.publicUrl;
+  } catch {
+    return null;
+  }
 }
 
 async function perguntar(pergunta, opts = {}){
@@ -356,27 +582,27 @@ async function extrairDadosProduto(page){
 
   // Em alguns produtos, cada opção de uma variação (fora tamanho) tem um
   // PREÇO DIFERENTE (ex: "Silver-1CT" custa mais que "Silver-0.5CT" — o
-  // fornecedor só não separou "quilate" de "cor" direito). Clica em cada
-  // opção de cada grupo (menos tamanho — são muitas opções e raramente
-  // mudam preço) e registra o preço mostrado depois do clique. Só é
-  // reportado se os preços realmente vierem diferentes; se der erro em
-  // alguma opção específica, pula ela e segue nas outras.
+  // fornecedor só não separou "quilate" de "cor" direito). Tenta separar
+  // quilate de banho/cor e clicar em cada combinação de verdade pra saber
+  // o custo de cada uma — vira matrizVariacoes (pronto pra salvar direto
+  // como quilate/banho no produto). Quando não dá pra separar com
+  // segurança, cai num modo mais simples: só clica em cada opção de cada
+  // grupo (sem cruzar) e reporta os preços crus, pra revisão manual.
+  const matrizVariacoes = await capturarMatrizVariacoes(page, variacoes);
   const precosPorVariacao = [];
-  for (const grupo of variacoes){
-    if (/tamanho/i.test(grupo.nome) || grupo.valores.length < 2) continue;
-    const precos = {};
-    for (const valor of grupo.valores){
-      try {
-        const valorEscapado = valor.replace(/"/g, '\\"');
-        await page.locator(`[data-sku-col][title="${valorEscapado}"], [data-sku-col]:has(img[alt="${valorEscapado}"])`)
-          .first().click({ timeout: 3000 });
-        await page.waitForTimeout(700); // dá tempo do preço na tela atualizar depois do clique
-        const t = await page.locator('[class*="price-default--current"]').first().textContent({ timeout: 3000 });
-        precos[valor] = limpar(t);
-      } catch { /* essa opção específica não deu — pula, não trava as outras */ }
-    }
-    if (new Set(Object.values(precos)).size > 1){
-      precosPorVariacao.push({ nome: grupo.nome, precos });
+  if (!matrizVariacoes){
+    for (const grupo of variacoes){
+      if (/tamanho/i.test(grupo.nome) || grupo.valores.length < 2) continue;
+      const precos = {};
+      for (const valor of grupo.valores){
+        const clicou = await clicarOpcaoVariacao(page, valor);
+        if (!clicou) continue;
+        const t = await page.locator('[class*="price-default--current"]').first().textContent({ timeout: 3000 }).catch(() => null);
+        if (t) precos[valor] = limpar(t);
+      }
+      if (new Set(Object.values(precos)).size > 1){
+        precosPorVariacao.push({ nome: grupo.nome, precos });
+      }
     }
   }
 
@@ -396,7 +622,7 @@ async function extrairDadosProduto(page){
     } catch { /* isso é só um extra, não pode travar a importação por causa disso */ }
   }
 
-  return { nome, descricao, fotos, preco, variacoes, avisos, impostoEstimado, estoque, precosPorVariacao };
+  return { nome, descricao, fotos, preco, variacoes, avisos, impostoEstimado, estoque, precosPorVariacao, matrizVariacoes };
 }
 
 /* ============================================================
@@ -481,7 +707,7 @@ async function modoImportar(url){
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await page.waitForTimeout(2500); // dá tempo do JS da página terminar de montar tudo
 
-  let { nome, descricao, fotos, preco, variacoes, avisos, impostoEstimado, estoque, precosPorVariacao } = await extrairDadosProduto(page);
+  let { nome, descricao, fotos, preco, variacoes, avisos, impostoEstimado, estoque, precosPorVariacao, matrizVariacoes } = await extrairDadosProduto(page);
   await browser.close();
 
   console.log(`\nNome (como veio do fornecedor): ${nome || '(não encontrado)'}`);
@@ -520,10 +746,22 @@ async function modoImportar(url){
   if (estoque) console.log(`Estoque no fornecedor: ${estoque}`);
   console.log(`Fotos encontradas: ${fotos.length}`);
   if (variacoes.length){
-    console.log('Variações encontradas (mapeia quilate/banho na mão no admin):');
+    console.log(matrizVariacoes ? 'Variações encontradas:' : 'Variações encontradas (mapeia quilate/banho na mão no admin):');
     variacoes.forEach(v => console.log(`  - ${v.nome}: ${v.valores.join(', ')}`));
   }
-  if (precosPorVariacao.length){
+  if (matrizVariacoes){
+    if (matrizVariacoes.quilatesCustos.length){
+      console.log('\nQuilate detectado — custo por quilate (vai direto pro produto):');
+      matrizVariacoes.quilatesCustos.forEach(q => console.log(`  - ${q.valor}: R$${q.custo.toFixed(2).replace('.', ',')}`));
+    }
+    if (matrizVariacoes.banhosCustos.length){
+      console.log('Banho/cor detectado — diferença de custo por opção (vai direto pro produto):');
+      matrizVariacoes.banhosCustos.forEach(b => console.log(`  - ${b.nome}: ${b.custo >= 0 ? '+' : ''}R$${b.custo.toFixed(2).replace('.', ',')}${b.foto ? '' : ' (sem foto — precisa subir na mão no admin)'}`));
+    }
+    if (matrizVariacoes.avisos.length){
+      console.log(`⚠️  Durante a matriz de quilate/banho: ${matrizVariacoes.avisos.join('; ')}`);
+    }
+  } else if (precosPorVariacao.length){
     console.log('\n⚠️  O preço muda dependendo da opção escolhida nessas variações (pode ser quilate disfarçado de cor — confere e cadastra como quilate no admin se for o caso):');
     precosPorVariacao.forEach(v => {
       console.log(`  "${v.nome}":`);
@@ -614,21 +852,26 @@ async function modoImportar(url){
   console.log('\nBaixando e enviando fotos pro Supabase Storage...');
   const urlsFinal = [];
   for (const [i, urlFoto] of fotos.entries()){
-    try {
-      const resp = await fetch(urlFoto);
-      if (!resp.ok) throw new Error(`status ${resp.status}`);
-      const bytes = new Uint8Array(await resp.arrayBuffer());
-      const extensao = urlFoto.split('.').pop().split(/[?#]/)[0].slice(0, 5) || 'jpg';
-      const nomeArquivo = `importados/aliexpress-${crypto.randomUUID()}.${extensao}`;
-      const { error: erroUpload } = await sb.storage.from('produtos').upload(nomeArquivo, bytes, {
-        contentType: resp.headers.get('content-type') || 'image/jpeg'
-      });
-      if (erroUpload) throw erroUpload;
-      const { data: urlData } = sb.storage.from('produtos').getPublicUrl(nomeArquivo);
-      urlsFinal.push(urlData.publicUrl);
-      console.log(`  foto ${i + 1}/${fotos.length} ok`);
-    } catch (err) {
-      console.log(`  foto ${i + 1}/${fotos.length} falhou (${err.message}) — pulei essa, sobe na mão se precisar`);
+    const url = await baixarESubirFoto(sb, urlFoto, 'importados');
+    if (url){ urlsFinal.push(url); console.log(`  foto ${i + 1}/${fotos.length} ok`); }
+    else console.log(`  foto ${i + 1}/${fotos.length} falhou — pulei essa, sobe na mão se precisar`);
+  }
+
+  // Fotos de cada banho/cor (se a matriz de variações achou alguma com
+  // foto identificada) — banho sem foto fica de fora do que é salvo
+  // automaticamente (o admin exige foto por banho), avisado no terminal
+  // pra você subir na mão.
+  const banhosComFoto = [];
+  if (matrizVariacoes?.banhosCustos.length){
+    console.log('\nBaixando e enviando fotos de cada banho/cor...');
+    for (const b of matrizVariacoes.banhosCustos){
+      if (!b.foto){
+        console.log(`  "${b.nome}": sem foto encontrada — sobe na mão no admin se quiser cadastrar essa opção`);
+        continue;
+      }
+      const url = await baixarESubirFoto(sb, b.foto, 'importados');
+      if (url){ banhosComFoto.push({ ...b, fotoUrl: url }); console.log(`  "${b.nome}": ok`); }
+      else console.log(`  "${b.nome}": falhou o upload — sobe na mão no admin se quiser cadastrar essa opção`);
     }
   }
 
@@ -648,6 +891,22 @@ async function modoImportar(url){
   // Estoque vem como texto ("Apenas 7 restante(s)") — extrai só o número.
   const estoqueMatch = estoque?.match(/\d+/);
   const estoqueNumero = estoqueMatch ? parseInt(estoqueMatch[0], 10) : null;
+
+  // Se achou quilate/banho E você deu uma margem, calcula o preço de
+  // venda de cada opção também — mesma ideia da calculadora do admin
+  // (custo + imposto + margem). O imposto de cada opção é aproximado
+  // pela MESMA proporção imposto/custo do produto base (não dá pra
+  // reler o imposto de cada combinação sem clicar de novo só pra isso,
+  // já foram cliques demais) — é uma estimativa, revisa no admin.
+  const taxaImpostoAprox = (custoPecaNumero > 0 && custoImpostoNumero) ? custoImpostoNumero / custoPecaNumero : 0;
+  const precoComMargem = (custo) => margemNumero
+    ? Math.round(custo * (1 + taxaImpostoAprox) * (1 + margemNumero / 100) * 100) / 100
+    : 0;
+
+  const quilatesDisponiveis = (matrizVariacoes?.quilatesCustos || []).map(q => ({ valor: q.valor, preco: precoComMargem(q.custo) }));
+  const quilatesCustosFinal = (matrizVariacoes?.quilatesCustos || []).map(q => ({ valor: q.valor, custo: q.custo }));
+  const banhosDisponiveis = banhosComFoto.map(b => ({ nome: b.nome, preco: precoComMargem(custoPecaNumero + b.custo), foto_url: b.fotoUrl }));
+  const banhosCustosFinal = banhosComFoto.map(b => ({ nome: b.nome, custo: b.custo }));
 
   // Cria o produto como RASCUNHO (ativo:false — não aparece pro cliente
   // até você revisar e ativar no admin). Se você pulou a margem acima, o
@@ -670,7 +929,9 @@ async function modoImportar(url){
     ...(custoImpostoNumero !== null ? { custo_imposto: custoImpostoNumero } : {}),
     ...(margemNumero ? { margem_lucro: margemNumero } : {}),
     ...(estoqueNumero !== null ? { estoque: estoqueNumero } : {}),
-    ...(tamanhosBR.length ? { tamanhos_disponiveis: tamanhosBR } : {})
+    ...(tamanhosBR.length ? { tamanhos_disponiveis: tamanhosBR } : {}),
+    ...(quilatesDisponiveis.length ? { quilates_disponiveis: quilatesDisponiveis, quilates_custos: quilatesCustosFinal } : {}),
+    ...(banhosDisponiveis.length ? { banhos_disponiveis: banhosDisponiveis, banhos_custos: banhosCustosFinal } : {})
   });
 
   if (erroInsert){
@@ -680,6 +941,8 @@ async function modoImportar(url){
 
   console.log(`\n✅ Rascunho criado: "${nome || '(sem nome)'}"`);
   console.log(`Categoria provisória: "${categoriaProvisoria}" — troca pela certa na revisão.`);
+  if (quilatesDisponiveis.length) console.log(`Quilates salvos: ${quilatesDisponiveis.length} opção(ões).`);
+  if (banhosDisponiveis.length) console.log(`Banhos/cores salvos (com foto): ${banhosDisponiveis.length} opção(ões).`);
   console.log(precoFinalNumero
     ? `Preço de venda: R$${precoFinalNumero.toFixed(2).replace('.', ',')} (${margemNumero}% de lucro) — confere no admin antes de ativar.`
     : '⚠️  Preço de venda ainda está ZERADO de propósito — abre o admin, acha esse produto na lista (aparece como inativo, com o ícone 🔗) e roda a calculadora de margem (custo + imposto já vieram preenchidos) antes de ativar.');

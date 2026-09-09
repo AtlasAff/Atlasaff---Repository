@@ -92,6 +92,10 @@ produto. Na primeira vez que você preencher a chave do Groq e o login do
 admin, eles ficam salvos num arquivo local (`.credenciais.json`, dentro
 dessa mesma pasta) pra não perguntar de novo nas próximas importações.
 
+Se o produto tem quilate/cor, a importação demora mais (o script clica em
+cada opção de verdade na página pra saber o preço de cada uma) — um
+produto com bastante variação pode levar um minuto ou mais, é normal.
+
 ⚠️ Esse arquivo fica **só no seu computador** (nunca vai pro GitHub) mas
 guarda sua senha em texto puro, sem criptografia — não compartilha essa
 pasta com ninguém, não anexa em e-mail, não sobe em nenhum lugar. Se
@@ -105,8 +109,8 @@ Abre o admin do site normalmente, acha o produto na lista (ele entra
 link do fornecedor). Revisa:
 
 - Categoria
-- Quilate / banho (as variações que apareceram no terminal te dão uma pista de quais existem — tamanho de anel já vem convertido pra numeração BR e preenchido sozinho, não precisa mexer). Se o terminal avisou que o preço muda por variação, cadastra como quilate no admin (cada quilate tem seu próprio custo lá) em vez de só banho/cor
-- **Preço de venda** (o produto entra com preço **zerado** de propósito — o valor do AliExpress vai pro campo "Custo da peça", nunca pro preço de venda. O imposto também já vem preenchido, com o valor exato que o próprio AliExpress mostrou. Roda a calculadora de margem do admin pra gerar o preço final antes de ativar)
+- Quilate / banho — quando o produto tem esse tipo de variação, o script tenta separar sozinho (clicando em cada opção de verdade na página pra saber o preço de cada uma) e já salva **quilates_disponiveis/custos** e **banhos_disponiveis/custos** direto no produto, com foto por banho quando consegue achar uma. Ainda assim, sempre confere: essa parte é a mais nova e a mais "adivinhada" do script (não dá pra eu testar contra o AliExpress de verdade daqui) — se algo vier errado ou faltando foto, corrige na mão. Tamanho de anel sempre vem convertido pra numeração BR à parte, isso já é bem confiável
+- **Preço de venda** — se você respondeu a pergunta de % de lucro no terminal, o preço já vem calculado (produto base e cada quilate/banho, se tiver). Se pulou, entra **zerado** de propósito. De qualquer jeito, confere na calculadora de margem do admin antes de ativar
 - Fotos (confere se vieram certas)
 
 Quando estiver tudo certo, marca como **ativo** e salva — aí sim aparece no site.
