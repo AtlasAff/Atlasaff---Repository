@@ -219,17 +219,50 @@ async function extrairDadosProduto(page){
     return lista.map(u => u.startsWith('http') ? u : `https:${u}`);
   }) || [];
 
+  // Descrição sai como HTML de verdade (<p> por tópico), igual ao que o
+  // editor de texto do admin já salva — o site injeta a descrição direto
+  // na página (innerHTML), então precisa ser HTML válido, não texto puro
+  // com \n (que não vira quebra de linha visual nenhuma).
   const descricao = await tentarCadeia('descrição/especificações',
-    // Cada tópico da descrição fica num <li> separado — pega cada um
-    // individualmente e junta com quebra de parágrafo de verdade, em vez
-    // de ler o bloco inteiro de uma vez (que virava uma parede de texto só).
+    // Cada tópico da descrição fica num <li> separado, e o próprio
+    // AliExpress já bota a frase-título de cada um em <strong> — aproveita
+    // esse negrito (não precisa reinventar), só limpa o resto (tira
+    // qualquer outra tag que não seja negrito/itálico/quebra de linha,
+    // por segurança).
     async () => {
-      const itens = await page.locator('[class*="seo-sellpoints--sellerPoint"] li').allTextContents();
-      const paragrafos = itens.map(limpar).filter(Boolean);
-      return paragrafos.length ? paragrafos.join('\n\n') : null;
+      const paragrafos = await page.evaluate(() => {
+        const permitidas = new Set(['STRONG', 'B', 'EM', 'I', 'BR']);
+        function limparTags(el){
+          [...el.childNodes].forEach(filho => {
+            if (filho.nodeType !== 1) return;
+            if (!permitidas.has(filho.tagName)){
+              filho.replaceWith(document.createTextNode(filho.textContent));
+              return;
+            }
+            [...filho.attributes].forEach(a => filho.removeAttribute(a.name));
+            limparTags(filho);
+          });
+        }
+        return [...document.querySelectorAll('[class*="seo-sellpoints--sellerPoint"] li')]
+          .map(li => {
+            const copia = li.cloneNode(true);
+            limparTags(copia);
+            return copia.innerHTML.replace(/\s+/g, ' ').trim();
+          })
+          .filter(Boolean);
+      });
+      return paragrafos.length ? paragrafos.map(p => `<p>${p}</p>`).join('') : null;
     },
-    () => dados?.descriptionModule?.description ||
-      (dados?.specsModule?.props || []).map(p => `${p.attrName}: ${p.attrValue}`).join('\n')
+    // Sem a lista de tópicos, cai pra um texto puro qualquer achado no
+    // JSON embutido — nesse caso escapa e transforma em parágrafo(s) HTML
+    // simples, sem negrito (não tem de onde tirar).
+    () => {
+      const texto = dados?.descriptionModule?.description ||
+        (dados?.specsModule?.props || []).map(p => `${p.attrName}: ${p.attrValue}`).join('\n');
+      if (!texto) throw new Error('sem descrição');
+      const escapado = texto.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      return escapado.split(/\n+/).map(t => t.trim()).filter(Boolean).map(t => `<p>${t}</p>`).join('');
+    }
   );
 
   const variacoes = await tentarCadeia('variações (tamanho/cor/etc — precisa mapear na mão)', async () => {
@@ -319,17 +352,21 @@ PADRÃO DO NOME (sempre seguir):
 - Curto: até 6 palavras. Só a primeira letra maiúscula (nada de Título Em Cada Palavra)
 Exemplos já usados na loja (siga esse tom): "Brincos de Moissanite", "Anel Solitário Moissanite 3.6ct"
 
-PADRÃO DA DESCRIÇÃO:
-- 2 a 4 parágrafos curtos, tom caloroso e direto, sem exagero de vendedor
+PADRÃO DA DESCRIÇÃO — a descrição é HTML, não texto puro (o site injeta ela direto na página):
+- 2 a 4 tópicos, cada um é um <p>...</p> separado (nunca use \n pra separar, só tags <p>)
+- Cada <p> começa com uma frase curta em <strong>...</strong> (tipo um mini-título) seguida da explicação — mesmo estilo do "Resumo do item com IA" que o próprio AliExpress mostra
+- Só use as tags <p> e <strong> — nada de markdown (nada de **), nada de outras tags HTML
+- Tom caloroso e direto, sem exagero de vendedor
 - Mantém as informações técnicas reais que vieram no texto original (material, quilates, tamanho, certificação) — NUNCA inventa informação nova
 - Corta repetição e frases de venda genéricas
+- O texto original abaixo já pode vir com algumas tags <strong> — pode reorganizar/resumir à vontade, contanto que a SAÍDA continue seguindo esse mesmo padrão
 
 Texto original do fornecedor:
 NOME: ${nomeOriginal}
-DESCRIÇÃO: ${descricaoOriginal || '(sem descrição)'}
+DESCRIÇÃO (HTML): ${descricaoOriginal || '(sem descrição)'}
 
-Responda SOMENTE com um JSON válido nesse formato, sem nenhum texto antes ou depois:
-{"nome": "...", "descricao": "..."}`;
+Responda SOMENTE com um JSON válido nesse formato, sem nenhum texto antes ou depois (o valor de "descricao" é uma string HTML, como descrito acima):
+{"nome": "...", "descricao": "<p><strong>...</strong> ...</p>"}`;
 
   const resposta = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',

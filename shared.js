@@ -1989,7 +1989,10 @@ async function renderProdutoPage(){
   // sociais sempre mostrava o mesmo título/imagem genérico, não a peça
   // certa. Também aponta o canonical pra URL limpa (/produto/slug).
   const urlCanonica = `https://pavanoficial.com.br/produto/${p.slug}`;
-  const descricaoResumo = (p.descricao || '').replace(/<[^>]+>/g, '').slice(0, 160) ||
+  const descricaoResumo = (p.descricao || '')
+    .replace(/<\/(p|div|li)>|<br\s*\/?>/gi, ' ') // fecho de bloco vira espaço, senão as frases colam sem separação
+    .replace(/<[^>]+>/g, '')
+    .replace(/\s+/g, ' ').trim().slice(0, 160) ||
     'Joias atemporais em ouro 18k, ouro rosé e prata 925, com moissanite e zircônia.';
   document.querySelector('meta[name="description"]')?.setAttribute('content', descricaoResumo);
   document.querySelector('meta[property="og:title"]')?.setAttribute('content', `${p.nome} | Pavan & Co.`);
@@ -2311,7 +2314,10 @@ async function renderProdutoPage(){
     }
   });
 
-  document.getElementById('produtoDescricao').innerHTML = `<p>${p.descricao || 'Sem descrição cadastrada ainda.'}</p>`;
+  // A descrição já vem com sua própria formatação (parágrafos/negrito em
+  // HTML, digitada no editor do admin ou gerada na importação) — não
+  // embrulha em <p> de novo aqui, senão vira <p> dentro de <p>.
+  document.getElementById('produtoDescricao').innerHTML = p.descricao || '<p>Sem descrição cadastrada ainda.</p>';
   const detalhes = [
     ["Material", p.material],
     p.temBanho ? ["Banho", p.banho] : null,
