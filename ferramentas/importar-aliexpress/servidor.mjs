@@ -20,7 +20,8 @@ import {
   SUPABASE_URL, SUPABASE_ANON_KEY,
   carregarCredenciais, salvarCredenciais,
   abrirNavegador, extrairDadosProduto, formatarComIA,
-  converterTamanhosParaBR, paraNumero, extrairValorReais, baixarESubirFoto
+  converterTamanhosParaBR, paraNumero, extrairValorReais, baixarESubirFoto,
+  montarMatrizes
 } from './importar.mjs';
 
 const PORTA = 3737;
@@ -206,6 +207,22 @@ async function handlePublicar(req, res){
   const { data: categoriaValida } = await sb.from('categorias').select('slug').eq('slug', corpo.categoria).eq('ativa', true).maybeSingle();
   if (!categoriaValida) return responderJSON(res, 400, { erro: 'Categoria inválida ou inativa — escolhe uma da lista.' });
 
+  // CRÍTICO: sem isso, o site nunca muda o preço mostrado quando o
+  // cliente escolhe um quilate/banho diferente (sempre mostra o preço
+  // base) — é o campo que resolverPrecoVariante() (shared.js) usa de
+  // verdade, não só quilates_disponiveis/banhos_disponiveis.
+  const custoPecaNumero = Number(corpo.custoPeca) || 0;
+  const custoImpostoNumero = corpo.custoImposto !== null && corpo.custoImposto !== undefined && corpo.custoImposto !== '' ? Number(corpo.custoImposto) : null;
+  const taxaImpostoAprox = (custoPecaNumero > 0 && custoImpostoNumero) ? custoImpostoNumero / custoPecaNumero : 0;
+  const margemNumero = Number(corpo.margemLucro) || null;
+  const { matrizPrecos, matrizCustos } = montarMatrizes({
+    quilatesCustos: (corpo.quilates || []).map(q => ({ valor: q.valor, custo: Number(q.custo) || 0 })),
+    banhosCustos: banhosFinal.map(b => ({ nome: b.nome, custo: b.custo })),
+    custoPecaBase: custoPecaNumero,
+    taxaImposto: taxaImpostoAprox,
+    margemNumero
+  });
+
   // Sem ".select()" no final de propósito (mesmo motivo do script de
   // terminal): a leitura direta da tabela produtos é restrita mesmo pra
   // admin — o insert funciona igual, só não confirma id/slug de volta.
@@ -218,9 +235,9 @@ async function handlePublicar(req, res){
     categoria: corpo.categoria,
     ativo: Boolean(corpo.ativo),
     preco: Number(corpo.preco) || 0,
-    custo_peca: Number(corpo.custoPeca) || 0,
-    ...(corpo.custoImposto !== null && corpo.custoImposto !== undefined && corpo.custoImposto !== '' ? { custo_imposto: Number(corpo.custoImposto) } : {}),
-    ...(corpo.margemLucro ? { margem_lucro: Number(corpo.margemLucro) } : {}),
+    custo_peca: custoPecaNumero,
+    ...(custoImpostoNumero !== null ? { custo_imposto: custoImpostoNumero } : {}),
+    ...(margemNumero ? { margem_lucro: margemNumero } : {}),
     ...(corpo.estoque !== null && corpo.estoque !== undefined && corpo.estoque !== '' ? { estoque: Number(corpo.estoque) } : {}),
     ...(corpo.tamanhos?.length ? { tamanhos_disponiveis: corpo.tamanhos } : {}),
     ...(corpo.quilates?.length ? {
@@ -230,7 +247,8 @@ async function handlePublicar(req, res){
     ...(banhosFinal.length ? {
       banhos_disponiveis: banhosFinal.map(b => ({ nome: b.nome, preco: b.preco, foto_url: b.foto_url })),
       banhos_custos: banhosFinal.map(b => ({ nome: b.nome, custo: b.custo }))
-    } : {})
+    } : {}),
+    ...(matrizPrecos.length ? { matriz_precos: matrizPrecos, matriz_custos: matrizCustos } : {})
   });
 
   if (erroInsert){
