@@ -58,18 +58,33 @@ vez em quando (quando a sessão expirar, alguns meses depois).
 
 ## Passo 6 — Importar um produto
 
-Copia o link do produto no AliExpress e roda:
+Copia o link do produto no AliExpress e roda, **com o link entre aspas**
+(o link do AliExpress costuma ter `&` no meio, que o terminal do Windows
+entende errado se não tiver aspas):
 
 ```
-npm run importar -- https://www.aliexpress.com/item/COLA-O-LINK-AQUI.html
+npm run importar -- "https://www.aliexpress.com/item/COLA-O-LINK-AQUI.html"
 ```
 
 (o `--` antes do link é importante, não esquece)
 
 Vai aparecer no terminal o que foi encontrado (nome, quantas fotos, preço,
 variações) e o que **não** foi encontrado (esses campos você preenche na
-mão depois). No fim, vai pedir seu e-mail e senha de admin do site — é
-só pra salvar o produto, não fica guardado em lugar nenhum.
+mão depois).
+
+Antes de salvar, ele pergunta se você tem uma **chave da API do Gemini**
+(opcional) — se tiver, ele usa a IA do Google pra reescrever o nome
+(seguindo o padrão da loja: Tipo de peça + Material/Pedra + Detalhe) e
+arrumar a descrição em parágrafos, em vez de deixar o texto cru do
+AliExpress. Pra conseguir uma chave, grátis pra uso ocasional: entra em
+[aistudio.google.com](https://aistudio.google.com/), loga com sua conta
+Google, cria uma chave de API (Get API key) e cola no terminal quando
+pedir. Se não tiver ou não quiser usar, é só apertar Enter e pular —
+o produto entra do mesmo jeito, só com o texto original.
+
+No fim, vai pedir seu e-mail e senha de admin do site — é só pra salvar
+o produto, não fica guardado em lugar nenhum (a chave do Gemini também
+não fica guardada, só é usada naquela hora).
 
 ## Passo 7 — Terminar no site
 
