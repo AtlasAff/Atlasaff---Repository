@@ -246,6 +246,43 @@ let filaItemAtual = null; // item da fila que está aberto no formulário agora 
 
 function $(id){ return document.getElementById(id); }
 function formatarR$(n){ return 'R$' + (Number(n) || 0).toFixed(2).replace('.', ','); }
+
+// A descrição (do scraping OU reescrita pela IA/Groq) é HTML de verdade
+// (negrito/itálico/lista) — não dá pra escapar como texto puro (viraria
+// tag visível em vez de formatação). O texto da página do AliExpress e a
+// instrução livre que você digita pro Groq passam pelo prompt da IA, que
+// só promete devolver <p>/<strong>/<em> mas nada garante isso de verdade —
+// um anúncio malicioso no AliExpress (o próprio vendedor controla o texto
+// da página) podia em teoria levar a IA a devolver algo tipo
+// "<img src=x onerror=...>", que rodava direto aqui (essa página guarda
+// sua sessão de admin logada) e, se publicado sem reparar, na loja de
+// verdade também. Mesmo filtro usado no site: só passa a tag de
+// formatação e remove todo atributo dela.
+const TAGS_DESCRICAO_PERMITIDAS = new Set(['B','STRONG','I','EM','U','UL','OL','LI','BR','P','DIV','SPAN']);
+function sanitizarDescricaoHtml(html){
+  if (!html) return '';
+  try {
+    const doc = new DOMParser().parseFromString(String(html), 'text/html');
+    (function limpar(node){
+      [...node.childNodes].forEach(filho => {
+        if (filho.nodeType === 1){
+          if (!TAGS_DESCRICAO_PERMITIDAS.has(filho.tagName)){
+            filho.replaceWith(document.createTextNode(filho.textContent || ''));
+            return;
+          }
+          [...filho.attributes].forEach(attr => filho.removeAttribute(attr.name));
+          limpar(filho);
+        } else if (filho.nodeType !== 3){
+          filho.remove();
+        }
+      });
+    })(doc.body);
+    return doc.body.innerHTML;
+  } catch (err) {
+    return String(html).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+}
+
 // Foto que já é nossa (Supabase Storage) carrega direto; foto externa
 // (AliExpress) passa pelo servidor — evita bloqueio de hotlink.
 function urlImagem(u){
@@ -373,7 +410,7 @@ $('btnBuscar').addEventListener('click', async () => {
 
 function preencherFormulario(dados){
   $('fNome').value = dados.nomeIA || dados.nomeOriginal || '';
-  $('descricaoEdit').innerHTML = dados.descricaoIA || dados.descricaoOriginal || '';
+  $('descricaoEdit').innerHTML = sanitizarDescricaoHtml(dados.descricaoIA || dados.descricaoOriginal || '');
   $('fLinkFornecedor').value = dados.link || '';
   $('fAtivo').checked = false; // reseta — senão ficava marcado de uma busca anterior sem querer
 
@@ -609,7 +646,7 @@ $('btnRegenerar').addEventListener('click', async () => {
     const r = await resp.json();
     if (!resp.ok || r.erro) throw new Error(r.erro || 'Erro desconhecido');
     $('fNome').value = r.nome || $('fNome').value;
-    if (r.descricao) $('descricaoEdit').innerHTML = r.descricao;
+    if (r.descricao) $('descricaoEdit').innerHTML = sanitizarDescricaoHtml(r.descricao);
     $('instrucaoIA').value = '';
   } catch (err) {
     $('erroRegenerar').innerHTML = `<div class="erro-box">Não consegui aplicar: ${err.message}</div>`;
@@ -680,6 +717,19 @@ $('btnPublicar').addEventListener('click', async () => {
   }
   if (!payload.nome){ $('resultadoPublicar').innerHTML = '<div class="erro-box">Precisa de um nome pro produto.</div>'; return; }
   if (!payload.categoria){ $('resultadoPublicar').innerHTML = '<div class="erro-box">Escolhe uma categoria.</div>'; return; }
+  // Preço de venda zerado é OK só pra um produto NOVO deixado como
+  // rascunho (o README documenta isso de propósito — confere depois no
+  // admin). Mas "Atualizar produto" sempre sobrescreve o preço com o que
+  // está na tela (nunca preserva o preço antigo) — se a pessoa só queria
+  // atualizar estoque/fotos, esqueceu de preencher a margem e clicou em
+  // Atualizar, isso zerava o preço de venda de um produto JÁ NO AR (bug
+  // real encontrado numa revisão). Mesmo risco se marcar "ativo" num
+  // produto novo sem preço nenhum — o cliente veria R$0,00 na loja.
+  const precoNumero = parseFloat(payload.preco) || 0;
+  if (precoNumero <= 0 && (payload.produtoExistenteId || payload.ativo)){
+    $('resultadoPublicar').innerHTML = `<div class="erro-box">Preço de venda está zerado${payload.produtoExistenteId ? ' — isso ia apagar o preço que esse produto já tem no site' : ' e o produto está marcado como ativo'}. Preenche a margem de lucro (ou o preço manualmente) antes de publicar.</div>`;
+    return;
+  }
 
   $('btnPublicar').disabled = true;
   $('btnPublicar').textContent = 'Publicando...';

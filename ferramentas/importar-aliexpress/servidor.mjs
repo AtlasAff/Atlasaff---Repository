@@ -58,9 +58,29 @@ async function handleStatus(req, res){
 // O AliExpress às vezes bloqueia imagem carregada de outro site
 // (hotlink) checando de onde veio o pedido — pedindo pelo servidor (Node,
 // sem essa checagem de origem de navegador) evita isso.
+// Só imagem de verdade, num host público — enquanto o servidor local está
+// rodando (localhost:3737), QUALQUER página aberta em outra aba do mesmo
+// navegador podia pedir pra esse proxy buscar uma URL arbitrária (ex:
+// http://localhost:3737/api/imagem-proxy?url=http://169.254.169.254/...
+// ou outro endereço interno da sua rede) — o Node buscava sem checar nada
+// e devolvia a resposta, virando uma ponte pra sondar a rede local a
+// partir do seu navegador (bug real encontrado numa revisão). Trava pra
+// só http/https e recusa hosts privados/locais óbvios.
+function urlDeImagemPermitida(alvo){
+  let u;
+  try { u = new URL(alvo); } catch { return false; }
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') return false;
+  const host = u.hostname.toLowerCase();
+  if (host === 'localhost' || host === '0.0.0.0' || host === '::1' || host.endsWith('.local')) return false;
+  if (/^127\./.test(host) || /^10\./.test(host) || /^169\.254\./.test(host)) return false;
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) return false;
+  if (/^192\.168\./.test(host)) return false;
+  return true;
+}
+
 async function handleImagemProxy(req, res, url){
   const alvo = url.searchParams.get('url');
-  if (!alvo) { res.writeHead(400); return res.end(); }
+  if (!alvo || !urlDeImagemPermitida(alvo)) { res.writeHead(400); return res.end(); }
   try {
     const resp = await fetch(alvo);
     if (!resp.ok) throw new Error('status ' + resp.status);
