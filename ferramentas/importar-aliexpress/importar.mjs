@@ -25,7 +25,7 @@ import { chromium } from 'playwright';
 import { createClient } from '@supabase/supabase-js';
 import { createInterface } from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, chmod } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -48,7 +48,15 @@ export async function carregarCredenciais(){
 
 export async function salvarCredenciais(dados){
   try {
-    await writeFile(ARQUIVO_CREDENCIAIS, JSON.stringify(dados, null, 2));
+    // Guarda senha de admin e chave da API do Groq em texto puro — mode
+    // 0o600 (só o dono do arquivo lê/escreve) evita que outro usuário do
+    // mesmo computador consiga ler isso, já que o padrão do sistema
+    // operacional às vezes deixa arquivo novo legível por qualquer um
+    // (bug real encontrado numa revisão). O `mode` do writeFile só vale
+    // na criação do arquivo — o chmod depois garante isso mesmo se o
+    // arquivo já existia de uma versão anterior desta ferramenta.
+    await writeFile(ARQUIVO_CREDENCIAIS, JSON.stringify(dados, null, 2), { mode: 0o600 });
+    await chmod(ARQUIVO_CREDENCIAIS, 0o600).catch(() => {});
   } catch { /* não trava a importação por causa disso */ }
 }
 
@@ -423,6 +431,24 @@ export function montarMatrizes({ quilatesCustos, banhosCustos, custoPecaBase, ta
   return { matrizPrecos, matrizCustos };
 }
 
+// Extensão do arquivo a partir só do PATH da URL (não a URL inteira) —
+// olhar a URL inteira fazia o ".com"/".cn" do próprio domínio contar como
+// se fosse a extensão em fotos sem extensão de verdade no path (ex:
+// ".../kf/Sabc123def456", sem nenhum ponto no nome do arquivo): o `.pop()`
+// pegava "com/kf/Sabc123def456" (não tinha outro ponto depois de "com"),
+// e o resultado incluía uma "/" no meio — o Storage rejeitava ou criava
+// uma pasta aninhada sem querer, e a foto era descartada em silêncio (bug
+// real encontrado numa revisão). Sem extensão reconhecível, cai pra "jpg".
+function extensaoDaUrl(urlFoto){
+  try {
+    const nomeArquivo = new URL(urlFoto).pathname.split('/').pop() || '';
+    const match = nomeArquivo.match(/\.([a-zA-Z0-9]{1,5})$/);
+    return match ? match[1].toLowerCase() : 'jpg';
+  } catch {
+    return 'jpg';
+  }
+}
+
 // Baixa uma foto de uma URL externa e sobe pro mesmo bucket que o admin
 // usa pra upload manual — reaproveitado tanto pras fotos principais do
 // produto quanto pras fotos de cada banho/cor. Devolve a URL pública, ou
@@ -432,7 +458,7 @@ export async function baixarESubirFoto(sb, urlFoto, pasta){
     const resp = await fetch(urlFoto);
     if (!resp.ok) throw new Error(`status ${resp.status}`);
     const bytes = new Uint8Array(await resp.arrayBuffer());
-    const extensao = urlFoto.split('.').pop().split(/[?#]/)[0].slice(0, 5) || 'jpg';
+    const extensao = extensaoDaUrl(urlFoto);
     // Nome aleatório, sem mencionar o fornecedor — alguém inspecionando a
     // foto no site não pode ver de onde ela veio.
     const nomeArquivo = `${pasta}/${crypto.randomUUID()}.${extensao}`;
@@ -499,6 +525,10 @@ async function modoLogin(){
   await perguntar('Já logou? Aperta Enter aqui pra salvar a sessão... ');
 
   await context.storageState({ path: ARQUIVO_SESSAO });
+  // Esse arquivo tem os cookies da sua sessão logada no AliExpress — quem
+  // conseguir ler ele consegue "ser você" lá, então mesma proteção da
+  // .credenciais.json (0o600, só o dono do arquivo lê/escreve).
+  await chmod(ARQUIVO_SESSAO, 0o600).catch(() => {});
   await browser.close();
   console.log(`\nSessão salva em ${ARQUIVO_SESSAO}. Agora já dá pra importar produtos.`);
 }
@@ -997,14 +1027,21 @@ async function modoImportar(url){
   // ICMS (que nem sempre bate com o valor real cobrado).
   const custoPecaNumero = paraNumero(preco) ?? 0;
   const custoImpostoNumero = extrairValorReais(impostoEstimado);
-  const custoTotalEstimado = custoPecaNumero + (custoImpostoNumero || 0);
+  // Frete que o FORNECEDOR cobra pra importar a peça (não é o frete que o
+  // cliente vê no site) — mesmo campo que existe na interface visual.
+  // Ficava de fora daqui até uma revisão encontrar o bug: todo produto
+  // importado por esse modo terminal entrava precificado como se o frete
+  // fosse sempre grátis.
+  const freteTexto = await perguntar('Frete que o fornecedor cobra pra importar essa peça, em R$ (Enter se for grátis): ');
+  const custoFreteNumero = freteTexto ? (parseFloat(freteTexto.replace(',', '.')) || 0) : 0;
+  const custoTotalEstimado = custoPecaNumero + (custoImpostoNumero || 0) + custoFreteNumero;
 
   // Passo opcional: pergunta a margem de lucro e já mostra o preço de
   // venda final, igual a calculadora do admin faz (mesma conta: custo +
-  // imposto, vezes a margem). Se pular (Enter), o produto entra com
-  // preço ZERADO — mais seguro que arriscar um preço errado sozinho — e
-  // você roda a calculadora depois, no admin.
-  console.log(`\nCusto estimado (peça + imposto): R$${custoTotalEstimado.toFixed(2).replace('.', ',')}`);
+  // imposto + frete, vezes a margem). Se pular (Enter), o produto entra
+  // com preço ZERADO — mais seguro que arriscar um preço errado sozinho —
+  // e você roda a calculadora depois, no admin.
+  console.log(`\nCusto estimado (peça + imposto + frete): R$${custoTotalEstimado.toFixed(2).replace('.', ',')}`);
   const margemTexto = await perguntar('Quantos % de lucro você quer aplicar? (Enter pra pular e decidir depois no admin): ');
   const margemNumero = margemTexto ? parseFloat(margemTexto.replace(',', '.')) : null;
   let precoFinalNumero = null;
@@ -1127,11 +1164,13 @@ async function modoImportar(url){
   // produto base quando não conseguiu ler (ou pro delta do banho, que
   // costuma ser pequeno/zero).
   const taxaImpostoAprox = (custoPecaNumero > 0 && custoImpostoNumero) ? custoImpostoNumero / custoPecaNumero : 0;
+  // + custoFreteNumero em cada opção — mesmo frete do produto base, ele
+  // não muda por quilate/banho (é o mesmo pacote/envio).
   const precoComMargem = (custo) => margemNumero
-    ? Math.round(custo * (1 + taxaImpostoAprox) * (1 + margemNumero / 100) * 100) / 100
+    ? Math.round((custo * (1 + taxaImpostoAprox) + custoFreteNumero) * (1 + margemNumero / 100) * 100) / 100
     : 0;
   const precoComMargemDoQuilate = (q) => margemNumero
-    ? Math.round((q.custoComImposto != null ? Number(q.custoComImposto) : q.custo * (1 + taxaImpostoAprox)) * (1 + margemNumero / 100) * 100) / 100
+    ? Math.round(((q.custoComImposto != null ? Number(q.custoComImposto) : q.custo * (1 + taxaImpostoAprox)) + custoFreteNumero) * (1 + margemNumero / 100) * 100) / 100
     : 0;
 
   // Taxa de cada quilate, separada do custo (o admin agora tem um campo
@@ -1160,7 +1199,8 @@ async function modoImportar(url){
     banhosCustos: banhosCustosFinal,
     custoPecaBase: custoPecaNumero,
     taxaImposto: taxaImpostoAprox,
-    margemNumero
+    margemNumero,
+    freteNumero: custoFreteNumero
   });
 
   // Junta o resto do que já foi avisado ao longo da importação — tudo
@@ -1185,6 +1225,18 @@ async function modoImportar(url){
   // a categoria que você já tinha escolhido à toa).
   const categoriaFinal = produtoExistenteAtual?.categoria || categoriaProvisoria;
 
+  // Preço de venda: pular a margem (Enter) é seguro num produto NOVO (fica
+  // zerado de propósito, você confere depois no admin antes de ativar) —
+  // mas numa ATUALIZAÇÃO de um produto que já está no ar com preço de
+  // verdade, pular a margem sem essa checagem zerava o preço de venda de
+  // uma peça já ativa na loja (bug real encontrado numa revisão). Se não
+  // informou margem nova, mantém o preço que o produto já tinha.
+  let precoFinal = precoFinalNumero;
+  if (precoFinal === null && produtoExistenteAtual?.preco > 0){
+    precoFinal = produtoExistenteAtual.preco;
+    console.log(`Sem margem nova informada — mantendo o preço de venda que esse produto já tinha: R$${precoFinal.toFixed(2).replace('.', ',')}`);
+  }
+
   const dadosProduto = {
     nome: nome || '(sem nome — importação parcial, preencher)',
     descricao: descricao || null,
@@ -1192,8 +1244,9 @@ async function modoImportar(url){
     link_fornecedor: url,
     observacoes_internas: observacoesInternas,
     categoria: categoriaFinal,
-    preco: precoFinalNumero ?? 0,
+    preco: precoFinal ?? 0,
     custo_peca: custoPecaNumero,
+    custo_frete: custoFreteNumero,
     ...(custoImpostoNumero !== null ? { custo_imposto: custoImpostoNumero } : {}),
     ...(margemNumero ? { margem_lucro: margemNumero } : {}),
     ...(estoqueNumero !== null ? { estoque: estoqueNumero } : {}),
