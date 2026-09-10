@@ -237,7 +237,7 @@
 initBuscaForm('searchFormHeader', true);
 
 let itensCarrinho = [];
-let freteEscolhido = null; // { transportadora, servico, preco, prazoDias }
+let freteEscolhido = null; // { transportadora, servico, preco, prazoConfeccaoDias, prazoEntregaDiasMin, prazoEntregaDias }
 let opcoesFreteAtuais = [];
 let cupomAtualCheckout = null; // { codigo, tipo, valor, desconto }
 
@@ -545,12 +545,12 @@ function renderResumo(){
 
   document.getElementById('checkoutItens').innerHTML = itensCarrinho.map(item => `
     <div class="carrinho-item" style="padding:12px 0;">
-      <img src="${item.imagem}" alt="${item.nome}">
+      <img src="${item.imagem}" alt="${escaparHtml(item.nome)}">
       <div class="carrinho-info">
-        <div class="nome" style="font-size:0.9rem;">${item.nome}</div>
-        ${item.quilate ? `<div class="tags">${item.quilate}</div>` : ''}
-        ${item.banho ? `<div class="tags">${item.banho}</div>` : ''}
-        ${item.tamanho ? `<div class="tags">Aro ${item.tamanho}</div>` : ''}
+        <div class="nome" style="font-size:0.9rem;">${escaparHtml(item.nome)}</div>
+        ${item.quilate ? `<div class="tags">${escaparHtml(item.quilate)}</div>` : ''}
+        ${item.banho ? `<div class="tags">${escaparHtml(item.banho)}</div>` : ''}
+        ${item.tamanho ? `<div class="tags">Aro ${escaparHtml(item.tamanho)}</div>` : ''}
         <div class="tags">Qtd: ${item.qtd}</div>
       </div>
       <div class="carrinho-preco">${formatarPreco(item.preco * item.qtd)}</div>
@@ -691,6 +691,11 @@ document.getElementById('formCheckout').addEventListener('submit', async (e) => 
   const subtotal = subtotalCarrinho();
   const gratis = carrinhoTemFreteGratis(itensCarrinho);
   const freteFinal = gratis ? 0 : freteEscolhido.preco;
+  // O RPC criar_pedido recalcula subtotal/desconto/total sozinho no
+  // servidor (nunca confia no que vem daqui) — esses dois campos são só
+  // pra manter o registro do pedido coerente com o que a pessoa viu na
+  // tela, não é o que decide o valor cobrado de verdade.
+  const descontoFinal = cupomAtualCheckout ? Math.min(cupomAtualCheckout.desconto, subtotal) : 0;
 
   const pedido = {
     nome_cliente: nomeCliente,
@@ -707,8 +712,14 @@ document.getElementById('formCheckout').addEventListener('submit', async (e) => 
     subtotal,
     frete: freteFinal,
     frete_servico: `${freteEscolhido.transportadora} — ${freteEscolhido.servico}`,
-    frete_prazo_dias: freteEscolhido.prazoDias,
-    total: subtotal + freteFinal,
+    // freteEscolhido nunca teve uma propriedade "prazoDias" (era
+    // "prazoConfeccaoDias" + "prazoEntregaDiasMin/Dias" separados desde
+    // sempre) — esse campo ia sempre undefined pro RPC, então todo pedido
+    // ficava sem previsão de entrega pro cliente (bug real encontrado
+    // numa revisão). Soma confecção + entrega (pelo prazo maior, pra não
+    // prometer cedo demais) pra virar o único número que a coluna espera.
+    frete_prazo_dias: (Number(freteEscolhido.prazoConfeccaoDias) || 0) + (Number(freteEscolhido.prazoEntregaDias) || 0),
+    total: Math.max(0, subtotal + freteFinal - descontoFinal),
     observacoes: document.getElementById('ckObservacoes').value.trim() || null,
     cupom_codigo: cupomAtualCheckout ? cupomAtualCheckout.codigo : null
   };

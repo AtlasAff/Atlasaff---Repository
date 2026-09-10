@@ -33,6 +33,44 @@ function escaparHtml(texto){
     .replace(/'/g, '&#39;');
 }
 
+// A descrição do produto é HTML de verdade (negrito/itálico/lista, digitado
+// no editor do admin OU gerado pela importação automática do AliExpress) —
+// não dá pra escapar com escaparHtml() (viraria &lt;b&gt; visível em vez de
+// negrito). Em vez disso, sanitiza: só deixa passar as tags de formatação
+// que o editor realmente produz e remove QUALQUER atributo delas (inclusive
+// on*/style, que poderiam rodar código sozinhos). Uma tag fora da lista
+// (<script>, <img onerror>, <iframe>...) vira só o texto dela, sem executar
+// nada. Sem isso, uma descrição maliciosa — admin comprometido, edição
+// direta no banco, ou um feed de importação problemático — rodaria código
+// na tela de QUALQUER visitante que abrisse a página do produto, e também
+// na tela do próprio admin ao reabrir esse produto pra editar.
+const TAGS_DESCRICAO_PERMITIDAS = new Set(['B','STRONG','I','EM','U','UL','OL','LI','BR','P','DIV','SPAN']);
+function sanitizarDescricaoHtml(html){
+  if (!html) return '';
+  try {
+    const doc = new DOMParser().parseFromString(String(html), 'text/html');
+    (function limpar(node){
+      [...node.childNodes].forEach(filho => {
+        if (filho.nodeType === 1){ // elemento
+          if (!TAGS_DESCRICAO_PERMITIDAS.has(filho.tagName)){
+            filho.replaceWith(document.createTextNode(filho.textContent || ''));
+            return;
+          }
+          [...filho.attributes].forEach(attr => filho.removeAttribute(attr.name));
+          limpar(filho);
+        } else if (filho.nodeType !== 3){ // não é elemento nem texto (comentário etc.) — fora
+          filho.remove();
+        }
+      });
+    })(doc.body);
+    return doc.body.innerHTML;
+  } catch (err) {
+    // Se der qualquer erro inesperado no parser, erra pro lado seguro:
+    // mostra como texto puro em vez de arriscar inserir HTML não filtrado.
+    return escaparHtml(html);
+  }
+}
+
 /* ============================================================
    STATUS DE PEDIDO — labels, cor do badge e linha do tempo.
    Compartilhado entre conta.html (pedidos de quem tá logado) e
@@ -49,7 +87,7 @@ const FORMA_PAGAMENTO_LABEL = { pix: 'Pix', credit_card: 'Cartão de crédito', 
 // cai numa busca que já leva a pessoa a rastrear pelo código.
 function linkRastreio(codigo, transportadora){
   const t = (transportadora || '').toLowerCase();
-  if (t.includes('correios')) return `https://rastreamento.correios.com.br/app/index.php?objetos=${codigo}`;
+  if (t.includes('correios')) return `https://rastreamento.correios.com.br/app/index.php?objetos=${encodeURIComponent(codigo)}`;
   return `https://www.google.com/search?q=rastrear+encomenda+${encodeURIComponent(codigo)}`;
 }
 
@@ -111,13 +149,19 @@ function previsaoChegadaInternacionalHtml(p){
 // Card de pedido é "produto em primeiro lugar": mostra a foto e o nome do
 // que a cliente comprou, não o código do pedido (isso vira um detalhe
 // pequeno no canto — ninguém decora "#1E37DC51", mas lembra "o anel que eu comprei").
+// titulo/subtitulo escapados aqui na fonte (e não em cada tela que chama
+// isso) — os itens do pedido vêm do carrinho salvo no navegador de quem
+// fez a compra (checkout.html manda pro RPC criar_pedido praticamente
+// como está), então um nome de item malicioso tem que ser tratado como
+// texto em toda tela que reabre esse pedido (conta.html, rastreio.html),
+// inclusive na tela do admin.
 function resumoItensPedido(itens){
   const lista = itens || [];
   const primeiro = lista[0];
   if (!primeiro) return { foto: '', titulo: 'Pedido', subtitulo: '' };
   const extras = lista.length - 1;
-  const titulo = primeiro.nome + (extras > 0 ? ` + ${extras} ${extras === 1 ? 'item' : 'itens'}` : '');
-  const subtitulo = [primeiro.quilate, primeiro.banho, primeiro.tamanho ? `aro ${primeiro.tamanho}` : null].filter(Boolean).join(' · ');
+  const titulo = escaparHtml(primeiro.nome) + (extras > 0 ? ` + ${extras} ${extras === 1 ? 'item' : 'itens'}` : '');
+  const subtitulo = [primeiro.quilate, primeiro.banho, primeiro.tamanho ? `aro ${primeiro.tamanho}` : null].filter(Boolean).map(escaparHtml).join(' · ');
   return { foto: primeiro.imagem || '', titulo, subtitulo };
 }
 
@@ -565,7 +609,12 @@ async function carregarTodosProdutosAtivos(){
 // URL limpa.
 async function carregarProduto(idOuSlug){
   const ehUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOuSlug || '');
-  const query = sb.from('produtos').select(COLUNAS_PRODUTO_PUBLICO);
+  // .eq('ativo', true) igual toda outra função de carregar produto deste
+  // arquivo — sem isso, um produto desativado pelo admin (esgotado, erro
+  // de preço, rascunho não pronto) continuava abrindo normalmente pra
+  // quem tivesse o link antigo, resultado de busca indexado, ou slug
+  // adivinhado (bug real encontrado numa revisão).
+  const query = sb.from('produtos').select(COLUNAS_PRODUTO_PUBLICO).eq('ativo', true);
   const { data, error } = ehUuid
     ? await query.eq('id', idOuSlug).maybeSingle()
     : await query.eq('slug', idOuSlug).maybeSingle();
@@ -606,9 +655,9 @@ async function initHeaderShared(){
 
   const categorias = await carregarCategorias();
   categorias.forEach(cat => {
-    if (navList) navList.innerHTML += `<li><a href="${cat.href}">${cat.nome}</a></li>`;
-    if (mobileNavList) mobileNavList.innerHTML += `<li><a href="${cat.href}">${cat.nome}</a></li>`;
-    if (footerCatList) footerCatList.innerHTML += `<li><a href="${cat.href}">${cat.nome}</a></li>`;
+    if (navList) navList.innerHTML += `<li><a href="${cat.href}">${escaparHtml(cat.nome)}</a></li>`;
+    if (mobileNavList) mobileNavList.innerHTML += `<li><a href="${cat.href}">${escaparHtml(cat.nome)}</a></li>`;
+    if (footerCatList) footerCatList.innerHTML += `<li><a href="${cat.href}">${escaparHtml(cat.nome)}</a></li>`;
   });
 
   const header = document.getElementById('siteHeader');
@@ -797,12 +846,19 @@ async function alternarFavorito(produtoId){
   }
   const userId = sessao.session.user.id;
   const ids = await carregarFavoritosIds();
+  // Confere o "error" antes de mexer no estado local — sem isso, uma
+  // falha de verdade no banco (RLS, rede, clique duplo batendo numa
+  // corrida) ainda mostrava "Adicionado aos favoritos ♥" mesmo sem ter
+  // gravado nada, e o coração só voltava a desfavoritado sozinho na
+  // próxima vez que a página recarregasse os favoritos do zero.
   if (ids.has(produtoId)){
-    await sb.from('favoritos').delete().eq('user_id', userId).eq('produto_id', produtoId);
+    const { error } = await sb.from('favoritos').delete().eq('user_id', userId).eq('produto_id', produtoId);
+    if (error) { mostrarToast('Não consegui atualizar seus favoritos agora.'); return null; }
     ids.delete(produtoId);
     return false;
   } else {
-    await sb.from('favoritos').insert({ user_id: userId, produto_id: produtoId });
+    const { error } = await sb.from('favoritos').insert({ user_id: userId, produto_id: produtoId });
+    if (error) { mostrarToast('Não consegui atualizar seus favoritos agora.'); return null; }
     ids.add(produtoId);
     return true;
   }
@@ -1326,12 +1382,12 @@ function renderCartDrawer(){
 
   lista.innerHTML = itens.map(item => `
     <div class="carrinho-item">
-      <img src="${item.imagem}" alt="${item.nome}">
+      <img src="${item.imagem}" alt="${escaparHtml(item.nome)}">
       <div class="carrinho-info">
-        <div class="nome">${item.nome}</div>
-        ${item.quilate ? `<div class="tags">${item.quilate}</div>` : ''}
-        ${item.banho ? `<div class="tags">${item.banho}</div>` : ''}
-        ${item.tamanho ? `<div class="tags">Aro ${item.tamanho}</div>` : ''}
+        <div class="nome">${escaparHtml(item.nome)}</div>
+        ${item.quilate ? `<div class="tags">${escaparHtml(item.quilate)}</div>` : ''}
+        ${item.banho ? `<div class="tags">${escaparHtml(item.banho)}</div>` : ''}
+        ${item.tamanho ? `<div class="tags">Aro ${escaparHtml(item.tamanho)}</div>` : ''}
         <div class="carrinho-qtd">
           <button type="button" data-acao="menos" data-id="${item.id}" data-tamanho="${item.tamanho || ''}" data-quilate="${item.quilate || ''}" data-banho="${item.banho || ''}" aria-label="Diminuir quantidade">−</button>
           <span>${item.qtd}</span>
@@ -1569,24 +1625,24 @@ function cardProdutoHTML(p){
     <div class="prod-card reveal ${esgotado ? 'esgotado' : ''}">
       ${esgotado ? '<span class="badge-esgotado-card">Esgotado</span>' : ''}
       ${temFreteGratis ? seloFreteGratisHTML('selo-frete-gratis--foto') : ''}
-      <a href="/produto/${p.slug}" class="prod-card-link" aria-label="Ver ${p.nome}">
+      <a href="/produto/${p.slug}" class="prod-card-link" aria-label="Ver ${escaparHtml(p.nome)}">
         <div class="prod-img" style="background-image:url('${p.image}')"></div>
-        <div class="prod-name">${p.nome}</div>
+        <div class="prod-name">${escaparHtml(p.nome)}</div>
         <div class="prod-info-box">
           <div class="prod-info-cell">
             <span class="prod-price" data-produto-id="${p.id}" data-preco-original="${p.preco}">${formatarPreco(p.preco)}</span>
           </div>
           <div class="prod-info-cell">
             <span class="prod-spec-label">Banho</span>
-            <span class="prod-spec-valor">${p.temBanho ? p.banho : '—'}</span>
+            <span class="prod-spec-valor">${p.temBanho ? escaparHtml(p.banho) : '—'}</span>
           </div>
           <div class="prod-info-cell">
             <span class="prod-spec-label">Material</span>
-            <span class="prod-spec-valor">${p.material}</span>
+            <span class="prod-spec-valor">${escaparHtml(p.material)}</span>
           </div>
           <div class="prod-info-cell">
             <span class="prod-spec-label">Pedra</span>
-            <span class="prod-spec-valor">${p.temPedra ? p.pedra : '—'}</span>
+            <span class="prod-spec-valor">${p.temPedra ? escaparHtml(p.pedra) : '—'}</span>
           </div>
         </div>
       </a>
@@ -1594,7 +1650,7 @@ function cardProdutoHTML(p){
         ${esgotado
           ? `<button type="button" class="btn btn-outline" disabled>Esgotado</button>`
           : `<button type="button" class="btn btn-primary btn-add"
-              data-id="${p.id}" data-nome="${p.nome.replace(/"/g, '&quot;')}" data-preco="${p.preco}" data-imagem="${p.image}"
+              data-id="${p.id}" data-nome="${escaparHtml(p.nome)}" data-preco="${p.preco}" data-imagem="${p.image}"
               data-tamanhos="${(p.tamanhos || []).join(',')}"
               data-quilates="${encodeURIComponent(JSON.stringify(p.quilates || []))}"
               data-banhos="${encodeURIComponent(JSON.stringify(p.banhos || []))}"
@@ -1895,17 +1951,23 @@ async function renderBuscaPage(){
 
   grid.innerHTML = skeletonGridHTML();
 
+  // Aspas duplas em volta do valor (com o % de wildcard JÁ DENTRO delas)
+  // protegem vírgula/parênteses — que senão quebravam a sintaxe do filtro
+  // .or() do PostgREST (bug real: buscar "ouro, prata" dava erro
+  // silencioso e mostrava zero resultados) — e escapam aspas/barra
+  // invertida internas do termo digitado.
+  const termoFiltro = `"%${termo.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}%"`;
   const { data, error } = await sb
     .from('produtos')
     .select(COLUNAS_PRODUTO_PUBLICO)
     .eq('ativo', true)
-    .or(`nome.ilike.%${termo}%,material_aro.ilike.%${termo}%,pedra_central.ilike.%${termo}%,categoria.ilike.%${termo}%`);
+    .or(`nome.ilike.${termoFiltro},material_aro.ilike.${termoFiltro},pedra_central.ilike.${termoFiltro},categoria.ilike.${termoFiltro}`);
 
   const resultados = error ? [] : data.map(mapProduto);
 
   tituloEl.textContent = `Resultados para "${termo}"`;
   countEl.textContent = `${resultados.length} produto${resultados.length === 1 ? '' : 's'} encontrado${resultados.length === 1 ? '' : 's'}`;
-  renderGridPaginado(grid, resultados, { vazio: `<p class="sem-resultados">Nenhum produto encontrado para "${termo}". Tente outro termo.</p>` });
+  renderGridPaginado(grid, resultados, { vazio: `<p class="sem-resultados">Nenhum produto encontrado para "${escaparHtml(termo)}". Tente outro termo.</p>` });
 }
 
 /* ============================================================
@@ -2231,8 +2293,13 @@ async function renderProdutoPage(){
   }
 
   const qtdDisplay = document.getElementById('qtdDisplay');
+  // Trava no estoque disponível — sem isso dava pra pedir mais peças do
+  // que existem (o servidor também barra isso no fechamento do pedido,
+  // ver criar_pedido, mas só nessa hora — melhor a pessoa já ver o limite
+  // aqui do que só descobrir com erro no checkout).
+  const estoqueMaximo = Math.max(1, Number(p.estoque) || 0);
   document.getElementById('qtdMenos').addEventListener('click', () => { qtd = Math.max(1, qtd - 1); qtdDisplay.textContent = qtd; });
-  document.getElementById('qtdMais').addEventListener('click', () => { qtd++; qtdDisplay.textContent = qtd; });
+  document.getElementById('qtdMais').addEventListener('click', () => { qtd = Math.min(estoqueMaximo, qtd + 1); qtdDisplay.textContent = qtd; });
 
   // Confere se falta escolher alguma variante (quilate/banho/tamanho) antes
   // de adicionar ao carrinho OU comprar direto — os dois botões usam a
@@ -2335,7 +2402,7 @@ async function renderProdutoPage(){
   // A descrição já vem com sua própria formatação (parágrafos/negrito em
   // HTML, digitada no editor do admin ou gerada na importação) — não
   // embrulha em <p> de novo aqui, senão vira <p> dentro de <p>.
-  document.getElementById('produtoDescricao').innerHTML = p.descricao || '<p>Sem descrição cadastrada ainda.</p>';
+  document.getElementById('produtoDescricao').innerHTML = p.descricao ? sanitizarDescricaoHtml(p.descricao) : '<p>Sem descrição cadastrada ainda.</p>';
   const detalhes = [
     ["Material", p.material],
     p.temBanho ? ["Banho", p.banho] : null,

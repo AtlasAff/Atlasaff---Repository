@@ -2521,7 +2521,7 @@ function abrirDetalhesPedido(pedido){
     <div style="border-top:1px solid var(--cinza-borda);padding-top:14px;">
       ${(pedido.itens || []).map(item => `
         <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:8px;">
-          <span>${item.nome}${item.quilate ? ' — ' + item.quilate : ''}${item.banho ? ' — ' + item.banho : ''}${item.tamanho ? ' (aro ' + item.tamanho + ')' : ''} × ${item.qtd}</span>
+          <span>${escaparHtml(item.nome)}${item.quilate ? ' — ' + escaparHtml(item.quilate) : ''}${item.banho ? ' — ' + escaparHtml(item.banho) : ''}${item.tamanho ? ' (aro ' + escaparHtml(item.tamanho) + ')' : ''} × ${item.qtd}</span>
           <span>${formatarPreco(item.preco * item.qtd)}</span>
         </div>
       `).join('')}
@@ -2742,7 +2742,7 @@ async function renderNewsletter(){
   document.getElementById('contagemAssinantes').textContent = `(${data.length})`;
   document.getElementById('listaNewsletter').innerHTML = data.map(a => `
     <div class="newsletter-linha">
-      <span>${a.email}</span>
+      <span>${escaparHtml(a.email)}</span>
       <button type="button" data-acao="excluir-assinante" data-id="${a.id}">Remover</button>
     </div>
   `).join('') || `<p style="color:var(--texto-suave);font-size:0.85rem;">Nenhum assinante ainda.</p>`;
@@ -3829,7 +3829,7 @@ function abrirModalProduto(produto){
   if (produto){
     document.getElementById('fNome').value = produto.nome || '';
     document.getElementById('fCategoria').value = produto.categoria || 'aneis';
-    document.getElementById('fDescricao').innerHTML = produto.descricao || '';
+    document.getElementById('fDescricao').innerHTML = produto.descricao ? sanitizarDescricaoHtml(produto.descricao) : '';
     document.getElementById('fMaterial').value = produto.material_aro || 'Prata 925';
     document.getElementById('fPedra').value = produto.pedra_central || 'Sem pedra';
     document.getElementById('fBanho').value = produto.banho || 'Sem banho';
@@ -4320,10 +4320,21 @@ document.getElementById('btnConfirmarExcluir').addEventListener('click', async (
 
   // Best-effort: também apaga as fotos do Storage (não bloqueia se falhar)
   if (produto && produto.fotos && produto.fotos.length){
-    const caminhos = produto.fotos.map(url => {
-      const partes = url.split('/produtos/');
-      return partes[1];
-    }).filter(Boolean);
+    // "Duplicar produto" copia o array de fotos como está — os dois
+    // produtos apontam pros MESMOS arquivos até alguém trocar a foto de
+    // um deles. Sem essa checagem, excluir um dos dois apagava o arquivo
+    // do Storage e quebrava a foto do outro na loja (404) — bug real
+    // encontrado numa revisão. Só apaga do Storage a foto que nenhum
+    // OUTRO produto ainda usa.
+    const urlsEmUsoPorOutros = new Set(
+      produtosAdmin.filter(p => p.id !== idParaExcluir).flatMap(p => p.fotos || [])
+    );
+    const caminhos = produto.fotos
+      .filter(url => !urlsEmUsoPorOutros.has(url))
+      .map(url => {
+        const partes = url.split('/produtos/');
+        return partes[1];
+      }).filter(Boolean);
     if (caminhos.length) sb.storage.from('produtos').remove(caminhos).catch(() => {});
   }
 
