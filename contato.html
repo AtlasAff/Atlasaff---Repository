@@ -142,15 +142,29 @@ document.addEventListener('configSiteCarregada', (e) => {
 
 document.getElementById('formContato').addEventListener('submit', async (e) => {
   e.preventDefault();
+
+  const nome = document.getElementById('ctNome').value.trim();
+  const assunto = document.getElementById('ctAssunto').value.trim();
+  const mensagem = document.getElementById('ctMensagem').value.trim();
+  // O "required" nativo do navegador aceita um campo só com espaços (não é
+  // vazio, tem length > 0) — sem essa checagem aqui, dava pra "enviar" uma
+  // mensagem de nome/assunto/corpo em branco e a tela dizia que funcionou.
+  if (!nome || !assunto || !mensagem){
+    const msg = document.getElementById('msgContato');
+    msg.textContent = 'Preenche nome, assunto e mensagem (não pode ficar só com espaços).';
+    msg.className = 'conta-msg show erro';
+    return;
+  }
+
   const botao = e.target.querySelector('button[type="submit"]');
   botao.disabled = true;
   botao.textContent = 'Enviando...';
 
   const { error } = await sb.rpc('enviar_mensagem_contato', {
-    p_nome: document.getElementById('ctNome').value.trim(),
+    p_nome: nome,
     p_email: document.getElementById('ctEmail').value.trim(),
-    p_assunto: document.getElementById('ctAssunto').value.trim(),
-    p_mensagem: document.getElementById('ctMensagem').value.trim()
+    p_assunto: assunto,
+    p_mensagem: mensagem
   });
 
   botao.disabled = false;

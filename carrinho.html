@@ -111,6 +111,13 @@ function renderCarrinho(){
   const resumo = document.getElementById('resumoCarrinho');
   const barraFrete = document.getElementById('freteGratisBarraCarrinho');
 
+  // Frete calculado é pro conteúdo do carrinho no momento do cálculo — se
+  // a quantidade/itens mudam depois (a caixa de resultado do frete já
+  // reseta visualmente logo abaixo), a variável tinha que ser esquecida
+  // também, senão atualizarTotaisCarrinho() ficava mostrando um frete de
+  // outra quantidade sem nenhum aviso (bug real encontrado numa revisão).
+  freteEscolhidoCarrinho = null;
+
   if (itens.length === 0){
     barraFrete.innerHTML = '';
     lista.innerHTML = '';
@@ -127,12 +134,12 @@ function renderCarrinho(){
 
   lista.innerHTML = itens.map(item => `
     <div class="carrinho-item">
-      <img src="${item.imagem}" alt="${item.nome}">
+      <img src="${item.imagem}" alt="${escaparHtml(item.nome)}">
       <div class="carrinho-info">
-        <div class="nome">${item.nome}</div>
-        ${item.quilate ? `<div class="tags">${item.quilate}</div>` : ''}
-        ${item.banho ? `<div class="tags">${item.banho}</div>` : ''}
-        ${item.tamanho ? `<div class="tags">Aro ${item.tamanho}</div>` : ''}
+        <div class="nome">${escaparHtml(item.nome)}</div>
+        ${item.quilate ? `<div class="tags">${escaparHtml(item.quilate)}</div>` : ''}
+        ${item.banho ? `<div class="tags">${escaparHtml(item.banho)}</div>` : ''}
+        ${item.tamanho ? `<div class="tags">Aro ${escaparHtml(item.tamanho)}</div>` : ''}
         <div class="carrinho-qtd">
           <button type="button" data-acao="menos" data-id="${item.id}" data-tamanho="${item.tamanho || ''}" data-quilate="${item.quilate || ''}" data-banho="${item.banho || ''}" aria-label="Diminuir quantidade">−</button>
           <span>${item.qtd}</span>

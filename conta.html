@@ -725,28 +725,28 @@ function pedidoParaHtml(p, solicitacoes, avaliadosSet){
         <div style="margin-bottom:14px;">
           ${(p.itens || []).map(item => `
             <div style="display:flex;justify-content:space-between;gap:10px;font-size:0.85rem;margin-bottom:8px;">
-              <span>${item.nome}${item.quilate ? ' — ' + item.quilate : ''}${item.banho ? ' — ' + item.banho : ''}${item.tamanho ? ' (aro ' + item.tamanho + ')' : ''} × ${item.qtd}</span>
+              <span>${escaparHtml(item.nome)}${item.quilate ? ' — ' + escaparHtml(item.quilate) : ''}${item.banho ? ' — ' + escaparHtml(item.banho) : ''}${item.tamanho ? ' (aro ' + escaparHtml(item.tamanho) + ')' : ''} × ${item.qtd}</span>
               <span style="flex-shrink:0;">${formatarPreco(item.preco * item.qtd)}</span>
             </div>
           `).join('')}
           <div style="display:flex;justify-content:space-between;font-size:0.82rem;color:var(--texto-suave);margin-top:10px;padding-top:10px;border-top:1px solid var(--borda);">
-            <span>Frete${p.frete_servico ? ' (' + p.frete_servico + ')' : ''}</span>
+            <span>Frete${p.frete_servico ? ' (' + escaparHtml(p.frete_servico) + ')' : ''}</span>
             <span>${p.frete === 0 ? 'Grátis' : formatarPreco(p.frete)}</span>
           </div>
           ${p.desconto > 0 ? `
           <div style="display:flex;justify-content:space-between;font-size:0.82rem;color:var(--verde);margin-top:4px;">
-            <span>Desconto${p.cupom_codigo ? ' (' + p.cupom_codigo + ')' : ''}</span>
+            <span>Desconto${p.cupom_codigo ? ' (' + escaparHtml(p.cupom_codigo) + ')' : ''}</span>
             <span>−${formatarPreco(p.desconto)}</span>
           </div>` : ''}
         </div>
         <div style="font-size:0.82rem;color:var(--texto-suave);line-height:1.7;">
-          ${formaPagamento ? `Pago com <strong style="color:var(--texto);">${formaPagamento}</strong><br>` : ''}
-          Entrega: ${p.endereco}, ${p.numero}${p.complemento ? ' - ' + p.complemento : ''} — ${p.bairro}, ${p.cidade}/${p.estado}
+          ${formaPagamento ? `Pago com <strong style="color:var(--texto);">${escaparHtml(formaPagamento)}</strong><br>` : ''}
+          Entrega: ${escaparHtml(p.endereco)}, ${escaparHtml(p.numero)}${p.complemento ? ' - ' + escaparHtml(p.complemento) : ''} — ${escaparHtml(p.bairro)}, ${escaparHtml(p.cidade)}/${escaparHtml(p.estado)}
         </div>
 
         ${p.codigo_rastreio ? `
         <div class="conta-pedido-rastreio">
-          📦 Código de rastreio: <strong>${p.codigo_rastreio}</strong>${p.transportadora_rastreio ? ` (${p.transportadora_rastreio})` : ''}
+          📦 Código de rastreio: <strong>${escaparHtml(p.codigo_rastreio)}</strong>${p.transportadora_rastreio ? ` (${escaparHtml(p.transportadora_rastreio)})` : ''}
           — <a href="${linkRastreio(p.codigo_rastreio, p.transportadora_rastreio)}" target="_blank" rel="noopener">Rastrear entrega</a>
         </div>` : ''}
 
@@ -801,7 +801,15 @@ document.getElementById('contaPedidos').addEventListener('click', async (e) => {
     btn.disabled = true;
     const textoOriginal = btn.textContent;
     btn.textContent = 'Abrindo...';
-    const { data: pedidoNf } = await sb.from('pedidos').select('nota_fiscal_path').eq('id', pedidoId).maybeSingle();
+    // .eq('user_id', ...) explícito, mesmo motivo do comentário lá em
+    // cima (linha ~632): sem isso, editar o data-pedido-id no devtools (ou
+    // chamar essa mesma query direto pelo console) bastava pra abrir a
+    // nota fiscal de QUALQUER pedido da loja, não só os da própria pessoa
+    // (bug real encontrado numa revisão).
+    const { data: { session: sessaoAtual } } = await sb.auth.getSession();
+    const { data: pedidoNf } = sessaoAtual
+      ? await sb.from('pedidos').select('nota_fiscal_path').eq('id', pedidoId).eq('user_id', sessaoAtual.user.id).maybeSingle()
+      : { data: null };
     if (pedidoNf?.nota_fiscal_path){
       const { data: assinada, error } = await sb.storage.from('notas-fiscais').createSignedUrl(pedidoNf.nota_fiscal_path, 60);
       if (assinada?.signedUrl) window.open(assinada.signedUrl, '_blank');
@@ -821,7 +829,12 @@ document.getElementById('contaPedidos').addEventListener('click', async (e) => {
   }
 
   if (acao === 'repetir'){
-    const { data: pedido } = await sb.from('pedidos').select('itens').eq('id', pedidoId).maybeSingle();
+    // Mesma correção de escopo por user_id explicado acima — sem isso
+    // dava pra "repetir" e ver os itens de um pedido de outra pessoa.
+    const { data: { session: sessaoRepetir } } = await sb.auth.getSession();
+    const { data: pedido } = sessaoRepetir
+      ? await sb.from('pedidos').select('itens').eq('id', pedidoId).eq('user_id', sessaoRepetir.user.id).maybeSingle()
+      : { data: null };
     if (!pedido) return;
     const carrinhoAtual = obterCarrinho();
     (pedido.itens || []).forEach(item => {
