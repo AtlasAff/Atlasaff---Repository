@@ -90,6 +90,11 @@
         <label for="ckEmail">E-mail *</label>
         <input type="email" id="ckEmail" required>
       </div>
+      <div class="checkout-campo">
+        <label for="ckCpf">CPF *</label>
+        <input type="text" id="ckCpf" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" autocomplete="off" required>
+        <span class="checkout-campo-aviso">Usamos seu CPF somente para emitir a nota fiscal da compra.</span>
+      </div>
       <div class="checkout-linha cols-2" id="ckSenhaWrap">
         <div class="checkout-campo">
           <label for="ckSenha">Crie uma senha *</label>
@@ -577,6 +582,28 @@ function renderResumo(){
 // ---------- CEP: busca endereço (ViaCEP) + calcula frete do carrinho inteiro ----------
 const ckCep = document.getElementById('ckCep');
 ckCep.addEventListener('input', (e) => { e.target.value = formatarCep(e.target.value); });
+const ckCpf = document.getElementById('ckCpf');
+
+function formatarCpf(valor){
+  const numeros = String(valor || '').replace(/\D/g, '').slice(0, 11);
+  return numeros
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+}
+
+function cpfValido(cpf){
+  if (!/^\d{11}$/.test(cpf) || /^(\d)\1{10}$/.test(cpf)) return false;
+  const calcularDigito = (ate) => {
+    let soma = 0;
+    for (let i = 0; i < ate; i++) soma += Number(cpf[i]) * (ate + 1 - i);
+    const resto = (soma * 10) % 11;
+    return resto === 10 ? 0 : resto;
+  };
+  return calcularDigito(9) === Number(cpf[9]) && calcularDigito(10) === Number(cpf[10]);
+}
+
+ckCpf.addEventListener('input', (e) => { e.target.value = formatarCpf(e.target.value); });
 ckCep.addEventListener('blur', async () => {
   const cep = ckCep.value.replace(/\D/g, '');
   const aviso = document.getElementById('ckCepAviso');
@@ -654,6 +681,13 @@ document.getElementById('formCheckout').addEventListener('submit', async (e) => 
     return;
   }
 
+  const cpfCliente = ckCpf.value.replace(/\D/g, '');
+  if (!cpfValido(cpfCliente)){
+    alert('Digite um CPF válido para emitirmos a nota fiscal.');
+    ckCpf.focus();
+    return;
+  }
+
   const botao = document.getElementById('btnConfirmarPedido');
   botao.disabled = true;
   botao.textContent = 'Enviando...';
@@ -702,6 +736,7 @@ document.getElementById('formCheckout').addEventListener('submit', async (e) => 
     nome_cliente: nomeCliente,
     email_cliente: emailCliente,
     telefone_cliente: document.getElementById('ckTelefone').value.trim(),
+    cpf_cliente: cpfCliente,
     cep: ckCep.value.replace(/\D/g, ''),
     endereco: document.getElementById('ckEndereco').value.trim(),
     numero: document.getElementById('ckNumero').value.trim(),

@@ -1228,6 +1228,16 @@
     <h2>Pedido <span id="detalhesPedidoNumero"></span></h2>
     <div id="detalhesPedidoConteudo"></div>
 
+    <div id="blocoDadosFiscais" style="margin-top:18px;padding-top:16px;border-top:1px solid var(--cinza-borda);">
+      <h3 style="font-size:0.82rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--texto-suave);margin-bottom:10px;">Dados para nota fiscal</h3>
+      <div class="form-campo">
+        <label for="detalhesCpfCliente">CPF do cliente</label>
+        <input type="text" id="detalhesCpfCliente" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" autocomplete="off">
+      </div>
+      <button type="button" class="btn-admin btn-admin-primary" id="btnSalvarCpfCliente" style="margin-top:6px;">Salvar CPF</button>
+      <p style="font-size:0.76rem;color:var(--texto-suave);margin-top:6px;">Necessário para emitir a nota fiscal. Em pedidos antigos, preencha aqui antes de emitir.</p>
+    </div>
+
     <div id="blocoPrevisaoInternacional" style="display:none;margin-top:18px;padding-top:16px;border-top:1px solid var(--cinza-borda);">
       <h3 style="font-size:0.82rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--texto-suave);margin-bottom:10px;">Previsão de chegada (fornecedor internacional)</h3>
       <div class="form-campo">
@@ -2492,6 +2502,17 @@ async function renderTabelaPedidos(){
 
 let pedidoDetalhesAtual = null;
 
+function cpfValidoAdmin(cpf){
+  if (!/^\d{11}$/.test(cpf) || /^(\d)\1{10}$/.test(cpf)) return false;
+  const calcularDigito = (ate) => {
+    let soma = 0;
+    for (let i = 0; i < ate; i++) soma += Number(cpf[i]) * (ate + 1 - i);
+    const resto = (soma * 10) % 11;
+    return resto === 10 ? 0 : resto;
+  };
+  return calcularDigito(9) === Number(cpf[9]) && calcularDigito(10) === Number(cpf[10]);
+}
+
 function abrirDetalhesPedido(pedido){
   pedidoDetalhesAtual = pedido;
   const numero = pedido.id.slice(0, 8).toUpperCase();
@@ -2500,6 +2521,9 @@ function abrirDetalhesPedido(pedido){
   document.getElementById('detalhesCodigoRastreio').value = pedido.codigo_rastreio || '';
   document.getElementById('blocoPrevisaoInternacional').style.display = pedido.status === 'em_transito_internacional' ? 'block' : 'none';
   document.getElementById('detalhesPrevisaoInternacional').value = pedido.previsao_chegada_internacional || '';
+  document.getElementById('detalhesCpfCliente').value = pedido.cpf_cliente
+    ? pedido.cpf_cliente.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+    : '';
   document.getElementById('detalhesNotaFiscalStatus').textContent = pedido.nota_fiscal_path
     ? '✓ Nota fiscal anexada — subir outro PDF substitui a atual e reenvia o e-mail.'
     : 'Nenhuma nota fiscal anexada ainda.';
@@ -2513,6 +2537,7 @@ function abrirDetalhesPedido(pedido){
     <div style="font-size:0.88rem;line-height:1.7;margin-bottom:18px;">
       <strong>${escaparHtml(pedido.nome_cliente)}</strong><br>
       ${escaparHtml(pedido.email_cliente)} · ${escaparHtml(pedido.telefone_cliente)}<br><br>
+      <strong>CPF para nota fiscal:</strong> ${pedido.cpf_cliente ? escaparHtml(pedido.cpf_cliente.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')) : '<em style="color:var(--vermelho);">não informado</em>'}<br><br>
       ${escaparHtml(pedido.endereco)}, ${escaparHtml(pedido.numero)}${pedido.complemento ? ' - ' + escaparHtml(pedido.complemento) : ''}<br>
       ${escaparHtml(pedido.bairro)} — ${escaparHtml(pedido.cidade)}/${escaparHtml(pedido.estado)}<br>
       CEP: ${escaparHtml(pedido.cep)}
@@ -2535,6 +2560,13 @@ function abrirDetalhesPedido(pedido){
       </div>
     </div>
   `;
+  const cpfInput = document.getElementById('detalhesCpfCliente');
+  if (cpfInput){
+    cpfInput.addEventListener('input', () => {
+      const numeros = cpfInput.value.replace(/\D/g, '').slice(0, 11);
+      cpfInput.value = numeros.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    });
+  }
   document.getElementById('modalDetalhesPedido').classList.add('show');
 }
 
@@ -2563,6 +2595,30 @@ document.getElementById('btnExcluirPedido').addEventListener('click', async () =
   pedidoDetalhesAtual = null;
   renderTabelaPedidos();
   mostrarToastAdmin('Pedido excluído ✓');
+});
+
+document.getElementById('btnSalvarCpfCliente').addEventListener('click', async () => {
+  if (!pedidoDetalhesAtual) return;
+  const input = document.getElementById('detalhesCpfCliente');
+  const cpf = input.value.replace(/\D/g, '');
+  if (!cpfValidoAdmin(cpf)){
+    alert('Digite um CPF válido para emitir a nota fiscal.');
+    input.focus();
+    return;
+  }
+
+  const botao = document.getElementById('btnSalvarCpfCliente');
+  botao.disabled = true;
+  botao.textContent = 'Salvando...';
+  const { error } = await sb.from('pedidos').update({ cpf_cliente: cpf }).eq('id', pedidoDetalhesAtual.id);
+  botao.disabled = false;
+  botao.textContent = 'Salvar CPF';
+
+  if (error){ alert('Erro ao salvar CPF: ' + error.message); return; }
+  pedidoDetalhesAtual.cpf_cliente = cpf;
+  abrirDetalhesPedido(pedidoDetalhesAtual);
+  renderTabelaPedidos();
+  mostrarToastAdmin('CPF salvo ✓');
 });
 
 document.getElementById('btnSalvarRastreio').addEventListener('click', async () => {
@@ -4345,3 +4401,4 @@ document.getElementById('btnConfirmarExcluir').addEventListener('click', async (
 
 </body>
 </html>
+
