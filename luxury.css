@@ -62,8 +62,9 @@ nav.main-nav a { font-size: .8125rem; font-weight: 400; letter-spacing: .11em; }
   overflow: hidden;
   aspect-ratio: 4 / 5;
   margin: 0;
-  background-size: 100%;
-  transition: background-size .7s cubic-bezier(.16,1,.3,1);
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
 }
 .cat-polaroid-photo::after {
   content: '';
@@ -73,7 +74,6 @@ nav.main-nav a { font-size: .8125rem; font-weight: 400; letter-spacing: .11em; }
   background: linear-gradient(180deg, transparent 38%, rgba(22, 12, 12, .1) 55%, rgba(20, 8, 10, .82) 100%);
   transition: background .35s ease;
 }
-.cat-polaroid:hover .cat-polaroid-photo { background-size: 108%; }
 .cat-polaroid:hover .cat-polaroid-photo::after { background: linear-gradient(180deg, transparent 30%, rgba(22, 12, 12, .16) 52%, rgba(20, 8, 10, .9) 100%); }
 .cat-polaroid-meta {
   position: absolute;
@@ -88,7 +88,7 @@ nav.main-nav a { font-size: .8125rem; font-weight: 400; letter-spacing: .11em; }
 .cat-polaroid-nome {
   position: absolute;
   left: 22px;
-  right: 52px;
+  right: 22px;
   bottom: 23px;
   color: #fffaf2;
   font-family: var(--serif);
@@ -99,22 +99,6 @@ nav.main-nav a { font-size: .8125rem; font-weight: 400; letter-spacing: .11em; }
   text-align: left;
   text-shadow: 0 1px 16px rgba(0,0,0,.18);
 }
-.cat-polaroid-arrow {
-  position: absolute;
-  right: 20px;
-  bottom: 25px;
-  width: 30px;
-  height: 30px;
-  display: grid;
-  place-items: center;
-  border: 1px solid rgba(255,255,255,.55);
-  border-radius: 50%;
-  color: #fffaf2;
-  font-size: .95rem;
-  line-height: 1;
-  transition: transform .3s ease, background .3s ease;
-}
-.cat-polaroid:hover .cat-polaroid-arrow { transform: translate(3px,-3px); background: rgba(255,255,255,.14); }
 .vitrine { background: transparent; padding-top: 30px; }
 .vitrine-grid { gap: 24px; }
 .vitrine-card { min-height: 490px; }
@@ -203,8 +187,7 @@ footer { background: var(--creme); color: var(--texto); padding-top: 65px; }
   .section-head h2 { font-size: 2.4rem; }
   .cat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 26px 14px; }
   .cat-polaroid-meta { left: 16px; bottom: 57px; font-size: .56rem; }
-  .cat-polaroid-nome { left: 16px; right: 43px; bottom: 18px; font-size: 1.45rem; }
-  .cat-polaroid-arrow { right: 14px; bottom: 19px; width: 25px; height: 25px; font-size: .8rem; }
+  .cat-polaroid-nome { left: 16px; right: 16px; bottom: 18px; font-size: 1.45rem; }
   .vitrine-grid { grid-template-columns: 1fr; gap: 20px; }
   .vitrine-card { min-height: 420px; }
   .vitrine-inner { padding: 30px; }
