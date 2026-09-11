@@ -44,8 +44,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=Lato:wght@300;400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="luxury.css">
 </head>
-<body>
+<body class="pavan-home">
+<div class="maison-note">Joias para o que merece ser eterno.</div>
 
 <!-- ============ HEADER ============ -->
 <header id="siteHeader">
@@ -89,21 +91,25 @@
 </header>
 
 <!-- ============ HERO (faixa contida, imagem + texto) ============ -->
-<section class="section" style="padding-top:24px; padding-bottom:8px;">
-  <div class="container">
+<main id="conteudo">
+<section class="home-hero" aria-label="Destaque Pavan">
+  <div class="hero-container">
     <div class="faixa faixa--principal entra-com-pagina">
       <div class="faixa-img" id="heroFaixaImg"></div>
       <div class="faixa-content">
-        <span class="eyebrow" id="heroEyebrow"></span>
-        <h1 id="heroTitle"></h1>
-        <a href="#produtos" class="btn btn-primary" id="heroCta"></a>
+        <span class="eyebrow" id="heroEyebrow">O extraordinário mora nos detalhes</span>
+        <h1 id="heroTitle">Alguns sentimentos<br>merecem <em>brilhar.</em></h1>
+        <p class="hero-description">Joias que dizem o que as palavras não conseguem. Encontre a peça que faz parte da sua história.</p>
+        <a href="#produtos" class="btn btn-primary" id="heroCta">Descubra a seleção</a>
+        <a href="#categorias" class="hero-secondary">Encontre a sua joia <span aria-hidden="true">↗</span></a>
+        <span class="hero-signature">PAVAN & CO. <span>UM BRILHO. UMA HISTÓRIA.</span></span>
       </div>
     </div>
   </div>
 </section>
 
 <!-- ============ FAIXA DE CONFIANÇA ============ -->
-<section class="section" style="padding-top:0;padding-bottom:8px;">
+<section class="section trust-section" style="padding-top:0;padding-bottom:8px;" aria-label="Compre com tranquilidade">
   <div class="container">
     <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:22px 34px;padding:18px 16px;border-top:1px solid var(--borda);border-bottom:1px solid var(--borda);">
       <span style="display:flex;align-items:center;gap:8px;font-size:0.8rem;color:var(--texto-suave);">
@@ -127,8 +133,8 @@
 <section class="section" id="categorias">
   <div class="container">
     <div class="section-head reveal">
-      <span class="eyebrow">Explore</span>
-      <h2>Nossas categorias</h2>
+      <span class="eyebrow">Universo Pavan</span>
+      <h2>Um detalhe. <em>Infinitas possibilidades.</em></h2>
     </div>
     <div class="cat-grid" id="catGrid"></div>
   </div>
@@ -138,8 +144,8 @@
 <section class="section vitrine">
   <div class="container">
     <div class="section-head reveal">
-      <span class="eyebrow">Seleção</span>
-      <h2>Coleções em destaque</h2>
+      <span class="eyebrow">A arte de escolher</span>
+      <h2>Para cada versão <em>de você.</em></h2>
     </div>
     <div class="vitrine-grid" id="vitrineGrid"></div>
   </div>
@@ -149,19 +155,21 @@
 <section class="section" id="produtos">
   <div class="container">
     <div class="section-head reveal">
-      <span class="eyebrow">Catálogo</span>
-      <h2>Peças em destaque</h2>
+      <span class="eyebrow">A seleção Pavan</span>
+      <h2>Feitas para encantar.<br><em>Escolhidas para ficar.</em></h2>
     </div>
     <div class="prod-grid" id="prodGrid"></div>
   </div>
 </section>
 
 <!-- ============ NEWSLETTER ============ -->
+</main>
 <div class="newsletter-strip">
-  <h3>Receba novidades da Pavan <span class="amp-serif">&</span> Co.</h3>
+  <span class="eyebrow">Um convite especial</span>
+  <h3>O próximo encanto,<br><em>em primeira mão.</em></h3>
   <p>Lançamentos, coleções e convites exclusivos, direto no seu e-mail.</p>
   <form class="newsletter-form" onsubmit="event.preventDefault(); assinarNewsletter(this);">
-    <input type="email" placeholder="Seu melhor e-mail" required>
+    <input type="email" placeholder="Seu melhor e-mail" aria-label="Seu e-mail para receber novidades" required>
     <button class="btn btn-light" type="submit">Assinar</button>
   </form>
 </div>
@@ -224,10 +232,10 @@
 
 carregarHomeHero().then(banner => {
   if (!banner) return;
-  document.getElementById('heroFaixaImg').style.backgroundImage = `url('${banner.foto_url || ''}')`;
-  document.getElementById('heroEyebrow').textContent = banner.subtexto;
-  document.getElementById('heroTitle').textContent = banner.titulo;
-  document.getElementById('heroCta').textContent = banner.texto_botao;
+  if (banner.foto_url) document.getElementById('heroFaixaImg').style.backgroundImage = `url('${banner.foto_url}')`;
+  if (banner.subtexto) document.getElementById('heroEyebrow').textContent = banner.subtexto;
+  if (banner.titulo) document.getElementById('heroTitle').textContent = banner.titulo;
+  if (banner.texto_botao) document.getElementById('heroCta').textContent = banner.texto_botao;
 });
 
 const catGrid = document.getElementById('catGrid');
@@ -272,3 +280,4 @@ initBuscaForm('searchFormHeader', true);
 
 </body>
 </html>
+

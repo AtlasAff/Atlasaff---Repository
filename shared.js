@@ -1612,8 +1612,9 @@ if (!document.getElementById('painelAdmin')){
 
 /* ============================================================
    CARD DE PRODUTO
-   Ordem: imagem → título (centralizado) → box 2x2 [preço | banho]
-   / [material | pedra] → Comprar → Adicionar ao carrinho.
+   A imagem apresenta a peça; abaixo dela, nome, valor e os três atributos
+   relevantes ficam em uma leitura contínua. A seleção de variações continua
+   acontecendo na página da peça ou no seletor do botão de carrinho.
    ============================================================ */
 function cardProdutoHTML(p){
   const esgotado = (p.estoque ?? 0) <= 0;
@@ -1621,29 +1622,24 @@ function cardProdutoHTML(p){
   // mesmo cantinho da foto, e não faz sentido vender frete de algo
   // que não dá pra comprar agora).
   const temFreteGratis = !esgotado && (p.preco >= FRETE_GRATIS_MINIMO || p.freteGratisSempre);
+  const detalhes = [
+    p.material,
+    p.temPedra ? p.pedra : null,
+    p.temBanho ? p.banho : null
+  ].filter(Boolean).map(escaparHtml);
   return `
     <div class="prod-card reveal ${esgotado ? 'esgotado' : ''}">
       ${esgotado ? '<span class="badge-esgotado-card">Esgotado</span>' : ''}
       ${temFreteGratis ? seloFreteGratisHTML('selo-frete-gratis--foto') : ''}
       <a href="/produto/${p.slug}" class="prod-card-link" aria-label="Ver ${escaparHtml(p.nome)}">
         <div class="prod-img" style="background-image:url('${p.image}')"></div>
-        <div class="prod-name">${escaparHtml(p.nome)}</div>
-        <div class="prod-info-box">
-          <div class="prod-info-cell">
+        <div class="prod-card-content">
+          <div class="prod-name">${escaparHtml(p.nome)}</div>
+          <div class="prod-price-row">
             <span class="prod-price" data-produto-id="${p.id}" data-preco-original="${p.preco}">${formatarPreco(p.preco)}</span>
+            <span class="prod-view-detail" aria-hidden="true">↗</span>
           </div>
-          <div class="prod-info-cell">
-            <span class="prod-spec-label">Banho</span>
-            <span class="prod-spec-valor">${p.temBanho ? escaparHtml(p.banho) : '—'}</span>
-          </div>
-          <div class="prod-info-cell">
-            <span class="prod-spec-label">Material</span>
-            <span class="prod-spec-valor">${escaparHtml(p.material)}</span>
-          </div>
-          <div class="prod-info-cell">
-            <span class="prod-spec-label">Pedra</span>
-            <span class="prod-spec-valor">${p.temPedra ? escaparHtml(p.pedra) : '—'}</span>
-          </div>
+          ${detalhes.length ? `<p class="prod-details">${detalhes.join('<span aria-hidden="true">·</span>')}</p>` : ''}
         </div>
       </a>
       <div class="prod-actions">
@@ -2534,3 +2530,4 @@ function alinharTitulosDescricaoDetalhes(){
 }
 
 document.addEventListener('DOMContentLoaded', initHeaderShared);
+
