@@ -62,6 +62,12 @@
   small.dica{display:block;color:var(--texto-suave);font-size:0.76rem;margin-top:4px;font-weight:normal;text-transform:none;letter-spacing:0;}
   .checkbox-linha{display:flex;align-items:center;gap:8px;font-weight:normal;text-transform:none;font-size:0.85rem;color:var(--texto);}
   .checkbox-linha input{width:auto;}
+  .tabs{display:flex;gap:8px;margin:18px 0;}
+  .tab{background:#fff;color:var(--texto);border:1px solid var(--borda);}
+  .tab.active{background:var(--bordo);color:#fff;border-color:var(--bordo);}
+  .config-nota{font-size:.84rem;color:var(--texto-suave);line-height:1.55;margin-bottom:16px;}
+  .config-acoes{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px;}
+  .config-resultado{font-size:.84rem;margin-top:10px;min-height:1.3em;}
 </style>
 </head>
 <body>
@@ -72,6 +78,13 @@
 </header>
 
 <div class="container">
+
+  <nav class="tabs" role="tablist" aria-label="Seções da ferramenta">
+    <button type="button" class="tab active" data-aba="importar" role="tab" aria-selected="true">Importar produto</button>
+    <button type="button" class="tab" data-aba="configuracoes" role="tab" aria-selected="false">Configurações</button>
+  </nav>
+
+  <section id="abaImportar" role="tabpanel">
 
   <div class="card" id="cardStatus">
     <h2>Status</h2>
@@ -229,6 +242,37 @@
     </div>
 
   </form>
+  </section>
+
+  <section id="abaConfiguracoes" role="tabpanel" hidden>
+    <div class="card">
+      <h2>Configurações</h2>
+      <p class="config-nota">Tudo fica salvo só neste computador. A ferramenta nunca mostra de volta sua senha nem a chave da IA, e esses dados não vão para o GitHub nem para o site.</p>
+
+      <div class="campo">
+        <label for="cfgEmail">Login do admin</label>
+        <div class="grid2">
+          <input type="email" id="cfgEmail" autocomplete="username" placeholder="E-mail do admin">
+          <input type="password" id="cfgSenha" autocomplete="current-password" placeholder="Senha do admin">
+        </div>
+        <div class="config-acoes">
+          <button type="button" id="btnSalvarLoginConfig">Salvar e testar login</button>
+          <button type="button" class="outline" id="btnRemoverLoginConfig">Remover login salvo</button>
+        </div>
+        <p class="config-resultado" id="resultadoLoginConfig" aria-live="polite"></p>
+      </div>
+
+      <div class="campo">
+        <label for="cfgChaveGroq">Chave da IA (Groq)</label>
+        <input type="password" id="cfgChaveGroq" autocomplete="off" placeholder="Cole a chave da IA aqui">
+        <div class="config-acoes">
+          <button type="button" id="btnSalvarGroqConfig">Salvar chave da IA</button>
+          <button type="button" class="outline" id="btnRemoverGroqConfig">Remover chave salva</button>
+        </div>
+        <p class="config-resultado" id="resultadoGroqConfig" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
 </div>
 
 <div class="rodape-fixo" id="rodape" style="display:none;">
@@ -246,6 +290,79 @@ let filaItemAtual = null; // item da fila que está aberto no formulário agora 
 
 function $(id){ return document.getElementById(id); }
 function formatarR$(n){ return 'R$' + (Number(n) || 0).toFixed(2).replace('.', ','); }
+function escaparHtml(valor){
+  return String(valor ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+document.querySelectorAll('[data-aba]').forEach(botao => {
+  botao.addEventListener('click', () => {
+    const aba = botao.dataset.aba;
+    const importando = aba === 'importar';
+    $('abaImportar').hidden = !importando;
+    $('abaConfiguracoes').hidden = importando;
+    document.querySelectorAll('[data-aba]').forEach(b => {
+      const ativa = b === botao;
+      b.classList.toggle('active', ativa);
+      b.setAttribute('aria-selected', String(ativa));
+    });
+  });
+});
+
+function mostrarResultadoConfiguracao(id, texto, erro = false){
+  const el = $(id);
+  el.textContent = texto;
+  el.style.color = erro ? 'var(--erro)' : 'var(--verde)';
+}
+
+async function salvarConfiguracoes(payload, resultadoId){
+  try {
+    const resp = await fetch('/api/configuracoes', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+    const dados = await resp.json();
+    if (!resp.ok || dados.erro) throw new Error(dados.erro || 'Não consegui salvar.');
+    await carregarStatus();
+    return dados;
+  } catch (err) {
+    mostrarResultadoConfiguracao(resultadoId, err.message, true);
+    return null;
+  }
+}
+
+$('btnSalvarLoginConfig').addEventListener('click', async () => {
+  const email = $('cfgEmail').value.trim();
+  const senha = $('cfgSenha').value;
+  if (!email || !senha) return mostrarResultadoConfiguracao('resultadoLoginConfig', 'Preenche e-mail e senha para salvar.', true);
+  const dados = await salvarConfiguracoes({ atualizarLogin: true, email, senha }, 'resultadoLoginConfig');
+  if (dados){
+    $('cfgSenha').value = '';
+    mostrarResultadoConfiguracao('resultadoLoginConfig', 'Login confirmado e salvo neste computador.');
+  }
+});
+
+$('btnRemoverLoginConfig').addEventListener('click', async () => {
+  const dados = await salvarConfiguracoes({ removerLogin: true }, 'resultadoLoginConfig');
+  if (dados){
+    $('cfgEmail').value = '';
+    $('cfgSenha').value = '';
+    mostrarResultadoConfiguracao('resultadoLoginConfig', 'Login salvo removido deste computador.');
+  }
+});
+
+$('btnSalvarGroqConfig').addEventListener('click', async () => {
+  const chaveGroq = $('cfgChaveGroq').value.trim();
+  if (!chaveGroq) return mostrarResultadoConfiguracao('resultadoGroqConfig', 'Cole a chave da IA para salvar.', true);
+  const dados = await salvarConfiguracoes({ atualizarChaveGroq: true, chaveGroq }, 'resultadoGroqConfig');
+  if (dados){
+    $('cfgChaveGroq').value = '';
+    mostrarResultadoConfiguracao('resultadoGroqConfig', 'Chave da IA salva neste computador.');
+  }
+});
+
+$('btnRemoverGroqConfig').addEventListener('click', async () => {
+  const dados = await salvarConfiguracoes({ removerChaveGroq: true }, 'resultadoGroqConfig');
+  if (dados) mostrarResultadoConfiguracao('resultadoGroqConfig', 'Chave da IA removida deste computador.');
+});
 
 // A descrição (do scraping OU reescrita pela IA/Groq) é HTML de verdade
 // (negrito/itálico/lista) — não dá pra escapar como texto puro (viraria
@@ -305,7 +422,7 @@ async function carregarStatus(){
 
 async function carregarCategorias(selecionar){
   const cats = await fetch('/api/categorias').then(r => r.json());
-  $('fCategoria').innerHTML = cats.map(c => `<option value="${c.slug}">${c.nome}</option>`).join('');
+  $('fCategoria').innerHTML = cats.map(c => `<option value="${escaparHtml(c.slug)}">${escaparHtml(c.nome)}</option>`).join('');
   if (selecionar) $('fCategoria').value = selecionar;
 }
 
@@ -349,7 +466,7 @@ function renderFila(){
   $('filaLista').innerHTML = fila.map((item, i) => {
     const nome = item.dados ? (item.dados.nomeIA || item.dados.nomeOriginal || item.link) : item.link;
     return `<div class="chip" style="width:100%;justify-content:space-between;box-sizing:border-box;${item.status === 'pronto' ? 'cursor:pointer;' : ''}" data-i="${i}">
-      <span>${icones[item.status] || ''} ${nome}${item.status === 'erro' ? ' — ' + item.erro : ''}</span>
+       <span>${icones[item.status] || ''} ${escaparHtml(nome)}${item.status === 'erro' ? ' — ' + escaparHtml(item.erro) : ''}</span>
     </div>`;
   }).join('');
   $('filaLista').querySelectorAll('[data-i]').forEach(el => {
@@ -379,7 +496,7 @@ $('btnBuscar').addEventListener('click', async () => {
     try {
       preencherFormulario(await buscarUm(links[0]));
     } catch (err) {
-      $('erroBusca').innerHTML = `<div class="erro-box">Não consegui buscar: ${err.message}</div>`;
+      $('erroBusca').innerHTML = `<div class="erro-box">Não consegui buscar: ${escaparHtml(err.message)}</div>`;
     } finally {
       $('carregando').style.display = 'none';
       $('btnBuscar').disabled = false;
@@ -479,7 +596,7 @@ function renderAvisoDuplicado(produtoExistente){
   el.style.display = 'block';
   const dataFmt = new Date(produtoExistente.criado_em).toLocaleDateString('pt-BR');
   el.innerHTML = `<div class="erro-box">
-    ⚠️ Esse link já foi importado antes: <strong>"${produtoExistente.nome}"</strong> (${produtoExistente.ativo ? 'ativo no site' : 'rascunho'}, criado em ${dataFmt}).
+    ⚠️ Esse link já foi importado antes: <strong>"${escaparHtml(produtoExistente.nome)}"</strong> (${produtoExistente.ativo ? 'ativo no site' : 'rascunho'}, criado em ${dataFmt}).
     <div style="margin-top:8px;display:flex;gap:8px;">
       <button type="button" id="btnUsarAtualizar">Atualizar esse produto</button>
       <button type="button" class="outline" id="btnUsarNovo">Criar novo mesmo assim</button>
@@ -542,7 +659,7 @@ function renderFotos(){
 // TAMANHOS
 function renderTamanhos(){
   $('tamanhosChips').innerHTML = estado.tamanhos.map((t, i) => `
-    <span class="chip">${t} <button type="button" class="chip-x" data-i="${i}">×</button></span>`).join('');
+    <span class="chip">${escaparHtml(t)} <button type="button" class="chip-x" data-i="${i}">×</button></span>`).join('');
   $('tamanhosChips').querySelectorAll('button').forEach(btn => {
     btn.addEventListener('click', () => { estado.tamanhos.splice(Number(btn.dataset.i), 1); renderTamanhos(); });
   });
@@ -570,7 +687,7 @@ function calcularPrecoComMargem(custo, custoComImposto){
 }
 function renderQuilates(){
   $('quilatesChips').innerHTML = estado.quilates.map((q, i) => `
-    <span class="chip">${q.valor} — custo ${formatarR$(q.custo)} → venda ${formatarR$(calcularPrecoComMargem(q.custo, q.custoComImposto))} <button type="button" class="chip-x" data-i="${i}">×</button></span>`).join('');
+    <span class="chip">${escaparHtml(q.valor)} — custo ${formatarR$(q.custo)} → venda ${formatarR$(calcularPrecoComMargem(q.custo, q.custoComImposto))} <button type="button" class="chip-x" data-i="${i}">×</button></span>`).join('');
   $('quilatesChips').querySelectorAll('button').forEach(btn => {
     btn.addEventListener('click', () => { estado.quilates.splice(Number(btn.dataset.i), 1); renderQuilates(); });
   });
@@ -590,7 +707,7 @@ function renderBanhos(){
   $('banhosChips').innerHTML = estado.banhos.map((b, i) => `
     <span class="chip">
       ${b.foto ? `<img src="${urlImagem(b.foto)}" alt="" style="width:24px;height:24px;border-radius:4px;object-fit:cover;">` : '<span style="color:var(--erro);font-size:0.75rem;">sem foto</span>'}
-      ${b.nome} (${b.custo >= 0 ? '+' : ''}${formatarR$(b.custo)})
+       ${escaparHtml(b.nome)} (${b.custo >= 0 ? '+' : ''}${formatarR$(b.custo)})
       <button type="button" class="chip-x" data-i="${i}">×</button>
     </span>`).join('');
   $('banhosChips').querySelectorAll('button').forEach(btn => {
@@ -649,7 +766,7 @@ $('btnRegenerar').addEventListener('click', async () => {
     if (r.descricao) $('descricaoEdit').innerHTML = sanitizarDescricaoHtml(r.descricao);
     $('instrucaoIA').value = '';
   } catch (err) {
-    $('erroRegenerar').innerHTML = `<div class="erro-box">Não consegui aplicar: ${err.message}</div>`;
+    $('erroRegenerar').innerHTML = `<div class="erro-box">Não consegui aplicar: ${escaparHtml(err.message)}</div>`;
   } finally {
     $('btnRegenerar').disabled = false;
     $('btnRegenerar').textContent = 'Aplicar';
@@ -753,7 +870,7 @@ $('btnPublicar').addEventListener('click', async () => {
       }
     }
   } catch (err) {
-    $('resultadoPublicar').innerHTML = `<div class="erro-box">Não consegui publicar: ${err.message}</div>`;
+    $('resultadoPublicar').innerHTML = `<div class="erro-box">Não consegui publicar: ${escaparHtml(err.message)}</div>`;
   } finally {
     $('btnPublicar').disabled = false;
     atualizarBotaoPublicar();
@@ -765,3 +882,4 @@ carregarCategorias();
 </script>
 </body>
 </html>
+
