@@ -343,6 +343,8 @@ async function handlePublicar(req, res){
   const custoPecaNumero = Number(corpo.custoPeca) || 0;
   const custoImpostoNumero = corpo.custoImposto !== null && corpo.custoImposto !== undefined && corpo.custoImposto !== '' ? Number(corpo.custoImposto) : null;
   const custoFreteNumero = Number(corpo.custoFrete) || 0;
+  const custoOperacaoNumero = Number(corpo.custoOperacao) || 0;
+  const taxaPagamentoNumero = Math.min(Math.max(Number(corpo.taxaPagamento) || 0, 0), 95);
   const taxaImpostoAprox = (custoPecaNumero > 0 && custoImpostoNumero) ? custoImpostoNumero / custoPecaNumero : 0;
   const margemNumero = Number(corpo.margemLucro) || null;
   const { matrizPrecos, matrizCustos } = montarMatrizes({
@@ -355,14 +357,24 @@ async function handlePublicar(req, res){
     custoPecaBase: custoPecaNumero,
     taxaImposto: taxaImpostoAprox,
     margemNumero,
-    freteNumero: custoFreteNumero
+    freteNumero: custoFreteNumero,
+    custoOperacaoNumero,
+    taxaPagamentoNumero
   });
 
   // Atualizando: acrescenta a observação nova embaixo da que já existia,
   // não substitui. Produto novo: só o que veio do formulário mesmo.
+  const notaPrecificacao = (custoOperacaoNumero || taxaPagamentoNumero)
+    ? `Precificação usada na importação: operação R$ ${custoOperacaoNumero.toFixed(2).replace('.', ',')}; taxa de pagamento ${taxaPagamentoNumero.toFixed(2).replace('.', ',')}%.`
+    : null;
+  const tratamentosPermitidos = new Set(['tamanho', 'quilate', 'banho', 'modelo', 'conferir']);
+  const notaVariacoes = Array.isArray(corpo.mapeamentoVariacoes) && corpo.mapeamentoVariacoes.length
+    ? `Variações conferidas: ${corpo.mapeamentoVariacoes.slice(0, 12).map(v => `${String(v.nome || 'variação').replace(/[\r\n]+/g, ' ').slice(0, 80)} → ${tratamentosPermitidos.has(v.tratamento) ? v.tratamento : 'conferir'}`).join('; ')}.`
+    : null;
+  const observacoesNovas = [corpo.observacoes || '', notaPrecificacao || '', notaVariacoes || ''].filter(Boolean).join('\n');
   const observacoesFinal = produtoExistenteAtual?.observacoes_internas
-    ? `${produtoExistenteAtual.observacoes_internas}\n\n${corpo.observacoes || ''}`.trim()
-    : (corpo.observacoes || null);
+    ? `${produtoExistenteAtual.observacoes_internas}\n\n${observacoesNovas}`.trim()
+    : (observacoesNovas || null);
 
   const dadosProduto = {
     nome: corpo.nome || '(sem nome)',
