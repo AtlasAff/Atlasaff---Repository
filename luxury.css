@@ -248,6 +248,9 @@ footer { background: var(--creme); color: var(--texto); padding-top: 65px; }
 .checkout-secao { padding: 30px; background: #fffdf8; border: 1px solid var(--borda); margin-bottom: 24px; }
 .checkout-secao h2, .checkout-resumo h2 { font-size: 1.8rem; font-weight: 400; }
 .checkout-resumo { background: #efeae1; border: 1px solid var(--borda); padding: 30px; }
+/* Mantém foto, detalhes e preço alinhados no topo no resumo do pedido. */
+.checkout-resumo .carrinho-item { align-items: flex-start; }
+.checkout-resumo .carrinho-preco { padding-top: 2px; }
 .checkout-campo label, .conta-form label { font-size: .875rem; font-weight: 400; }
 .checkout-campo input, .checkout-campo select, .checkout-campo textarea, .conta-form input { border-radius: 0; min-height: 48px; font-size: 1rem; background: #fffdf8; }
 .conta-wrap { padding-top: 45px; padding-bottom: 65px; }
