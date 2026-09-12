@@ -29,6 +29,8 @@ import { readFile, writeFile, mkdir, chmod } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { lookup } from 'node:dns/promises';
+import { isIP } from 'node:net';
 
 export const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const ARQUIVO_SESSAO = path.join(__dirname, '.sessao-aliexpress.json');
@@ -449,21 +451,78 @@ function extensaoDaUrl(urlFoto){
   }
 }
 
+// Nunca usa a ferramenta como ponte para endereços da própria máquina ou
+// da rede local. Além de bloquear os formatos comuns de IP, resolve o DNS
+// antes do fetch para não aceitar um domínio que aponta para uma faixa
+// privada. É usado tanto no proxy da prévia quanto no upload definitivo.
+function enderecoPrivadoOuReservado(endereco){
+  const tipo = isIP(endereco);
+  if (tipo === 4){
+    const partes = endereco.split('.').map(Number);
+    const [a, b] = partes;
+    return a === 0 || a === 10 || a === 127 ||
+      (a === 100 && b >= 64 && b <= 127) ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && (b === 0 || b === 168)) ||
+      (a === 198 && (b === 18 || b === 19));
+  }
+  if (tipo === 6){
+    const ip = endereco.toLowerCase();
+    if (ip === '::1' || ip === '::' || ip.startsWith('fc') || ip.startsWith('fd') || /^fe[89ab]/.test(ip)) return true;
+    const mapeado = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+    return Boolean(mapeado && enderecoPrivadoOuReservado(mapeado[1]));
+  }
+  return true;
+}
+
+export async function urlExternaPublicaPermitida(alvo){
+  let url;
+  try { url = new URL(alvo); } catch { return false; }
+  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) return false;
+  const host = url.hostname.toLowerCase();
+  if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local')) return false;
+  try {
+    const enderecos = isIP(host)
+      ? [{ address: host }]
+      : await lookup(host, { all: true, verbatim: true });
+    return enderecos.length > 0 && enderecos.every(({ address }) => !enderecoPrivadoOuReservado(address));
+  } catch {
+    return false;
+  }
+}
+
+export function linkAliExpressPermitido(alvo){
+  try {
+    const url = new URL(alvo);
+    const host = url.hostname.toLowerCase();
+    return url.protocol === 'https:' && !url.username && !url.password &&
+      (host === 'aliexpress.com' || host.endsWith('.aliexpress.com'));
+  } catch {
+    return false;
+  }
+}
+
 // Baixa uma foto de uma URL externa e sobe pro mesmo bucket que o admin
 // usa pra upload manual — reaproveitado tanto pras fotos principais do
 // produto quanto pras fotos de cada banho/cor. Devolve a URL pública, ou
 // null se der qualquer erro (quem chamar decide o que fazer, não trava).
 export async function baixarESubirFoto(sb, urlFoto, pasta){
   try {
-    const resp = await fetch(urlFoto);
+    if (!(await urlExternaPublicaPermitida(urlFoto))) return null;
+    const resp = await fetch(urlFoto, { signal: AbortSignal.timeout(20_000) });
     if (!resp.ok) throw new Error(`status ${resp.status}`);
+    const contentType = resp.headers.get('content-type') || '';
+    const tamanhoDeclarado = Number(resp.headers.get('content-length')) || 0;
+    if (!contentType.startsWith('image/') || tamanhoDeclarado > 15 * 1024 * 1024) return null;
     const bytes = new Uint8Array(await resp.arrayBuffer());
+    if (bytes.length > 15 * 1024 * 1024) return null;
     const extensao = extensaoDaUrl(urlFoto);
     // Nome aleatório, sem mencionar o fornecedor — alguém inspecionando a
     // foto no site não pode ver de onde ela veio.
     const nomeArquivo = `${pasta}/${crypto.randomUUID()}.${extensao}`;
     const { error: erroUpload } = await sb.storage.from('produtos').upload(nomeArquivo, bytes, {
-      contentType: resp.headers.get('content-type') || 'image/jpeg'
+      contentType
     });
     if (erroUpload) throw erroUpload;
     const { data: urlData } = sb.storage.from('produtos').getPublicUrl(nomeArquivo);
@@ -1311,3 +1370,4 @@ if (ehExecutadoDireto){
     console.log('  npm run interface                          -> abre a interface visual no navegador');
   }
 }
+
