@@ -184,6 +184,7 @@ async function handleBuscar(req, res){
       variacoes: dados.variacoes,
       quilates: dados.matrizVariacoes?.quilatesCustos || [],
       banhos: (dados.matrizVariacoes?.banhosCustos || []).map(b => ({ nome: b.nome, custo: b.custo, foto: b.foto })),
+      combosExatos: dados.matrizVariacoes?.combosExatos || [],
       precosPorVariacao: dados.precosPorVariacao,
       tamanhosBR,
       avisoTamanho,
@@ -326,11 +327,39 @@ async function handlePublicar(req, res){
     if (final) fotosFinal.push(final);
   }
 
+  // Alguns fornecedores escondem material e quilate na MESMA opção, por
+  // exemplo "925 Gold Plated 1CT" e "14K Gold 3CT". Essas são combinações
+  // fechadas, não uma grade completa de cor × quilate. Preservamos a lista
+  // exata para nunca vender no site uma combinação que não existe no Ali.
+  const combosExatos = [];
+  for (const combo of (Array.isArray(corpo.combosExatos) ? corpo.combosExatos.slice(0, 30) : [])){
+    const quilate = String(combo.quilate || '').trim().slice(0, 40);
+    const banho = String(combo.banho || '').trim().slice(0, 80);
+    const custo = Number(combo.custo);
+    const custoComImposto = Number(combo.custoComImposto);
+    if (!quilate || !banho || !Number.isFinite(custo) || custo < 0) continue;
+    const fotoUrl = await garantirNoStorage(combo.foto || corpo.fotos?.[0], 'importados');
+    combosExatos.push({
+      quilate, banho, custo,
+      custoComImposto: Number.isFinite(custoComImposto) && custoComImposto >= custo ? custoComImposto : null,
+      foto_url: fotoUrl
+    });
+  }
+
   const banhosFinal = [];
-  for (const b of (corpo.banhos || [])){
-    const fotoUrl = await garantirNoStorage(b.foto, 'importados');
-    if (!fotoUrl) continue; // o site exige foto por banho — sem foto, essa opção não é salva
-    banhosFinal.push({ nome: b.nome, custo: Number(b.custo) || 0, preco: Number(b.preco) || 0, foto_url: fotoUrl });
+  if (combosExatos.length){
+    const vistos = new Set();
+    for (const combo of combosExatos){
+      if (vistos.has(combo.banho) || !combo.foto_url) continue;
+      vistos.add(combo.banho);
+      banhosFinal.push({ nome: combo.banho, custo: combo.custo, preco: 0, foto_url: combo.foto_url });
+    }
+  } else {
+    for (const b of (corpo.banhos || [])){
+      const fotoUrl = await garantirNoStorage(b.foto, 'importados');
+      if (!fotoUrl) continue; // o site exige foto por banho — sem foto, essa opção não é salva
+      banhosFinal.push({ nome: b.nome, custo: Number(b.custo) || 0, preco: Number(b.preco) || 0, foto_url: fotoUrl });
+    }
   }
 
   const { data: categoriaValida } = await sb.from('categorias').select('slug').eq('slug', corpo.categoria).eq('ativa', true).maybeSingle();
@@ -347,7 +376,17 @@ async function handlePublicar(req, res){
   const taxaPagamentoNumero = Math.min(Math.max(Number(corpo.taxaPagamento) || 0, 0), 95);
   const taxaImpostoAprox = (custoPecaNumero > 0 && custoImpostoNumero) ? custoImpostoNumero / custoPecaNumero : 0;
   const margemNumero = Number(corpo.margemLucro) || null;
-  const { matrizPrecos, matrizCustos } = montarMatrizes({
+  const precificarCustoExato = (custoComImposto) => {
+    if (!margemNumero) return 0;
+    const taxaPagamento = taxaPagamentoNumero / 100;
+    const custoTotal = Number(custoComImposto) + custoFreteNumero + custoOperacaoNumero;
+    return Math.round(custoTotal * (1 + margemNumero / 100) / (1 - taxaPagamento) * 100) / 100;
+  };
+  const matrizDeCombosExatos = combosExatos.length ? {
+    matrizPrecos: combosExatos.map(c => ({ quilate: c.quilate, banho: c.banho, preco: precificarCustoExato(c.custoComImposto ?? (c.custo * (1 + taxaImpostoAprox)))})),
+    matrizCustos: combosExatos.map(c => ({ quilate: c.quilate, banho: c.banho, custo: Math.round(((c.custoComImposto ?? (c.custo * (1 + taxaImpostoAprox))) + custoFreteNumero + custoOperacaoNumero) * 100) / 100 }))
+  } : null;
+  const { matrizPrecos, matrizCustos } = matrizDeCombosExatos || montarMatrizes({
     quilatesCustos: (corpo.quilates || []).map(q => ({
       valor: q.valor,
       custo: Number(q.custo) || 0,
@@ -361,6 +400,22 @@ async function handlePublicar(req, res){
     custoOperacaoNumero,
     taxaPagamentoNumero
   });
+  const quilatesParaSalvar = combosExatos.length
+    ? [...new Map(combosExatos.map(c => [c.quilate, { valor: c.quilate, preco: precificarCustoExato(c.custoComImposto ?? (c.custo * (1 + taxaImpostoAprox))), descricao: '' }])).values()]
+    : (corpo.quilates || []).map(q => ({ valor: q.valor, preco: Number(q.preco) || 0, descricao: q.descricao || '' }));
+  const quilatesCustosParaSalvar = combosExatos.length
+    ? [...new Map(combosExatos.map(c => [c.quilate, { valor: c.quilate, custo: c.custo, taxa: Math.round(((c.custoComImposto ?? (c.custo * (1 + taxaImpostoAprox))) - c.custo) * 100) / 100 }])).values()]
+    : (corpo.quilates || []).map(q => {
+      const custo = Number(q.custo) || 0;
+      const taxa = q.custoComImposto != null
+        ? Math.round((Number(q.custoComImposto) - custo) * 100) / 100
+        : Math.round(custo * taxaImpostoAprox * 100) / 100;
+      return { valor: q.valor, custo, taxa };
+    });
+  if (combosExatos.length){
+    const precoPorBanho = new Map(matrizPrecos.map(m => [m.banho, m.preco]));
+    banhosFinal.forEach(b => { b.preco = precoPorBanho.get(b.nome) || 0; });
+  }
 
   // Atualizando: acrescenta a observação nova embaixo da que já existia,
   // não substitui. Produto novo: só o que veio do formulário mesmo.
@@ -391,19 +446,11 @@ async function handlePublicar(req, res){
     ...(margemNumero ? { margem_lucro: margemNumero } : {}),
     ...(corpo.estoque !== null && corpo.estoque !== undefined && corpo.estoque !== '' ? { estoque: Number(corpo.estoque) } : {}),
     ...(corpo.tamanhos?.length ? { tamanhos_disponiveis: corpo.tamanhos } : {}),
-    ...(corpo.quilates?.length ? {
-      quilates_disponiveis: corpo.quilates.map(q => ({ valor: q.valor, preco: Number(q.preco) || 0, descricao: q.descricao || '' })),
-      // Taxa separada do custo (campo próprio no admin agora, digitado na
-      // mão) — usa a taxa REAL lida naquele quilate quando veio
-      // (custoComImposto), só aproxima pela proporção do produto base
-      // quando não leu (mesmo fallback de sempre, ver montarMatrizes).
-      quilates_custos: corpo.quilates.map(q => {
-        const custo = Number(q.custo) || 0;
-        const taxa = q.custoComImposto != null
-          ? Math.round((Number(q.custoComImposto) - custo) * 100) / 100
-          : Math.round(custo * taxaImpostoAprox * 100) / 100;
-        return { valor: q.valor, custo, taxa };
-      })
+    ...(quilatesParaSalvar.length ? {
+      quilates_disponiveis: quilatesParaSalvar,
+      // Taxa separada do custo; quando o AliExpress mostrou a taxa dessa
+      // opção específica, ela prevalece sobre qualquer aproximação.
+      quilates_custos: quilatesCustosParaSalvar
     } : {}),
     ...(banhosFinal.length ? {
       banhos_disponiveis: banhosFinal.map(b => ({ nome: b.nome, preco: b.preco, foto_url: b.foto_url })),
