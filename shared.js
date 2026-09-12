@@ -1742,11 +1742,19 @@ async function renderCategoryPage(){
   const pedrasDisponiveis = [...new Set(todos.map(p => p.pedra))];
   const formatosDisponiveis = [...new Set(todos.map(p => p.formato).filter(Boolean))];
   const ocasioesDisponiveis = [...new Set(todos.map(p => p.ocasiao).filter(Boolean))];
+  // A faixa começa em zero e termina num número "redondo" acima da peça
+  // mais cara da categoria. Assim o mesmo filtro serve para qualquer
+  // categoria — inclusive as criadas depois pelo admin.
+  const maiorPreco = Math.max(0, ...todos.map(p => Number(p.preco) || 0));
+  const precoMinimoPermitido = 0;
+  const precoMaximoPermitido = Math.max(100, Math.ceil(maiorPreco / 50) * 50);
 
   let filtroMateriais = new Set();
   let filtroPedras = new Set();
   let filtroFormato = null;
   let filtroOcasiao = null;
+  let filtroPrecoMin = precoMinimoPermitido;
+  let filtroPrecoMax = precoMaximoPermitido;
   let ordenacaoAtual = "relevancia";
 
   // "Escolha por formato" — só aparece se algum produto da categoria tiver pedra
@@ -1803,6 +1811,20 @@ async function renderCategoryPage(){
 
   const painel = document.getElementById('painelFiltros');
   painel.innerHTML = `
+    <div class="filtro-grupo filtro-grupo-preco">
+      <h4>Preço</h4>
+      <div class="filtro-preco-slider" aria-label="Faixa de preço">
+        <div class="filtro-preco-trilho"></div>
+        <div class="filtro-preco-preenchido" id="filtroPrecoPreenchido"></div>
+        <input type="range" id="filtroPrecoMin" min="${precoMinimoPermitido}" max="${precoMaximoPermitido}" step="1" value="${filtroPrecoMin}" aria-label="Preço mínimo">
+        <input type="range" id="filtroPrecoMax" min="${precoMinimoPermitido}" max="${precoMaximoPermitido}" step="1" value="${filtroPrecoMax}" aria-label="Preço máximo">
+      </div>
+      <div class="filtro-preco-campos">
+        <label><span>R$</span><input type="number" id="filtroPrecoMinCampo" min="${precoMinimoPermitido}" max="${precoMaximoPermitido}" step="1" value="${filtroPrecoMin}" aria-label="Preço mínimo"></label>
+        <span>até</span>
+        <label><span>R$</span><input type="number" id="filtroPrecoMaxCampo" min="${precoMinimoPermitido}" max="${precoMaximoPermitido}" step="1" value="${filtroPrecoMax}" aria-label="Preço máximo"></label>
+      </div>
+    </div>
     <div class="filtro-grupo">
       <h4>Material</h4>
       ${materiaisDisponiveis.map(m => `
@@ -1825,13 +1847,59 @@ async function renderCategoryPage(){
     <button type="button" class="btn-limpar-filtros" id="limparFiltrosBtn">Limpar tudo</button>
   `;
 
+  const precoMinRange = painel.querySelector('#filtroPrecoMin');
+  const precoMaxRange = painel.querySelector('#filtroPrecoMax');
+  const precoMinCampo = painel.querySelector('#filtroPrecoMinCampo');
+  const precoMaxCampo = painel.querySelector('#filtroPrecoMaxCampo');
+  const precoPreenchido = painel.querySelector('#filtroPrecoPreenchido');
+
+  function limitarPreco(valor, padrao){
+    const numero = Number(valor);
+    return Number.isFinite(numero)
+      ? Math.max(precoMinimoPermitido, Math.min(precoMaximoPermitido, Math.round(numero)))
+      : padrao;
+  }
+
+  function atualizarControlesPreco(){
+    precoMinRange.value = filtroPrecoMin;
+    precoMaxRange.value = filtroPrecoMax;
+    precoMinCampo.value = filtroPrecoMin;
+    precoMaxCampo.value = filtroPrecoMax;
+    const amplitude = precoMaximoPermitido - precoMinimoPermitido || 1;
+    const inicio = ((filtroPrecoMin - precoMinimoPermitido) / amplitude) * 100;
+    const fim = ((filtroPrecoMax - precoMinimoPermitido) / amplitude) * 100;
+    precoPreenchido.style.left = `${inicio}%`;
+    precoPreenchido.style.right = `${100 - fim}%`;
+  }
+
+  function definirPrecoMin(valor){
+    filtroPrecoMin = limitarPreco(valor, precoMinimoPermitido);
+    if (filtroPrecoMin > filtroPrecoMax) filtroPrecoMin = filtroPrecoMax;
+    atualizarControlesPreco();
+    renderizarTudo();
+  }
+
+  function definirPrecoMax(valor){
+    filtroPrecoMax = limitarPreco(valor, precoMaximoPermitido);
+    if (filtroPrecoMax < filtroPrecoMin) filtroPrecoMax = filtroPrecoMin;
+    atualizarControlesPreco();
+    renderizarTudo();
+  }
+
+  precoMinRange.addEventListener('input', () => definirPrecoMin(precoMinRange.value));
+  precoMaxRange.addEventListener('input', () => definirPrecoMax(precoMaxRange.value));
+  precoMinCampo.addEventListener('change', () => definirPrecoMin(precoMinCampo.value));
+  precoMaxCampo.addEventListener('change', () => definirPrecoMax(precoMaxCampo.value));
+  atualizarControlesPreco();
+
   function produtosFiltrados(){
     return todos.filter(p => {
       const passaMaterial = filtroMateriais.size === 0 || filtroMateriais.has(p.material);
       const passaPedra = filtroPedras.size === 0 || filtroPedras.has(p.pedra);
       const passaFormato = !filtroFormato || p.formato === filtroFormato;
       const passaOcasiao = !filtroOcasiao || p.ocasiao === filtroOcasiao;
-      return passaMaterial && passaPedra && passaFormato && passaOcasiao;
+      const passaPreco = p.preco >= filtroPrecoMin && p.preco <= filtroPrecoMax;
+      return passaMaterial && passaPedra && passaFormato && passaOcasiao && passaPreco;
     });
   }
 
@@ -1851,6 +1919,9 @@ async function renderCategoryPage(){
     filtroPedras.forEach(p => chips.push({ tipo: 'pedra', valor: p }));
     if (filtroFormato) chips.push({ tipo: 'formato', valor: filtroFormato });
     if (filtroOcasiao) chips.push({ tipo: 'ocasiao', valor: filtroOcasiao });
+    if (filtroPrecoMin !== precoMinimoPermitido || filtroPrecoMax !== precoMaximoPermitido){
+      chips.push({ tipo: 'preco', valor: `${formatarPreco(filtroPrecoMin)} — ${formatarPreco(filtroPrecoMax)}` });
+    }
     chipsWrap.innerHTML = chips.map(c => `
       <span class="filter-chip">
         ${c.valor}
@@ -1872,6 +1943,11 @@ async function renderCategoryPage(){
         else if (tipo === 'ocasiao'){
           filtroOcasiao = null;
           if (ocasiaoWrap) ocasiaoWrap.querySelectorAll('.ocasiao-pill').forEach(b => b.classList.remove('active'));
+        }
+        else if (tipo === 'preco'){
+          filtroPrecoMin = precoMinimoPermitido;
+          filtroPrecoMax = precoMaximoPermitido;
+          atualizarControlesPreco();
         }
         const chk = painel.querySelector(`input[data-tipo="${tipo}"][value="${valor}"]`);
         if (chk) chk.checked = false;
@@ -1905,6 +1981,9 @@ async function renderCategoryPage(){
       formatoWrap.querySelectorAll('.formato-pill').forEach(b => b.classList.remove('active'));
       filtroOcasiao = null;
       if (ocasiaoWrap) ocasiaoWrap.querySelectorAll('.ocasiao-pill').forEach(b => b.classList.remove('active'));
+      filtroPrecoMin = precoMinimoPermitido;
+      filtroPrecoMax = precoMaximoPermitido;
+      atualizarControlesPreco();
       renderizarTudo();
     }
   });
