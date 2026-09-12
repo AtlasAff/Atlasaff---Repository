@@ -74,7 +74,12 @@
   .tabs{display:flex;gap:5px;width:max-content;margin:0 0 17px;padding:5px;background:rgba(255,253,248,.92);border:1px solid rgba(88,35,27,.12);border-radius:12px;box-shadow:0 8px 18px rgba(52,23,18,.08);}.tab{background:transparent;color:var(--texto-suave);border:0;box-shadow:none;padding:9px 14px;font-size:.76rem;}.tab:hover{background:rgba(104,17,29,.05);color:var(--bordo);box-shadow:none;transform:none;}.tab.active{background:var(--bordo);color:#fff;border-color:var(--bordo);box-shadow:0 4px 10px rgba(74,12,20,.2);}
   .config-nota{font-size:.84rem;color:var(--texto-suave);line-height:1.6;margin:0 0 19px;max-width:630px;}.config-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px;}.config-painel{padding:18px;background:linear-gradient(145deg,#fffefa,#f6efe5);border:1px solid var(--borda);border-radius:11px;}.config-painel h3{font-size:1.04rem;margin-bottom:5px;}.config-painel h3 span{color:var(--dourado);font-size:.82rem;margin-right:6px;}.config-painel > p{margin:0 0 16px;color:var(--texto-suave);font-size:.78rem;line-height:1.5;}.config-acoes{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;}.config-resultado{font-size:.8rem;margin:11px 0 0;min-height:1.3em;}
   #cardStatus{padding-bottom:21px;}#cardStatus h2{margin-bottom:15px;}#inputLink{min-height:78px;border-color:rgba(104,17,29,.2);background:linear-gradient(90deg,#fffefa,#fff);}.card > #btnBuscar{min-width:166px;}#filaBox{padding-top:5px;}.card:has(#inputLink){position:relative;overflow:hidden;}.card:has(#inputLink)::after{content:"";position:absolute;right:-34px;bottom:-42px;width:110px;height:110px;border-radius:50%;border:1px solid rgba(185,152,90,.2);box-shadow:0 0 0 15px rgba(185,152,90,.04);pointer-events:none;}
-  @media(max-width:680px){body{font-size:13px;padding-bottom:124px;}.topo{min-height:240px;padding:19px 20px;}.topo-conteudo{align-items:flex-start;}.topo-selo{font-size:.64rem;white-space:nowrap;}.header-intro{margin-top:40px;}.container{padding:0 11px;margin-top:-19px;}.card{padding:19px 16px;border-radius:12px;}.card h2{font-size:1.2rem;}.grid2,.grid3,.status-grid,.config-grid{grid-template-columns:1fr;gap:11px;}.add-linha{flex-wrap:wrap;}.add-linha .campo{flex-basis:calc(50% - 4px);}.add-linha button{width:100%;}.tabs{width:100%;}.tab{flex:1;padding:9px 8px;}.rodape-fixo{padding:10px 11px;flex-wrap:wrap;}.preco-preview{width:100%;}.rodape-fixo button{flex:1;padding:10px 8px;font-size:.72rem;}.config-painel{padding:15px;}}
+  .captura-resumo{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 17px;}.captura-item{padding:5px 9px;border:1px solid var(--borda);border-radius:99px;background:#f8f2e8;color:var(--texto-suave);font-size:.71rem;}.captura-item.ok::before{content:"●";color:var(--sucesso);font-size:.61rem;margin-right:5px;}.captura-item.atencao::before{content:"●";color:var(--dourado);font-size:.61rem;margin-right:5px;}
+  .mapa-variacoes{display:grid;gap:8px;margin:10px 0 17px;}.mapa-variacao{display:grid;grid-template-columns:minmax(140px,1fr) minmax(180px,1.4fr) 150px;gap:9px;align-items:center;padding:10px 11px;border:1px solid var(--borda);border-radius:9px;background:#fffefa;}.mapa-variacao strong{font-family:"Palatino Linotype",Georgia,serif;font-weight:500;color:var(--bordo);}.mapa-variacao small{font-size:.72rem;color:var(--texto-suave);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}.mapa-variacao select{padding:7px 9px;font-size:.78rem;}
+  .precificacao-nota{padding:13px 14px;margin:3px 0 16px;border-radius:10px;background:linear-gradient(115deg,#f9f1e2,#fffdf8);border:1px solid rgba(185,152,90,.35);}.precificacao-nota strong{display:block;font-family:"Palatino Linotype",Georgia,serif;color:var(--bordo);font-size:.99rem;margin-bottom:2px;}.precificacao-nota span{font-size:.76rem;color:var(--texto-suave);}.indicadores-preco{display:flex;flex-wrap:wrap;gap:8px;margin-top:11px;}.indicador-preco{flex:1;min-width:130px;padding:9px 10px;background:#fffefa;border-left:2px solid var(--dourado);}.indicador-preco small{display:block;text-transform:uppercase;letter-spacing:.07em;font-size:.61rem;color:var(--texto-suave);}.indicador-preco strong{font-family:"Palatino Linotype",Georgia,serif;color:var(--bordo);font-size:.97rem;font-weight:500;}
+  .previsao-produto{display:grid;grid-template-columns:92px 1fr;gap:13px;padding:11px;background:#f8f2e8;border:1px solid var(--borda);border-radius:10px;}.previsao-imagem{width:92px;height:92px;border-radius:7px;overflow:hidden;background:#e8dfd1;display:grid;place-items:center;color:var(--texto-suave);font-size:.7rem;text-align:center;}.previsao-imagem img{width:100%;height:100%;object-fit:cover;}.previsao-meta span{display:block;color:var(--texto-suave);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;margin:3px 0 3px;}.previsao-meta h3{font-size:1.05rem;line-height:1.15;color:var(--texto);margin:0;}.previsao-meta strong{font-family:"Palatino Linotype",Georgia,serif;color:var(--bordo);font-size:1.12rem;font-weight:500;}.previsao-meta p{margin:5px 0 0;font-size:.75rem;color:var(--texto-suave);}
+  .checklist-publicar{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin:2px 0 15px;}.check-item{padding:8px 10px;border-radius:7px;background:#f7f1e8;color:var(--texto-suave);font-size:.76rem;}.check-item::before{content:"○";font-size:.9rem;margin-right:6px;color:var(--dourado);}.check-item.ok::before{content:"✓";color:var(--sucesso);font-weight:700;}.check-item.alerta::before{content:"!";color:var(--erro);font-weight:700;}
+  @media(max-width:680px){body{font-size:13px;padding-bottom:124px;}.topo{min-height:240px;padding:19px 20px;}.topo-conteudo{align-items:flex-start;}.topo-selo{font-size:.64rem;white-space:nowrap;}.header-intro{margin-top:40px;}.container{padding:0 11px;margin-top:-19px;}.card{padding:19px 16px;border-radius:12px;}.card h2{font-size:1.2rem;}.grid2,.grid3,.status-grid,.config-grid,.checklist-publicar{grid-template-columns:1fr;gap:11px;}.mapa-variacao{grid-template-columns:1fr;gap:4px;}.add-linha{flex-wrap:wrap;}.add-linha .campo{flex-basis:calc(50% - 4px);}.add-linha button{width:100%;}.tabs{width:100%;}.tab{flex:1;padding:9px 8px;}.rodape-fixo{padding:10px 11px;flex-wrap:wrap;}.preco-preview{width:100%;}.rodape-fixo button{flex:1;padding:10px 8px;font-size:.72rem;}.config-painel{padding:15px;}}
 </style>
 </head>
 <body>
@@ -132,6 +137,7 @@
       <h2>2. Revisa e edita</h2>
 
       <div id="avisoDuplicado" style="display:none;margin-bottom:14px;"></div>
+      <div id="resumoCaptura" class="captura-resumo" aria-label="Resumo da captura"></div>
 
       <div class="campo">
         <label for="fNome">Nome do produto</label>
@@ -172,6 +178,11 @@
         <label>Fotos <small class="dica">arrasta pra reordenar; clica no × pra remover uma. Só são enviadas de verdade quando você publica</small></label>
         <div class="fotos-grid" id="fotosGrid"></div>
       </div>
+
+      <div class="campo">
+        <label>Prévia no catálogo <small class="dica">uma leitura rápida de como a peça deve aparecer para quem entra na Pavan</small></label>
+        <div class="previsao-produto" id="previsaoProduto"></div>
+      </div>
     </div>
 
     <div class="card">
@@ -204,10 +215,30 @@
           <input type="number" step="1" id="fEstoque">
         </div>
       </div>
+      <div class="precificacao-nota">
+        <strong>Preço que já protege sua margem.</strong>
+        <span>Acrescente o custo para preparar/enviar no Brasil e a taxa do meio de pagamento. A ferramenta calcula o preço para você receber a margem escolhida depois dessas despesas.</span>
+      </div>
+      <div class="grid2">
+        <div class="campo">
+          <label for="fCustoOperacao">Operação no Brasil (R$) <small class="dica">embalagem, reenvio, etiqueta ou outro custo por pedido</small></label>
+          <input type="number" step="0.01" min="0" id="fCustoOperacao" value="0">
+        </div>
+        <div class="campo">
+          <label for="fTaxaPagamento">Taxa de pagamento (%) <small class="dica">ex: taxa efetiva do Mercado Pago; deixe 0 se quiser decidir depois</small></label>
+          <input type="number" step="0.01" min="0" max="95" id="fTaxaPagamento" value="0">
+        </div>
+      </div>
+      <div class="indicadores-preco" id="indicadoresPreco" aria-live="polite"></div>
     </div>
 
     <div class="card">
       <h2>4. Tamanhos, quilates e cores</h2>
+
+      <div class="campo">
+        <label>Variações que o AliExpress encontrou <small class="dica">confira o significado de cada grupo. A ferramenta só cria opções de loja quando consegue fazer isso com segurança.</small></label>
+        <div id="mapaVariacoes" class="mapa-variacoes"><span class="captura-item atencao">As variações aparecem aqui depois da busca.</span></div>
+      </div>
 
       <div class="campo">
         <label>Tamanhos disponíveis <small class="dica">já convertidos pra numeração BR</small></label>
@@ -252,6 +283,8 @@
         <input type="checkbox" id="fAtivo">
         <label for="fAtivo" style="margin:0;text-transform:none;font-weight:normal;">Já deixar visível pro cliente (senão entra como rascunho, você ativa depois no admin)</label>
       </div>
+
+      <div id="checklistPublicar" class="checklist-publicar" aria-live="polite"></div>
 
       <div id="loginBox"></div>
 
@@ -309,7 +342,7 @@
 
 <script>
 const API = '';
-let estado = { fotos: [], tamanhos: [], quilates: [], banhos: [], custoPeca: 0, custoImposto: 0, produtoExistenteId: null };
+let estado = { fotos: [], tamanhos: [], quilates: [], banhos: [], variacoesDetectadas: [], mapeamentoVariacoes: [], custoPeca: 0, custoImposto: 0, produtoExistenteId: null };
 let statusAtual = {};
 let fila = []; // vários links de uma vez: [{ link, status: 'pendente'|'buscando'|'pronto'|'erro'|'publicado', dados, erro }]
 let filaItemAtual = null; // item da fila que está aberto no formulário agora (null = busca de link único)
@@ -318,6 +351,63 @@ function $(id){ return document.getElementById(id); }
 function formatarR$(n){ return 'R$' + (Number(n) || 0).toFixed(2).replace('.', ','); }
 function escaparHtml(valor){
   return String(valor ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function numeroDoCampo(id){ return Number.parseFloat($(id)?.value) || 0; }
+
+function renderResumoCaptura(dados){
+  const campos = [
+    ['Nome', dados.nomeOriginal], ['Preço', dados.custoPeca > 0], ['Fotos', dados.fotos?.length],
+    ['Descrição', dados.descricaoOriginal], ['Variações', dados.variacoes?.length], ['Estoque', dados.estoque]
+  ];
+  $('resumoCaptura').innerHTML = campos.map(([nome, encontrado]) => `<span class="captura-item ${encontrado ? 'ok' : 'atencao'}">${nome}: ${encontrado ? 'capturado' : 'revisar'}</span>`).join('');
+}
+
+function inferirTratamentoVariacao(grupo){
+  const nome = String(grupo.nome || '').toLowerCase();
+  const valores = (grupo.valores || []).join(' ').toLowerCase();
+  if (/tamanho|size|ring/.test(nome)) return 'tamanho';
+  if ((grupo.valores || []).every(v => /^\d+(?:[.,]\d+)?\s*ct\.?$/i.test(v.trim()))) return 'quilate';
+  if (/cor|color|colour|metal|banho|finish/.test(nome) || /ouro|gold|silver|prata|rose|rosé|ródio/.test(valores)) return 'banho';
+  return 'conferir';
+}
+
+function renderMapaVariacoes(){
+  const el = $('mapaVariacoes');
+  if (!estado.variacoesDetectadas.length){
+    el.innerHTML = '<span class="captura-item atencao">Nenhuma variação foi encontrada nesse anúncio.</span>';
+    return;
+  }
+  el.innerHTML = estado.variacoesDetectadas.map((grupo, i) => {
+    const mapa = estado.mapeamentoVariacoes[i];
+    return `<div class="mapa-variacao"><div><strong>${escaparHtml(grupo.nome)}</strong><small>${escaparHtml((grupo.valores || []).join(' · '))}</small></div><small>${mapa.tratamento === 'conferir' ? 'Confere antes de publicar para não criar opção errada.' : 'A ferramenta vai registrar essa leitura na importação.'}</small><select data-mapa="${i}" aria-label="Tratar variação ${escaparHtml(grupo.nome)}"><option value="tamanho" ${mapa.tratamento === 'tamanho' ? 'selected' : ''}>É tamanho</option><option value="quilate" ${mapa.tratamento === 'quilate' ? 'selected' : ''}>É quilate</option><option value="banho" ${mapa.tratamento === 'banho' ? 'selected' : ''}>É banho / cor</option><option value="modelo" ${mapa.tratamento === 'modelo' ? 'selected' : ''}>É modelo / comprimento</option><option value="conferir" ${mapa.tratamento === 'conferir' ? 'selected' : ''}>Revisar depois</option></select></div>`;
+  }).join('');
+  el.querySelectorAll('[data-mapa]').forEach(select => select.addEventListener('change', () => {
+    estado.mapeamentoVariacoes[Number(select.dataset.mapa)].tratamento = select.value;
+    renderMapaVariacoes();
+    atualizarChecklist();
+  }));
+}
+
+function atualizarPreviaProduto(){
+  const nome = $('fNome')?.value.trim() || 'Nome da joia';
+  const categoria = $('fCategoria')?.selectedOptions?.[0]?.textContent || 'Categoria';
+  const preco = numeroDoCampo('fPreco');
+  const imagem = estado.fotos[0];
+  $('previsaoProduto').innerHTML = `<div class="previsao-imagem">${imagem ? `<img src="${urlImagem(imagem)}" alt="">` : 'Foto principal'}</div><div class="previsao-meta"><span>${escaparHtml(categoria)}</span><h3>${escaparHtml(nome)}</h3><strong>${formatarR$(preco)}</strong><p>${estado.fotos.length ? `${estado.fotos.length} foto(s) pronta(s) para revisar` : 'Adicione ao menos uma foto antes de publicar.'}</p></div>`;
+}
+
+function atualizarChecklist(){
+  const pendenteVariacao = estado.mapeamentoVariacoes.some(v => v.tratamento === 'conferir');
+  const itens = [
+    ['Nome da peça', Boolean($('fNome')?.value.trim())],
+    ['Foto principal', estado.fotos.length > 0],
+    ['Categoria', Boolean($('fCategoria')?.value)],
+    ['Preço de venda', numeroDoCampo('fPreco') > 0],
+    ['Variações', !pendenteVariacao, pendenteVariacao ? 'alerta' : ''],
+    ['Descrição', Boolean($('descricaoEdit')?.textContent.trim())]
+  ];
+  $('checklistPublicar').innerHTML = itens.map(([nome, ok, extra]) => `<span class="check-item ${ok ? 'ok' : (extra || '')}">${nome}</span>`).join('');
 }
 
 document.querySelectorAll('[data-aba]').forEach(botao => {
@@ -451,6 +541,8 @@ async function carregarCategorias(selecionar){
   const cats = await fetch('/api/categorias').then(r => r.json());
   $('fCategoria').innerHTML = cats.map(c => `<option value="${escaparHtml(c.slug)}">${escaparHtml(c.nome)}</option>`).join('');
   if (selecionar) $('fCategoria').value = selecionar;
+  atualizarPreviaProduto();
+  atualizarChecklist();
 }
 
 function montarLoginBox(){
@@ -557,6 +649,7 @@ function preencherFormulario(dados){
   $('descricaoEdit').innerHTML = sanitizarDescricaoHtml(dados.descricaoIA || dados.descricaoOriginal || '');
   $('fLinkFornecedor').value = dados.link || '';
   $('fAtivo').checked = false; // reseta — senão ficava marcado de uma busca anterior sem querer
+  renderResumoCaptura(dados);
 
   estado.custoPeca = dados.custoPeca || 0;
   estado.custoImposto = dados.custoImposto;
@@ -584,6 +677,10 @@ function preencherFormulario(dados){
   estado.banhos = (dados.banhos || []).map(b => ({ nome: b.nome, custo: b.custo, foto: b.foto }));
   renderBanhos();
 
+  estado.variacoesDetectadas = dados.variacoes || [];
+  estado.mapeamentoVariacoes = estado.variacoesDetectadas.map(grupo => ({ nome: grupo.nome, tratamento: inferirTratamentoVariacao(grupo) }));
+  renderMapaVariacoes();
+
   const avisos = [];
   if (dados.avisos?.length) avisos.push(`Não encontrado na página: ${dados.avisos.join(', ')}.`);
   if (dados.avisoTamanho) avisos.push(dados.avisoTamanho);
@@ -604,6 +701,8 @@ function preencherFormulario(dados){
 
   carregarCategorias(dados.produtoExistente?.categoria || dados.categoriaSugerida || null);
   atualizarPrecoPreview();
+  atualizarPreviaProduto();
+  atualizarChecklist();
   $('formulario').style.display = 'block';
   $('rodape').style.display = 'flex';
   window.scrollTo({ top: $('formulario').offsetTop - 20, behavior: 'smooth' });
@@ -680,6 +779,8 @@ function renderFotos(){
       renderFotos();
     });
   });
+  atualizarPreviaProduto();
+  atualizarChecklist();
 }
 
 // ---------------------------------------------------------------
@@ -708,9 +809,11 @@ function calcularPrecoComMargem(custo, custoComImposto){
   const margem = parseFloat($('fMargem').value) || 0;
   if (!margem) return 0;
   const frete = parseFloat($('fCustoFrete').value) || 0;
+  const operacao = numeroDoCampo('fCustoOperacao');
+  const taxaPagamento = Math.min(Math.max(numeroDoCampo('fTaxaPagamento'), 0), 95) / 100;
   const taxaImposto = (estado.custoPeca > 0 && estado.custoImposto) ? estado.custoImposto / estado.custoPeca : 0;
   const custoBaseComImposto = custoComImposto != null ? Number(custoComImposto) : custo * (1 + taxaImposto);
-  return Math.round((custoBaseComImposto + frete) * (1 + margem / 100) * 100) / 100;
+  return Math.round((custoBaseComImposto + frete + operacao) * (1 + margem / 100) / (1 - taxaPagamento) * 100) / 100;
 }
 function renderQuilates(){
   $('quilatesChips').innerHTML = estado.quilates.map((q, i) => `
@@ -757,22 +860,39 @@ function atualizarPrecoPreview(){
   const custo = parseFloat($('fCustoPeca').value) || 0;
   const imposto = parseFloat($('fCustoImposto').value) || 0;
   const frete = parseFloat($('fCustoFrete').value) || 0;
+  const operacao = numeroDoCampo('fCustoOperacao');
+  const taxaPagamento = Math.min(Math.max(numeroDoCampo('fTaxaPagamento'), 0), 95) / 100;
   const margem = parseFloat($('fMargem').value) || 0;
   estado.custoPeca = custo;
   estado.custoImposto = imposto;
   if (margem){
-    const precoFinal = (custo + imposto + frete) * (1 + margem / 100);
+    const precoFinal = (custo + imposto + frete + operacao) * (1 + margem / 100) / (1 - taxaPagamento);
     $('fPreco').value = precoFinal.toFixed(2);
   }
-  $('precoPreview').textContent = `Preço de venda: ${formatarR$($('fPreco').value)}`;
+  const preco = numeroDoCampo('fPreco');
+  const custoTotal = custo + imposto + frete + operacao;
+  const taxaEmReais = preco * taxaPagamento;
+  const lucroEstimado = preco - taxaEmReais - custoTotal;
+  $('precoPreview').textContent = `Preço sugerido: ${formatarR$(preco)}`;
+  $('indicadoresPreco').innerHTML = [
+    ['Custo total', formatarR$(custoTotal)],
+    ['Taxa no pagamento', formatarR$(taxaEmReais)],
+    ['Lucro estimado', formatarR$(lucroEstimado)]
+  ].map(([nome, valor]) => `<span class="indicador-preco"><small>${nome}</small><strong>${valor}</strong></span>`).join('');
   renderQuilates();
+  atualizarPreviaProduto();
+  atualizarChecklist();
 }
-['fCustoPeca', 'fCustoImposto', 'fCustoFrete', 'fMargem'].forEach(id => {
+['fCustoPeca', 'fCustoImposto', 'fCustoFrete', 'fCustoOperacao', 'fTaxaPagamento', 'fMargem'].forEach(id => {
   $(id).addEventListener('input', atualizarPrecoPreview);
 });
 $('fPreco').addEventListener('input', () => {
-  $('precoPreview').textContent = `Preço de venda: ${formatarR$($('fPreco').value)}`;
+  atualizarPrecoPreview();
 });
+['fNome', 'fCategoria', 'descricaoEdit'].forEach(id => $(id).addEventListener('input', () => {
+  atualizarPreviaProduto();
+  atualizarChecklist();
+}));
 
 // ---------------------------------------------------------------
 // REGENERAR COM IA (aplica uma instrução em cima do que já está na tela)
@@ -840,9 +960,12 @@ $('btnPublicar').addEventListener('click', async () => {
     custoPeca: $('fCustoPeca').value,
     custoImposto: $('fCustoImposto').value,
     custoFrete: $('fCustoFrete').value,
+    custoOperacao: $('fCustoOperacao').value,
+    taxaPagamento: $('fTaxaPagamento').value,
     margemLucro: $('fMargem').value,
     estoque: $('fEstoque').value,
     tamanhos: estado.tamanhos,
+    mapeamentoVariacoes: estado.mapeamentoVariacoes,
     quilates: estado.quilates.map(q => ({ valor: q.valor, custo: q.custo, custoComImposto: q.custoComImposto, preco: calcularPrecoComMargem(q.custo, q.custoComImposto) })),
     banhos: estado.banhos.map(b => ({
       nome: b.nome, custo: b.custo, foto: b.foto,
