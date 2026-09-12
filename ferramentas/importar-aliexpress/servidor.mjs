@@ -21,21 +21,37 @@ import {
   carregarCredenciais, salvarCredenciais,
   abrirNavegador, extrairDadosProduto, formatarComIA, revisarComIA,
   converterTamanhosParaBR, paraNumero, extrairValorReais, baixarESubirFoto,
-  montarMatrizes, buscarProdutoExistente, sugerirCategoria
+  montarMatrizes, buscarProdutoExistente, sugerirCategoria,
+  urlExternaPublicaPermitida, linkAliExpressPermitido
 } from './importar.mjs';
 
 const PORTA = 3737;
+const LIMITE_CORPO_BYTES = 1_000_000;
 
 async function lerCorpoJSON(req){
   const pedacos = [];
-  for await (const pedaco of req) pedacos.push(pedaco);
+  let tamanho = 0;
+  for await (const pedaco of req){
+    tamanho += pedaco.length;
+    if (tamanho > LIMITE_CORPO_BYTES) throw new Error('Dados enviados grandes demais.');
+    pedacos.push(pedaco);
+  }
   const texto = Buffer.concat(pedacos).toString('utf-8');
   return texto ? JSON.parse(texto) : {};
 }
 
 function responderJSON(res, status, dados){
-  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
+  res.writeHead(status, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-store',
+    'X-Content-Type-Options': 'nosniff'
+  });
   res.end(JSON.stringify(dados));
+}
+
+function origemLocalPermitida(req){
+  const origem = req.headers.origin;
+  return !origem || origem === `http://localhost:${PORTA}` || origem === `http://127.0.0.1:${PORTA}`;
 }
 
 // ---------------------------------------------------------------
@@ -58,37 +74,23 @@ async function handleStatus(req, res){
 // O AliExpress às vezes bloqueia imagem carregada de outro site
 // (hotlink) checando de onde veio o pedido — pedindo pelo servidor (Node,
 // sem essa checagem de origem de navegador) evita isso.
-// Só imagem de verdade, num host público — enquanto o servidor local está
-// rodando (localhost:3737), QUALQUER página aberta em outra aba do mesmo
-// navegador podia pedir pra esse proxy buscar uma URL arbitrária (ex:
-// http://localhost:3737/api/imagem-proxy?url=http://169.254.169.254/...
-// ou outro endereço interno da sua rede) — o Node buscava sem checar nada
-// e devolvia a resposta, virando uma ponte pra sondar a rede local a
-// partir do seu navegador (bug real encontrado numa revisão). Trava pra
-// só http/https e recusa hosts privados/locais óbvios.
-function urlDeImagemPermitida(alvo){
-  let u;
-  try { u = new URL(alvo); } catch { return false; }
-  if (u.protocol !== 'http:' && u.protocol !== 'https:') return false;
-  const host = u.hostname.toLowerCase();
-  if (host === 'localhost' || host === '0.0.0.0' || host === '::1' || host.endsWith('.local')) return false;
-  if (/^127\./.test(host) || /^10\./.test(host) || /^169\.254\./.test(host)) return false;
-  if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) return false;
-  if (/^192\.168\./.test(host)) return false;
-  return true;
-}
-
 async function handleImagemProxy(req, res, url){
   const alvo = url.searchParams.get('url');
-  if (!alvo || !urlDeImagemPermitida(alvo)) { res.writeHead(400); return res.end(); }
+  if (!alvo || !(await urlExternaPublicaPermitida(alvo))) { res.writeHead(400); return res.end(); }
   try {
-    const resp = await fetch(alvo);
+    const resp = await fetch(alvo, { signal: AbortSignal.timeout(15_000) });
     if (!resp.ok) throw new Error('status ' + resp.status);
+    const contentType = resp.headers.get('content-type') || '';
+    const tamanhoDeclarado = Number(resp.headers.get('content-length')) || 0;
+    if (!contentType.startsWith('image/') || tamanhoDeclarado > 15 * 1024 * 1024) throw new Error('imagem inválida');
+    const bytes = Buffer.from(await resp.arrayBuffer());
+    if (bytes.length > 15 * 1024 * 1024) throw new Error('imagem grande demais');
     res.writeHead(200, {
-      'Content-Type': resp.headers.get('content-type') || 'image/jpeg',
-      'Cache-Control': 'public, max-age=3600'
+      'Content-Type': contentType,
+      'Cache-Control': 'private, max-age=3600',
+      'X-Content-Type-Options': 'nosniff'
     });
-    res.end(Buffer.from(await resp.arrayBuffer()));
+    res.end(bytes);
   } catch {
     res.writeHead(502);
     res.end();
@@ -118,6 +120,9 @@ async function handleBuscar(req, res){
   } catch (err) {
     return responderJSON(res, 400, { erro: 'Link inválido: ' + err.message });
     }
+  if (!linkAliExpressPermitido(link)){
+    return responderJSON(res, 400, { erro: 'Use um link HTTPS do AliExpress.' });
+  }
   if (!existsSync(ARQUIVO_SESSAO)){
     return responderJSON(res, 400, { erro: 'Ainda não tem sessão do AliExpress salva — roda "npm run login" no terminal primeiro (só precisa fazer isso de vez em quando).' });
   }
@@ -223,6 +228,49 @@ async function handleRegenerar(req, res){
   } catch (err) {
     responderJSON(res, 500, { erro: err.message });
   }
+}
+
+// ---------------------------------------------------------------
+// POST /api/configuracoes — altera somente o arquivo local de credenciais.
+// Os valores existentes nunca voltam para o navegador; o front só recebe
+// indicadores true/false pelo endpoint de status.
+async function handleConfiguracoes(req, res){
+  let corpo;
+  try {
+    corpo = await lerCorpoJSON(req);
+  } catch (err) {
+    return responderJSON(res, 400, { erro: 'JSON inválido: ' + err.message });
+  }
+
+  const credenciais = await carregarCredenciais();
+  if (corpo.removerLogin){
+    delete credenciais.email;
+    delete credenciais.senha;
+  } else if (corpo.atualizarLogin){
+    const email = String(corpo.email || '').trim();
+    const senha = String(corpo.senha || '');
+    if (!email || !senha) return responderJSON(res, 400, { erro: 'Preenche e-mail e senha para atualizar o login.' });
+    const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const { error } = await sb.auth.signInWithPassword({ email, password: senha });
+    if (error) return responderJSON(res, 401, { erro: 'Não consegui confirmar esse login: ' + error.message });
+    credenciais.email = email;
+    credenciais.senha = senha;
+  }
+
+  if (corpo.removerChaveGroq){
+    delete credenciais.chaveGroq;
+  } else if (corpo.atualizarChaveGroq){
+    const chaveGroq = String(corpo.chaveGroq || '').trim();
+    if (!chaveGroq) return responderJSON(res, 400, { erro: 'Cola a chave da IA para salvá-la.' });
+    credenciais.chaveGroq = chaveGroq;
+  }
+
+  await salvarCredenciais(credenciais);
+  responderJSON(res, 200, {
+    ok: true,
+    temLoginAdminSalvo: Boolean(credenciais.email && credenciais.senha),
+    temChaveGroq: Boolean(credenciais.chaveGroq)
+  });
 }
 
 // ---------------------------------------------------------------
@@ -372,10 +420,18 @@ async function handlePublicar(req, res){
 
 const servidor = http.createServer(async (req, res) => {
   try {
+    if (req.method === 'POST' && !origemLocalPermitida(req)){
+      return responderJSON(res, 403, { erro: 'Origem não permitida.' });
+    }
     const url = new URL(req.url, `http://localhost:${PORTA}`);
     if (req.method === 'GET' && url.pathname === '/'){
       const html = await readFile(path.join(__dirname, 'interface.html'), 'utf-8');
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.writeHead(200, {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff',
+        'Content-Security-Policy': "default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'"
+      });
       res.end(html);
     } else if (req.method === 'GET' && url.pathname === '/api/status'){
       await handleStatus(req, res);
@@ -387,6 +443,8 @@ const servidor = http.createServer(async (req, res) => {
       await handleBuscar(req, res);
     } else if (req.method === 'POST' && url.pathname === '/api/regenerar'){
       await handleRegenerar(req, res);
+    } else if (req.method === 'POST' && url.pathname === '/api/configuracoes'){
+      await handleConfiguracoes(req, res);
     } else if (req.method === 'POST' && url.pathname === '/api/publicar'){
       await handlePublicar(req, res);
     } else {
@@ -405,7 +463,7 @@ const servidor = http.createServer(async (req, res) => {
 servidor.requestTimeout = 0;
 servidor.headersTimeout = 0;
 
-servidor.listen(PORTA, () => {
+servidor.listen(PORTA, '127.0.0.1', () => {
   const enderecoLocal = `http://localhost:${PORTA}`;
   console.log(`\nInterface pronta! Abrindo no navegador: ${enderecoLocal}`);
   console.log('(se não abrir sozinho, copia esse endereço e cola no navegador)');
@@ -417,5 +475,12 @@ servidor.listen(PORTA, () => {
   const comando = process.platform === 'win32' ? `start ${enderecoLocal}`
     : process.platform === 'darwin' ? `open ${enderecoLocal}`
     : `xdg-open ${enderecoLocal}`;
-  exec(comando, () => { /* se não conseguiu abrir sozinho, o usuário abre na mão mesmo */ });
+  try {
+    const abertura = exec(comando, () => { /* se não conseguiu abrir sozinho, o usuário abre na mão mesmo */ });
+    abertura.on('error', () => { /* abrir é só conveniência; o servidor segue normal */ });
+  } catch {
+    // Alguns ambientes bloqueiam a abertura automática. A interface continua
+    // disponível no endereço mostrado acima, sem derrubar o servidor.
+  }
 });
+
