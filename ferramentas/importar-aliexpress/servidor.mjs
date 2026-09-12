@@ -132,6 +132,10 @@ async function handleBuscar(req, res){
   // link já foi importado antes.
   const sbAnon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const produtoExistente = await buscarProdutoExistente(sbAnon, link);
+  // A chave fica somente neste servidor local. Ela é passada para a etapa
+  // de leitura do anúncio, para a IA estruturar variações bagunçadas antes
+  // de o formulário receber qualquer dado.
+  const credenciais = await carregarCredenciais();
 
   let browser;
   try {
@@ -140,11 +144,10 @@ async function handleBuscar(req, res){
     const page = await abertura.context.newPage();
     await page.goto(link, { waitUntil: 'domcontentloaded', timeout: 30000 });
     await page.waitForTimeout(2500);
-    const dados = await extrairDadosProduto(page);
+    const dados = await extrairDadosProduto(page, { chaveGroq: credenciais.chaveGroq });
     await browser.close();
     browser = null;
 
-    const credenciais = await carregarCredenciais();
     let nomeIA = null, descricaoIA = null, erroIA = null;
     if (credenciais.chaveGroq){
       try {
@@ -190,6 +193,7 @@ async function handleBuscar(req, res){
       avisoTamanho,
       avisos: dados.avisos,
       avisosMatriz: dados.matrizVariacoes?.avisos || [],
+      interpretacaoVariacoes: dados.interpretacaoVariacoes,
       categoriaSugerida,
       produtoExistente,
       link
