@@ -128,6 +128,12 @@ export function converterTamanhosParaBR(variacoes){
 // automaticamente marcado num preset).
 function traduzirNomeBanho(nomeOriginal){
   const n = nomeOriginal.toLowerCase();
+  // Não reduz todo "gold" a Ouro 18k: fornecedores frequentemente usam a
+  // mesma variação para "925 Gold Plated" e "14K Gold". Tratar os dois
+  // como o mesmo banho cria combinações que nem existem e troca o preço.
+  if (/925/.test(n) && /(gold|dourad|ouro|plated|banhad)/.test(n)) return 'Prata 925 banhada a ouro';
+  if (/14\s*k|14k|au\s*585|585/.test(n)) return 'Ouro 14k';
+  if (/18\s*k|18k|au\s*750|750/.test(n)) return 'Ouro 18k';
   if (/rose|rosé|rosa/.test(n)) return 'Ouro Rosé';
   if (/white|branco/.test(n)) return 'Ouro Branco';
   if (/(black|negro|preto).*(rhod|ródio|rodio)|(rhod|ródio|rodio).*(black|negro|preto)/.test(n)) return 'Ródio negro';
@@ -310,7 +316,18 @@ async function capturarMatrizVariacoes(page, variacoes){
         foto: itensBanho[0].foto
       });
     }
-    return { quilatesCustos, banhosCustos, avisos };
+    // Mantém também a lista de combinações EXATAS. Nem todo anúncio tem
+    // uma grade completa (ex.: 925/1ct, 925/2ct, 14k/2ct, 14k/3ct), então
+    // transformar isso num cruzamento cor × quilate inventaria 14k/1ct e
+    // 925/3ct — opções que o fornecedor não vende.
+    const combosExatos = resultados.map(r => ({
+      quilate: r.quilate,
+      banho: traduzirNomeBanho(r.banho),
+      custo: r.preco,
+      custoComImposto: r.custoComImposto,
+      foto: r.foto
+    }));
+    return { quilatesCustos, banhosCustos, combosExatos, avisos };
   }
 
   // modo "separado": um grupo de quilate limpo + (opcional) um grupo de
