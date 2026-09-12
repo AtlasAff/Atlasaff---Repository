@@ -404,14 +404,17 @@ async function capturarMatrizVariacoes(page, variacoes){
 // proporção do mais barato SUBESTIMA o imposto dos quilates maiores —
 // bug real encontrado num teste). O delta do banho continua aproximado
 // pela proporção (costuma ser pequeno ou zero, erro pouco relevante ali).
-export function montarMatrizes({ quilatesCustos, banhosCustos, custoPecaBase, taxaImposto, margemNumero, freteNumero }){
+export function montarMatrizes({ quilatesCustos, banhosCustos, custoPecaBase, taxaImposto, margemNumero, freteNumero, custoOperacaoNumero = 0, taxaPagamentoNumero = 0 }){
   if (!quilatesCustos.length && !banhosCustos.length) return { matrizPrecos: [], matrizCustos: [] };
   const quilates = quilatesCustos.length ? quilatesCustos : [{ valor: null, custo: custoPecaBase }];
   const banhos = banhosCustos.length ? banhosCustos : [{ nome: null, custo: 0 }];
-  // Frete não tem imposto/proporção por quilate/banho — é um valor fixo
-  // por unidade, soma direto no custo total de cada combinação (mesma
-  // ideia do fCustoFrete na interface: some antes de aplicar a margem).
+  // Frete e operação (embalagem, reenvio no Brasil etc.) não variam por
+  // quilate/banho — são custos fixos por unidade e entram antes da margem.
   const frete = Number(freteNumero) || 0;
+  const operacao = Number(custoOperacaoNumero) || 0;
+  // A taxa de pagamento é percentual sobre a venda. Divide o preço em vez
+  // de só somar ao custo, para a margem escolhida continuar sendo líquida.
+  const taxaPagamento = Math.min(Math.max(Number(taxaPagamentoNumero) || 0, 0), 95) / 100;
 
   const matrizPrecos = [];
   const matrizCustos = [];
@@ -424,8 +427,8 @@ export function montarMatrizes({ quilatesCustos, banhosCustos, custoPecaBase, ta
       : (Number(q.custo) || 0) * (1 + (taxaImposto || 0));
     for (const b of banhos){
       const custoBanhoComImposto = (Number(b.custo) || 0) * (1 + (taxaImposto || 0));
-      const custoTotal = Math.round((custoQuilateComImposto + custoBanhoComImposto + frete) * 100) / 100;
-      const preco = margemNumero ? Math.round(custoTotal * (1 + margemNumero / 100) * 100) / 100 : 0;
+      const custoTotal = Math.round((custoQuilateComImposto + custoBanhoComImposto + frete + operacao) * 100) / 100;
+      const preco = margemNumero ? Math.round((custoTotal * (1 + margemNumero / 100) / (1 - taxaPagamento)) * 100) / 100 : 0;
       matrizCustos.push({ quilate: q.valor ?? null, banho: b.nome ?? null, custo: custoTotal });
       matrizPrecos.push({ quilate: q.valor ?? null, banho: b.nome ?? null, preco });
     }
