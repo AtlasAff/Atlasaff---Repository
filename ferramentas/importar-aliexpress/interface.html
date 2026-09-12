@@ -372,7 +372,9 @@ function inferirTratamentoVariacao(grupo){
   const nome = String(grupo.nome || '').toLowerCase();
   const valores = (grupo.valores || []).join(' ').toLowerCase();
   if (/tamanho|size|ring/.test(nome)) return 'tamanho';
-  if ((grupo.valores || []).every(v => /^\d+(?:[.,]\d+)?\s*ct\.?$/i.test(v.trim()))) return 'quilate';
+  // O Ali acrescenta medidas depois do CT, tipo "1ct (5x7mm)". O CT
+  // continua sendo o início do valor, então reconhece mesmo com o detalhe.
+  if ((grupo.valores || []).every(v => /^\d+(?:[.,]\d+)?\s*ct\b/i.test(v.trim()))) return 'quilate';
   if (/cor|color|colour|metal|banho|finish/.test(nome) || /ouro|gold|silver|prata|rose|rosé|ródio/.test(valores)) return 'banho';
   return 'conferir';
 }
@@ -842,7 +844,7 @@ function calcularPrecoComMargem(custo, custoComImposto){
 }
 function renderQuilates(){
   $('quilatesChips').innerHTML = estado.quilates.map((q, i) => `
-    <span class="chip">${escaparHtml(q.valor)} — custo ${formatarR$(q.custo)} → venda ${formatarR$(calcularPrecoComMargem(q.custo, q.custoComImposto))} <button type="button" class="chip-x" data-i="${i}">×</button></span>`).join('');
+    <span class="chip">${escaparHtml(q.valor)} — custo ${formatarR$(q.custo)}${q.custoComImposto != null ? ` + imposto ${formatarR$(Math.max(0, Number(q.custoComImposto) - Number(q.custo || 0)))}` : ''} → venda ${formatarR$(calcularPrecoComMargem(q.custo, q.custoComImposto))} <button type="button" class="chip-x" data-i="${i}">×</button></span>`).join('');
   $('quilatesChips').querySelectorAll('button').forEach(btn => {
     btn.addEventListener('click', () => { estado.quilates.splice(Number(btn.dataset.i), 1); renderQuilates(); });
   });
