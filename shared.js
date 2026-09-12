@@ -1549,6 +1549,7 @@ function abrirVarianteModal(produto, { tamanhos, quilates, banhos = [] }){
         // Combina com o banho já escolhido (se tiver) — não é o preço do
         // quilate sozinho, senão o banho apaga ele de novo na hora de somar.
         produtoAguardandoVariante.preco = resolverPrecoVariante(produto, produtoAguardandoVariante.quilate, produtoAguardandoVariante.banho);
+        sincronizarOpcoesModal();
         verificarCompleto();
       });
     });
@@ -1568,10 +1569,27 @@ function abrirVarianteModal(produto, { tamanhos, quilates, banhos = [] }){
         // Combina com o quilate já escolhido (se tiver) — mesma lógica do
         // quilate acima, só invertida.
         produtoAguardandoVariante.preco = resolverPrecoVariante(produto, produtoAguardandoVariante.quilate, produtoAguardandoVariante.banho);
+        sincronizarOpcoesModal();
         verificarCompleto();
       });
     });
   }
+
+  // Quando o fornecedor cadastrou opções fechadas (ex.: 925/1ct e
+  // 14k/3ct), não deixa o cliente montar uma combinação que não existe.
+  function sincronizarOpcoesModal(){
+    const matriz = produto.matrizPrecos || [];
+    if (!matriz.length || !quilates.length || !banhos.length) return;
+    document.querySelectorAll('#varianteModalQuilatePills [data-quilate]').forEach(btn => {
+      const valor = btn.getAttribute('data-quilate');
+      btn.disabled = !matriz.some(m => m.quilate === valor && (!produtoAguardandoVariante.banho || m.banho === produtoAguardandoVariante.banho));
+    });
+    document.querySelectorAll('#varianteModalBanhoSwatches [data-banho]').forEach(btn => {
+      const valor = btn.getAttribute('data-banho');
+      btn.disabled = !matriz.some(m => m.banho === valor && (!produtoAguardandoVariante.quilate || m.quilate === produtoAguardandoVariante.quilate));
+    });
+  }
+  sincronizarOpcoesModal();
 
   const tamanhoSecao = document.getElementById('varianteModalTamanhoSecao');
   tamanhoSecao.style.display = tamanhos.length ? 'block' : 'none';
@@ -2299,6 +2317,7 @@ async function renderProdutoPage(){
         quilateWrap.querySelectorAll('.tamanho-pill').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         quilateSelecionado = btn.getAttribute('data-quilate');
+        sincronizarCombinacoesDisponiveis();
         // Recalcula combinando com o banho já escolhido (se tiver) — não
         // é o preço do quilate sozinho, senão o banho "apaga" ele de novo.
         precoAtual = resolverPrecoVariante(p, quilateSelecionado, banhoSelecionado);
@@ -2337,6 +2356,7 @@ async function renderProdutoPage(){
         banhoWrap.querySelectorAll('.banho-swatch').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         banhoSelecionado = btn.getAttribute('data-banho');
+        sincronizarCombinacoesDisponiveis();
         document.getElementById('banhoSelecionadoNome').textContent = banhoSelecionado;
         // Recalcula combinando com o quilate já escolhido (se tiver) — não
         // é o preço do banho sozinho, senão ele "apaga" o quilate escolhido.
@@ -2349,6 +2369,23 @@ async function renderProdutoPage(){
   } else {
     banhoWrap.style.display = 'none';
   }
+
+  // A matriz pode conter apenas combinações específicas vindas do
+  // fornecedor. Desabilita as opções incompatíveis depois de cada escolha
+  // em vez de mostrar/preçar uma variante que não existe.
+  function sincronizarCombinacoesDisponiveis(){
+    const matriz = p.matrizPrecos || [];
+    if (!matriz.length || !p.quilates.length || !p.banhos.length) return;
+    quilateWrap.querySelectorAll('[data-quilate]').forEach(btn => {
+      const valor = btn.getAttribute('data-quilate');
+      btn.disabled = !matriz.some(m => m.quilate === valor && (!banhoSelecionado || m.banho === banhoSelecionado));
+    });
+    banhoWrap.querySelectorAll('[data-banho]').forEach(btn => {
+      const valor = btn.getAttribute('data-banho');
+      btn.disabled = !matriz.some(m => m.banho === valor && (!quilateSelecionado || m.quilate === quilateSelecionado));
+    });
+  }
+  sincronizarCombinacoesDisponiveis();
 
   const tamanhoWrap = document.getElementById('tamanhoWrap');
   if (p.tamanhos.length){
