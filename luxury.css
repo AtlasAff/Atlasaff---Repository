@@ -15,7 +15,7 @@
 html { scroll-padding-top: 165px; }
 body { font-size: 1rem; }
 .container { max-width: 1440px; padding-inline: clamp(22px, 4.4vw, 72px); }
-.maison-note { text-align: center; background: var(--bordo-escuro); color: var(--creme); padding: 8px 20px 10px; font-family: var(--serif); font-style: italic; font-size: 1rem; font-weight: 400; letter-spacing: .035em; line-height: 1; }
+.maison-note { height: 7px; background: var(--bordo-escuro); }
 #siteHeader { border-bottom: 1px solid var(--borda); background: var(--creme); }
 #siteHeader.scrolled { box-shadow: 0 4px 24px #30272508; }
 .header-inner { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0 24px; padding-block: 24px 0; }
@@ -168,7 +168,6 @@ footer { background: var(--creme); color: var(--texto); padding-top: 65px; }
   .section { padding-block: 65px; }
 }
 @media (max-width: 600px) {
-  .maison-note { font-size: .95rem; letter-spacing: .025em; }
   .container { padding-inline: 20px; }
   .header-inner { gap: 6px; }
   .header-icons { gap: 0; }
