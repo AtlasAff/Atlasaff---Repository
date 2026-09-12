@@ -430,7 +430,7 @@ function iniciarFormularioCheckout(itens){
   temPermissaoFabrica().then(tem => {
     if (tem){
       document.getElementById('blocoCupomCheckout').style.display = 'none';
-      document.getElementById('avisoCupomFabrica').style.display = 'block';
+      document.getElementById('avisoCupomFabrica').style.display = 'flex';
       return;
     }
 
