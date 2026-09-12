@@ -182,6 +182,12 @@ function quilateNoTexto(valor){
   return m ? `${m[1].replace(',', '.')}ct` : null;
 }
 
+function mesmoQuilate(a, b){
+  const numeroA = Number.parseFloat(String(a || '').replace('ct', ''));
+  const numeroB = Number.parseFloat(String(b || '').replace('ct', ''));
+  return Number.isFinite(numeroA) && Number.isFinite(numeroB) && Math.abs(numeroA - numeroB) < 0.0001;
+}
+
 export function classificarGruposVariacao(variacoes){
   const semTamanho = variacoes.filter(v => !/tamanho/i.test(v.nome) && v.valores.length);
   const ehQuilatePuro = (v) => v.valores.every(ehOpcaoQuilatePura);
@@ -192,14 +198,25 @@ export function classificarGruposVariacao(variacoes){
     return { modo: 'separado', grupoQuilate, grupoBanho };
   }
 
-  const regexCombo = /^(.*?)[\s\-]*([\d.,]+)\s*ct\.?$/i;
+  // Alguns fornecedores põem o CT ANTES da cor ("1.0CT White gold") e
+  // outros depois ("White gold 1CT"). Os dois são a mesma combinação
+  // fechada. Só aceita como combinado se ainda restar uma cor/material
+  // de verdade depois de tirar CT e uma possível medida em mm.
+  const lerCombo = (valor) => {
+    const texto = String(valor || '').trim();
+    const ct = texto.match(/(\d+(?:[.,]\d+)?)\s*ct\b/i);
+    if (!ct) return null;
+    const restante = texto.replace(ct[0], ' ').replace(/\(?\s*\d+(?:[.,]\d+)?\s*[×x]\s*\d+(?:[.,]\d+)?\s*mm\s*\)?/gi, ' ').replace(/\s+/g, ' ').replace(/^[\s\-–—/]+|[\s\-–—/]+$/g, '').trim();
+    if (!restante || /^[\d\s().×xX-]*(?:mm)?[\d\s().×xX-]*$/i.test(restante)) return null;
+    return { quilate: `${ct[1].replace(',', '.')}ct`, banho: restante };
+  };
   for (const grupo of semTamanho){
-    const partes = grupo.valores.map(v => v.match(regexCombo));
+    const partes = grupo.valores.map(lerCombo);
     if (partes.length && partes.every(Boolean)){
       const combos = grupo.valores.map((v, i) => ({
         valorOriginal: v,
-        banho: partes[i][1].trim() || 'Padrão',
-        quilate: `${partes[i][2].replace(',', '.')}ct`
+        banho: partes[i].banho,
+        quilate: partes[i].quilate
       }));
       return { modo: 'combinado', grupoOriginal: grupo, combos };
     }
@@ -237,9 +254,9 @@ function validarClassificacaoIA(variacoes, resultado){
       const quilate = String(item?.quilate || '').trim().toLowerCase();
       const banho = String(item?.banho || '').trim();
       if (!grupoOriginal.valores.includes(valorOriginal) || usados.has(valorOriginal) || !banho || banho.length > 80) return null;
-      if (!/^\d+(?:\.\d+)?ct$/.test(quilate) || quilateNoTexto(valorOriginal) !== quilate) return null;
+      if (!/^\d+(?:\.\d+)?ct$/.test(quilate) || !mesmoQuilate(quilateNoTexto(valorOriginal), quilate)) return null;
       usados.add(valorOriginal);
-      combos.push({ valorOriginal, quilate, banho });
+      combos.push({ valorOriginal, quilate: quilateNoTexto(valorOriginal), banho });
     }
     if (usados.size !== grupoOriginal.valores.length) return null;
     return { modo, grupoOriginal, combos, origem: 'ia', motivo: String(resultado.motivo || '').slice(0, 180) };
@@ -934,10 +951,11 @@ export async function extrairDadosProduto(page, { chaveGroq = null } = {}){
   // grupo (sem cruzar) e reporta os preços crus, pra revisão manual.
   let classificacaoVariacoes = classificarGruposVariacao(variacoes);
   let interpretacaoVariacoes = null;
-  // As regras cobrem os formatos já conhecidos e são instantâneas. Quando
-  // o vendedor misturou tudo num nome estranho, a IA recebe o anúncio cru
-  // ANTES de qualquer dado ir pro formulário e tenta montar a leitura.
-  if (classificacaoVariacoes.modo === 'nenhum' && chaveGroq){
+  // A IA passa por TODA importação antes de o formulário aparecer. As
+  // regras continuam como validação/fallback: se a IA ficar em dúvida ou
+  // responder algo que não existe no anúncio, a ferramenta usa a leitura
+  // determinística sem criar opção inventada.
+  if (chaveGroq && variacoes.length){
     const leituraIA = await interpretarVariacoesComIA({ nomeProduto: nome, variacoes }, chaveGroq);
     if (leituraIA){
       classificacaoVariacoes = leituraIA;
