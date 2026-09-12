@@ -6,75 +6,92 @@
 <title>Importar do AliExpress — Pavan & Co.</title>
 <style>
   :root{
-    --bordo:#6B0F1A; --bordo-escuro:#4E0A13; --creme:#FCF9F1; --creme-escuro:#EDE6D8;
-    --texto:#2B211F; --texto-suave:#6E6259; --borda:rgba(107,15,26,0.16);
-    --sucesso:#2E7D32; --erro:#B3261E; --aviso:#8A6116; --aviso-bg:#FBF1DE;
+    --bordo:#68111d; --bordo-escuro:#3d0810; --vinho:#23070b; --creme:#fffdf8; --creme-escuro:#f2ece2;
+    --areia:#e5d8c7; --dourado:#b9985a; --dourado-claro:#d9be8d; --texto:#2d2220; --texto-suave:#766a61;
+    --borda:rgba(88,35,27,.14); --sombra:0 18px 50px rgba(52,23,18,.10);
+    --sucesso:#297543; --erro:#ad3028; --aviso:#8a6116; --aviso-bg:#fbf1de;
   }
   *{box-sizing:border-box;}
-  body{margin:0;background:var(--creme-escuro);color:var(--texto);font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;padding-bottom:80px;}
-  h1,h2,h3{font-family:Georgia,'Times New Roman',serif;color:var(--bordo);margin:0;}
-  header{background:var(--bordo);color:var(--creme);padding:20px 24px;}
-  header h1{color:var(--creme);font-size:1.3rem;}
-  header p{margin:4px 0 0;font-size:0.82rem;opacity:0.85;}
-  .container{max-width:920px;margin:24px auto;padding:0 16px;}
-  .card{background:var(--creme);border:1px solid var(--borda);border-radius:8px;padding:20px 22px;margin-bottom:18px;}
-  .card h2{font-size:1.05rem;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--borda);}
-  .linha-busca{display:flex;gap:10px;}
-  .linha-busca input{flex:1;}
+  html{background:var(--creme-escuro);}
+  body{margin:0;min-height:100vh;background:radial-gradient(circle at 3% 18%,rgba(185,152,90,.14),transparent 20rem),radial-gradient(circle at 97% 42%,rgba(104,17,29,.08),transparent 26rem),var(--creme-escuro);color:var(--texto);font-family:"Segoe UI",Arial,sans-serif;font-size:14px;line-height:1.5;padding-bottom:104px;}
+  h1,h2,h3{font-family:"Palatino Linotype",Palatino,Georgia,serif;color:var(--bordo);margin:0;font-weight:500;}
+  .topo{position:relative;overflow:hidden;min-height:250px;background:linear-gradient(115deg,var(--vinho),var(--bordo) 58%,#7c1d2b);color:var(--creme);padding:24px max(24px,calc((100vw - 1080px) / 2));isolation:isolate;}
+  .topo::before,.topo::after{position:absolute;content:"";border:1px solid rgba(217,190,141,.2);border-radius:50%;z-index:-1;}
+  .topo::before{width:430px;height:430px;right:-125px;top:-260px;box-shadow:0 0 0 54px rgba(217,190,141,.04),0 0 0 108px rgba(217,190,141,.025);}
+  .topo::after{width:210px;height:210px;left:45%;bottom:-154px;}
+  .topo-conteudo{max-width:1048px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:16px;}
+  .marca{display:flex;align-items:center;gap:11px;}
+  .marca-selo{width:35px;height:35px;border:1px solid var(--dourado-claro);border-radius:50%;display:grid;place-items:center;color:var(--dourado-claro);font-family:"Palatino Linotype",Georgia,serif;font-size:1.25rem;}
+  .marca-eyebrow,.header-intro .eyebrow{margin:0;color:var(--dourado-claro);font-size:.61rem;letter-spacing:.18em;text-transform:uppercase;font-weight:700;}
+  .marca h1{margin:0;color:var(--creme);font-size:1.15rem;letter-spacing:.02em;}
+  .topo-selo{border:1px solid rgba(255,253,248,.22);border-radius:999px;padding:7px 11px;color:rgba(255,253,248,.86);font-size:.72rem;background:rgba(255,255,255,.06);backdrop-filter:blur(8px);}
+  .topo-selo span{display:inline-block;width:6px;height:6px;border-radius:50%;background:#89c39b;margin-right:6px;box-shadow:0 0 0 3px rgba(137,195,155,.14);}
+  .header-intro{max-width:1048px;margin:45px auto 0;}
+  .header-intro h2{margin:7px 0 9px;color:var(--creme);font-size:clamp(1.8rem,4vw,2.65rem);line-height:1.02;letter-spacing:-.035em;}
+  .header-intro h2 em{color:var(--dourado-claro);font-weight:400;}
+  .header-intro > p:last-child{max-width:460px;margin:0;color:rgba(255,253,248,.74);font-size:.87rem;}
+  .container{position:relative;z-index:2;max-width:1080px;margin:-27px auto 0;padding:0 16px;}
+  .card{background:rgba(255,253,248,.96);border:1px solid rgba(95,40,31,.12);border-radius:15px;padding:25px 27px;margin-bottom:16px;box-shadow:var(--sombra);}
+  .card h2{font-size:1.33rem;letter-spacing:-.02em;margin-bottom:19px;padding-bottom:14px;border-bottom:1px solid var(--borda);}
+  .card h2::after{content:"";display:block;width:29px;height:2px;background:var(--dourado);margin-top:8px;}
+  .linha-busca{display:flex;gap:10px;}.linha-busca input{flex:1;}
   input[type=text], input[type=url], input[type=number], input[type=password], input[type=email], select, textarea{
-    width:100%;padding:9px 11px;border:1px solid var(--borda);border-radius:6px;font-size:0.9rem;font-family:inherit;background:#fff;color:var(--texto);
+    width:100%;padding:11px 12px;border:1px solid rgba(88,35,27,.18);border-radius:8px;font-size:.9rem;font-family:inherit;background:#fffefa;color:var(--texto);box-shadow:inset 0 1px 1px rgba(38,12,8,.02);transition:border-color .18s,box-shadow .18s,background .18s;
   }
+  input:focus,select:focus,textarea:focus,#descricaoEdit:focus{outline:none;border-color:var(--dourado);box-shadow:0 0 0 3px rgba(185,152,90,.16);background:#fff;}
   textarea{resize:vertical;}
-  label{display:block;font-size:0.78rem;font-weight:bold;color:var(--texto-suave);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.02em;}
-  .campo{margin-bottom:14px;}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
-  button{cursor:pointer;font-family:inherit;font-size:0.88rem;border-radius:6px;border:1px solid var(--bordo);padding:9px 16px;background:var(--bordo);color:var(--creme);font-weight:bold;}
-  button:hover{background:var(--bordo-escuro);}
-  button.outline{background:transparent;color:var(--bordo);}
-  button.outline:hover{background:rgba(107,15,26,0.06);}
+  label{display:block;font-size:.67rem;font-weight:700;color:var(--texto-suave);margin-bottom:7px;text-transform:uppercase;letter-spacing:.1em;}
+  .campo{margin-bottom:17px;}.campo:last-child{margin-bottom:0;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:15px;}.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px;}
+  button{cursor:pointer;font-family:inherit;font-size:.82rem;letter-spacing:.01em;border-radius:8px;border:1px solid var(--bordo);padding:10px 16px;background:linear-gradient(135deg,#7d1c2a,var(--bordo));color:var(--creme);font-weight:700;box-shadow:0 4px 10px rgba(76,12,20,.14);transition:transform .16s,box-shadow .16s,background .16s;}
+  button:hover{background:var(--bordo-escuro);transform:translateY(-1px);box-shadow:0 7px 15px rgba(76,12,20,.19);}
+  button.outline{background:transparent;color:var(--bordo);box-shadow:none;border-color:rgba(104,17,29,.27);}
+  button.outline:hover{background:rgba(104,17,29,.06);box-shadow:none;}
   button:disabled{opacity:0.5;cursor:not-allowed;}
-  button.chip-x{padding:2px 7px;font-size:0.75rem;border-radius:12px;background:#fff;color:var(--bordo);border:1px solid var(--borda);font-weight:normal;}
-  .toolbar{display:flex;gap:6px;margin-bottom:6px;}
-  .toolbar button{padding:5px 11px;background:#fff;color:var(--bordo);}
-  #descricaoEdit{min-height:120px;padding:10px 12px;border:1px solid var(--borda);border-radius:6px;background:#fff;}
+  button.chip-x{padding:2px 7px;font-size:.75rem;border-radius:12px;background:#fff;color:var(--bordo);border:1px solid var(--borda);font-weight:normal;box-shadow:none;}.chip-x:hover{transform:none;box-shadow:none;}
+  .toolbar{display:flex;gap:6px;margin-bottom:7px;padding:5px;background:#f4eee5;border:1px solid var(--borda);border-radius:8px;width:max-content;}
+  .toolbar button{padding:4px 10px;background:transparent;color:var(--bordo);border:0;box-shadow:none;}.toolbar button:hover{background:#fff;transform:none;box-shadow:none;}
+  #descricaoEdit{min-height:130px;padding:12px;border:1px solid rgba(88,35,27,.18);border-radius:8px;background:#fffefa;transition:border-color .18s,box-shadow .18s,background .18s;}
   #descricaoEdit p{margin:0 0 10px;}
-  .fotos-grid{display:flex;flex-wrap:wrap;gap:10px;}
-  .foto-item{position:relative;width:88px;height:88px;border-radius:6px;overflow:hidden;border:1px solid var(--borda);}
+  .fotos-grid{display:flex;flex-wrap:wrap;gap:10px;padding:3px;}
+  .foto-item{position:relative;width:90px;height:90px;border-radius:9px;overflow:hidden;border:1px solid var(--borda);box-shadow:0 4px 12px rgba(47,23,17,.1);}
   .foto-item img{width:100%;height:100%;object-fit:cover;display:block;}
   .foto-item button{position:absolute;top:2px;right:2px;padding:1px 6px;font-size:0.7rem;background:rgba(179,38,30,0.9);border:none;}
-  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
-  .chip{background:#fff;border:1px solid var(--borda);border-radius:16px;padding:5px 8px 5px 12px;font-size:0.82rem;display:flex;align-items:center;gap:8px;}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px;}.chip{background:#fffefa;border:1px solid rgba(88,35,27,.16);border-radius:20px;padding:5px 8px 5px 12px;font-size:.79rem;display:flex;align-items:center;gap:8px;}
   .add-linha{display:flex;gap:8px;align-items:flex-end;}
   .add-linha .campo{flex:1;margin-bottom:0;}
-  .aviso-box{background:var(--aviso-bg);color:var(--aviso);border-radius:6px;padding:10px 12px;font-size:0.82rem;white-space:pre-line;}
-  .erro-box{background:#FBEAE9;color:var(--erro);border-radius:6px;padding:10px 12px;font-size:0.85rem;}
-  .sucesso-box{background:#E8F3E8;color:var(--sucesso);border-radius:6px;padding:12px 14px;font-size:0.9rem;}
-  .status-pill{display:inline-block;padding:3px 10px;border-radius:12px;font-size:0.72rem;font-weight:bold;}
+  .aviso-box{background:var(--aviso-bg);color:var(--aviso);border-radius:8px;padding:11px 13px;font-size:.82rem;white-space:pre-line;border-left:3px solid var(--dourado);}.erro-box{background:#fbeae9;color:var(--erro);border-radius:8px;padding:11px 13px;font-size:.85rem;border-left:3px solid var(--erro);}.sucesso-box{background:#e8f3e8;color:var(--sucesso);border-radius:8px;padding:12px 14px;font-size:.9rem;border-left:3px solid var(--sucesso);}
+  .status-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}.status-item{padding:12px 13px;background:linear-gradient(135deg,#fffefa,#f8f2e8);border:1px solid var(--borda);border-radius:10px;}.status-item small{display:block;color:var(--texto-suave);font-size:.66rem;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;}.status-item strong{font-family:"Palatino Linotype",Georgia,serif;font-weight:500;font-size:.94rem;}.status-pill{display:inline-block;padding:3px 8px;border-radius:12px;font-size:.67rem;font-family:"Segoe UI",Arial,sans-serif;font-weight:700;margin-left:4px;vertical-align:1px;}
   .status-ok{background:#E8F3E8;color:var(--sucesso);}
   .status-ruim{background:#FBEAE9;color:var(--erro);}
-  #carregando{display:none;text-align:center;padding:40px 0;color:var(--texto-suave);}
-  #carregando .spinner{width:34px;height:34px;border:3px solid var(--borda);border-top-color:var(--bordo);border-radius:50%;margin:0 auto 12px;animation:girar 0.8s linear infinite;}
+  #carregando{display:none;text-align:center;padding:48px 0;color:var(--texto-suave);}#carregando .spinner{width:36px;height:36px;border:3px solid var(--borda);border-top-color:var(--dourado);border-radius:50%;margin:0 auto 12px;animation:girar .8s linear infinite;}
   @keyframes girar{to{transform:rotate(360deg);}}
   #formulario, #resultadoBusca{display:none;}
-  .rodape-fixo{position:fixed;bottom:0;left:0;right:0;background:var(--creme);border-top:1px solid var(--borda);padding:12px 16px;display:flex;justify-content:flex-end;gap:10px;align-items:center;box-shadow:0 -2px 8px rgba(0,0,0,0.06);}
-  .preco-preview{font-family:Georgia,serif;font-size:1.1rem;color:var(--bordo);margin-right:auto;}
-  small.dica{display:block;color:var(--texto-suave);font-size:0.76rem;margin-top:4px;font-weight:normal;text-transform:none;letter-spacing:0;}
+  .rodape-fixo{position:fixed;z-index:10;bottom:0;left:0;right:0;background:rgba(255,253,248,.93);backdrop-filter:blur(13px);border-top:1px solid rgba(88,35,27,.14);padding:13px max(16px,calc((100vw - 1048px) / 2));display:flex;justify-content:flex-end;gap:10px;align-items:center;box-shadow:0 -10px 30px rgba(42,21,15,.08);}.preco-preview{font-family:"Palatino Linotype",Georgia,serif;font-size:1.2rem;color:var(--bordo);margin-right:auto;}
+  small.dica{display:block;color:var(--texto-suave);font-size:.75rem;margin-top:4px;font-weight:400;text-transform:none;letter-spacing:0;}
   .checkbox-linha{display:flex;align-items:center;gap:8px;font-weight:normal;text-transform:none;font-size:0.85rem;color:var(--texto);}
   .checkbox-linha input{width:auto;}
-  .tabs{display:flex;gap:8px;margin:18px 0;}
-  .tab{background:#fff;color:var(--texto);border:1px solid var(--borda);}
-  .tab.active{background:var(--bordo);color:#fff;border-color:var(--bordo);}
-  .config-nota{font-size:.84rem;color:var(--texto-suave);line-height:1.55;margin-bottom:16px;}
-  .config-acoes{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px;}
-  .config-resultado{font-size:.84rem;margin-top:10px;min-height:1.3em;}
+  .tabs{display:flex;gap:5px;width:max-content;margin:0 0 17px;padding:5px;background:rgba(255,253,248,.92);border:1px solid rgba(88,35,27,.12);border-radius:12px;box-shadow:0 8px 18px rgba(52,23,18,.08);}.tab{background:transparent;color:var(--texto-suave);border:0;box-shadow:none;padding:9px 14px;font-size:.76rem;}.tab:hover{background:rgba(104,17,29,.05);color:var(--bordo);box-shadow:none;transform:none;}.tab.active{background:var(--bordo);color:#fff;border-color:var(--bordo);box-shadow:0 4px 10px rgba(74,12,20,.2);}
+  .config-nota{font-size:.84rem;color:var(--texto-suave);line-height:1.6;margin:0 0 19px;max-width:630px;}.config-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px;}.config-painel{padding:18px;background:linear-gradient(145deg,#fffefa,#f6efe5);border:1px solid var(--borda);border-radius:11px;}.config-painel h3{font-size:1.04rem;margin-bottom:5px;}.config-painel h3 span{color:var(--dourado);font-size:.82rem;margin-right:6px;}.config-painel > p{margin:0 0 16px;color:var(--texto-suave);font-size:.78rem;line-height:1.5;}.config-acoes{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;}.config-resultado{font-size:.8rem;margin:11px 0 0;min-height:1.3em;}
+  #cardStatus{padding-bottom:21px;}#cardStatus h2{margin-bottom:15px;}#inputLink{min-height:78px;border-color:rgba(104,17,29,.2);background:linear-gradient(90deg,#fffefa,#fff);}.card > #btnBuscar{min-width:166px;}#filaBox{padding-top:5px;}.card:has(#inputLink){position:relative;overflow:hidden;}.card:has(#inputLink)::after{content:"";position:absolute;right:-34px;bottom:-42px;width:110px;height:110px;border-radius:50%;border:1px solid rgba(185,152,90,.2);box-shadow:0 0 0 15px rgba(185,152,90,.04);pointer-events:none;}
+  @media(max-width:680px){body{font-size:13px;padding-bottom:124px;}.topo{min-height:240px;padding:19px 20px;}.topo-conteudo{align-items:flex-start;}.topo-selo{font-size:.64rem;white-space:nowrap;}.header-intro{margin-top:40px;}.container{padding:0 11px;margin-top:-19px;}.card{padding:19px 16px;border-radius:12px;}.card h2{font-size:1.2rem;}.grid2,.grid3,.status-grid,.config-grid{grid-template-columns:1fr;gap:11px;}.add-linha{flex-wrap:wrap;}.add-linha .campo{flex-basis:calc(50% - 4px);}.add-linha button{width:100%;}.tabs{width:100%;}.tab{flex:1;padding:9px 8px;}.rodape-fixo{padding:10px 11px;flex-wrap:wrap;}.preco-preview{width:100%;}.rodape-fixo button{flex:1;padding:10px 8px;font-size:.72rem;}.config-painel{padding:15px;}}
 </style>
 </head>
 <body>
 
-<header>
-  <h1>Pavan &amp; Co. — Importar do AliExpress</h1>
-  <p>Roda no seu computador. Cola o link, revisa tudo, publica quando quiser.</p>
+<header class="topo">
+  <div class="topo-conteudo">
+    <div class="marca">
+      <span class="marca-selo">P</span>
+      <div><p class="marca-eyebrow">Ateliê digital</p><h1>Pavan &amp; Co.</h1></div>
+    </div>
+    <div class="topo-selo"><span></span>Importador privado</div>
+  </div>
+  <div class="header-intro">
+    <p class="eyebrow">Curadoria de catálogo</p>
+    <h2>Da curadoria à vitrine,<br><em>com controle absoluto.</em></h2>
+    <p>Cole o link, revise cada detalhe e publique só quando a peça estiver do jeito Pavan.</p>
+  </div>
 </header>
 
 <div class="container">
@@ -248,28 +265,37 @@
     <div class="card">
       <h2>Configurações</h2>
       <p class="config-nota">Tudo fica salvo só neste computador. A ferramenta nunca mostra de volta sua senha nem a chave da IA, e esses dados não vão para o GitHub nem para o site.</p>
+      <div class="config-grid">
+        <section class="config-painel">
+          <h3><span>01</span>Login do admin</h3>
+          <p>Usado somente para publicar ou atualizar produtos pela ferramenta.</p>
+          <div class="campo">
+            <label for="cfgEmail">Credenciais</label>
+            <div class="grid2">
+              <input type="email" id="cfgEmail" autocomplete="username" placeholder="E-mail do admin">
+              <input type="password" id="cfgSenha" autocomplete="current-password" placeholder="Senha do admin">
+            </div>
+          </div>
+          <div class="config-acoes">
+            <button type="button" id="btnSalvarLoginConfig">Salvar e testar</button>
+            <button type="button" class="outline" id="btnRemoverLoginConfig">Remover</button>
+          </div>
+          <p class="config-resultado" id="resultadoLoginConfig" aria-live="polite"></p>
+        </section>
 
-      <div class="campo">
-        <label for="cfgEmail">Login do admin</label>
-        <div class="grid2">
-          <input type="email" id="cfgEmail" autocomplete="username" placeholder="E-mail do admin">
-          <input type="password" id="cfgSenha" autocomplete="current-password" placeholder="Senha do admin">
-        </div>
-        <div class="config-acoes">
-          <button type="button" id="btnSalvarLoginConfig">Salvar e testar login</button>
-          <button type="button" class="outline" id="btnRemoverLoginConfig">Remover login salvo</button>
-        </div>
-        <p class="config-resultado" id="resultadoLoginConfig" aria-live="polite"></p>
-      </div>
-
-      <div class="campo">
-        <label for="cfgChaveGroq">Chave da IA (Groq)</label>
-        <input type="password" id="cfgChaveGroq" autocomplete="off" placeholder="Cole a chave da IA aqui">
-        <div class="config-acoes">
-          <button type="button" id="btnSalvarGroqConfig">Salvar chave da IA</button>
-          <button type="button" class="outline" id="btnRemoverGroqConfig">Remover chave salva</button>
-        </div>
-        <p class="config-resultado" id="resultadoGroqConfig" aria-live="polite"></p>
+        <section class="config-painel">
+          <h3><span>02</span>Chave da IA</h3>
+          <p>Permite lapidar o nome e a descrição antes de publicar a joia.</p>
+          <div class="campo">
+            <label for="cfgChaveGroq">Chave Groq</label>
+            <input type="password" id="cfgChaveGroq" autocomplete="off" placeholder="Cole a chave da IA aqui">
+          </div>
+          <div class="config-acoes">
+            <button type="button" id="btnSalvarGroqConfig">Salvar chave</button>
+            <button type="button" class="outline" id="btnRemoverGroqConfig">Remover</button>
+          </div>
+          <p class="config-resultado" id="resultadoGroqConfig" aria-live="polite"></p>
+        </section>
       </div>
     </div>
   </section>
@@ -311,7 +337,7 @@ document.querySelectorAll('[data-aba]').forEach(botao => {
 function mostrarResultadoConfiguracao(id, texto, erro = false){
   const el = $(id);
   el.textContent = texto;
-  el.style.color = erro ? 'var(--erro)' : 'var(--verde)';
+  el.style.color = erro ? 'var(--erro)' : 'var(--sucesso)';
 }
 
 async function salvarConfiguracoes(payload, resultadoId){
@@ -411,11 +437,12 @@ function urlImagem(u){
 async function carregarStatus(){
   const r = await fetch('/api/status').then(r => r.json());
   statusAtual = r;
-  const partes = [];
-  partes.push(`Sessão do AliExpress: <span class="status-pill ${r.temSessaoAliExpress ? 'status-ok' : 'status-ruim'}">${r.temSessaoAliExpress ? 'OK' : 'falta rodar "npm run login"'}</span>`);
-  partes.push(`Login do admin salvo: <span class="status-pill ${r.temLoginAdminSalvo ? 'status-ok' : 'status-ruim'}">${r.temLoginAdminSalvo ? 'sim' : 'não'}</span>`);
-  partes.push(`Chave do Groq (IA) salva: <span class="status-pill ${r.temChaveGroq ? 'status-ok' : 'status-ruim'}">${r.temChaveGroq ? 'sim' : 'não, sem formatação automática'}</span>`);
-  $('statusTexto').innerHTML = partes.join(' &nbsp;·&nbsp; ');
+  const status = [
+    ['Sessão AliExpress', r.temSessaoAliExpress ? 'Sessão pronta' : 'Login necessário', r.temSessaoAliExpress],
+    ['Publicação', r.temLoginAdminSalvo ? 'Login salvo' : 'Sem login salvo', r.temLoginAdminSalvo],
+    ['Lapidação por IA', r.temChaveGroq ? 'IA conectada' : 'IA desativada', r.temChaveGroq]
+  ];
+  $('statusTexto').innerHTML = `<div class="status-grid">${status.map(([titulo, valor, pronto]) => `<div class="status-item"><small>${titulo}</small><strong>${valor}<span class="status-pill ${pronto ? 'status-ok' : 'status-ruim'}">${pronto ? 'pronto' : 'atenção'}</span></strong></div>`).join('')}</div>`;
   $('btnBuscar').disabled = !r.temSessaoAliExpress;
   montarLoginBox();
 }
