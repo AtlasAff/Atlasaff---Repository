@@ -251,6 +251,8 @@ footer { background: var(--creme); color: var(--texto); padding-top: 65px; }
 /* Mantém foto, detalhes e preço alinhados no topo no resumo do pedido. */
 .checkout-resumo .carrinho-item { align-items: flex-start; }
 .checkout-resumo .carrinho-preco { padding-top: 2px; }
+.checkout-aviso-fabrica { display: flex; align-items: flex-start; gap: 6px; font-size: .82rem; color: var(--texto-suave); margin: -4px 0 14px; line-height: 1.45; }
+.checkout-aviso-fabrica > span:last-child { min-width: 0; }
 .checkout-campo label, .conta-form label { font-size: .875rem; font-weight: 400; }
 .checkout-campo input, .checkout-campo select, .checkout-campo textarea, .conta-form input { border-radius: 0; min-height: 48px; font-size: 1rem; background: #fffdf8; }
 .conta-wrap { padding-top: 45px; padding-bottom: 65px; }
