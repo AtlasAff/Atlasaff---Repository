@@ -134,7 +134,9 @@ function traduzirNomeBanho(nomeOriginal){
   if (/925/.test(n) && /(gold|dourad|ouro|plated|banhad)/.test(n)) return 'Prata 925 banhada a ouro';
   if (/14\s*k|14k|au\s*585|585/.test(n)) return 'Ouro 14k';
   if (/18\s*k|18k|au\s*750|750/.test(n)) return 'Ouro 18k';
-  if (/yellow|amarel/.test(n)) return 'Ouro Amarelo';
+  // O admin já tem "Ouro 18k" como opção padrão. "yellow gold color"
+  // descreve a cor amarela do ouro, não uma cor personalizada nova.
+  if (/yellow|amarel/.test(n)) return 'Ouro 18k';
   if (/rose|rosé|rosa/.test(n)) return 'Ouro Rosé';
   if (/white|branco/.test(n)) return 'Ouro Branco';
   if (/(black|negro|preto).*(rhod|ródio|rodio)|(rhod|ródio|rodio).*(black|negro|preto)/.test(n)) return 'Ródio negro';
@@ -162,9 +164,27 @@ function inicioQuilate(valor){
   return m ? `${m[1].replace(',', '.')}ct` : null;
 }
 
-function classificarGruposVariacao(variacoes){
+// "1ct (5x7mm)" é um grupo limpo de quilates; já "1ct gold" não é —
+// contém uma cor/material escondido na mesma opção e deve cair na IA para
+// ser desmembrado, em vez de sumir com o "gold" na importação.
+function ehOpcaoQuilatePura(valor){
+  if (!inicioQuilate(valor)) return false;
+  const resto = String(valor).replace(/^\s*\d+(?:[.,]\d+)?\s*ct\b\s*/i, '').trim();
+  return !resto || /^[\d\s().×xX-]*(?:mm)?[\d\s().×xX-]*$/i.test(resto);
+}
+
+// Alguns vendedores escrevem a mesma informação de maneiras bem fora do
+// padrão: "gold 1ct", "1ct gold", "2ct (7x9mm)"... Para validar o que a
+// IA devolve, basta que o CT exista de verdade em algum ponto do texto
+// original; a IA nunca ganha permissão para inventar um tamanho de pedra.
+function quilateNoTexto(valor){
+  const m = String(valor || '').match(/(\d+(?:[.,]\d+)?)\s*ct\b/i);
+  return m ? `${m[1].replace(',', '.')}ct` : null;
+}
+
+export function classificarGruposVariacao(variacoes){
   const semTamanho = variacoes.filter(v => !/tamanho/i.test(v.nome) && v.valores.length);
-  const ehQuilatePuro = (v) => v.valores.every(x => inicioQuilate(x));
+  const ehQuilatePuro = (v) => v.valores.every(ehOpcaoQuilatePura);
 
   const grupoQuilate = semTamanho.find(ehQuilatePuro);
   if (grupoQuilate){
@@ -186,6 +206,76 @@ function classificarGruposVariacao(variacoes){
   }
 
   return { modo: 'nenhum' };
+}
+
+// A IA entra justamente quando as regras não conseguem entender a escrita
+// do fornecedor. Ela recebe SOMENTE os grupos e opções que vieram da página
+// e devolve uma estrutura fechada. Antes de aceitar, validamos cada nome e
+// cada CT contra os dados crus: assim ela ajuda a interpretar "1ct gold",
+// mas não consegue criar uma cor/quilate que o AliExpress não vende.
+function validarClassificacaoIA(variacoes, resultado){
+  if (!resultado || resultado.confianca !== 'alta') return null;
+  const grupos = new Map((variacoes || []).map(g => [g.nome, g]));
+  const modo = resultado.modo;
+
+  if (modo === 'separado'){
+    const grupoQuilate = grupos.get(resultado.grupoQuilate);
+    const grupoBanho = resultado.grupoBanho ? grupos.get(resultado.grupoBanho) : null;
+    if (!grupoQuilate || (resultado.grupoBanho && !grupoBanho) || grupoQuilate === grupoBanho) return null;
+    if (!grupoQuilate.valores.every(quilateNoTexto)) return null;
+    return { modo, grupoQuilate, grupoBanho, origem: 'ia', motivo: String(resultado.motivo || '').slice(0, 180) };
+  }
+
+  if (modo === 'combinado'){
+    const grupoOriginal = grupos.get(resultado.grupoCombinado);
+    const combosRecebidos = Array.isArray(resultado.combos) ? resultado.combos : [];
+    if (!grupoOriginal || combosRecebidos.length !== grupoOriginal.valores.length) return null;
+    const usados = new Set();
+    const combos = [];
+    for (const item of combosRecebidos){
+      const valorOriginal = String(item?.valorOriginal || '');
+      const quilate = String(item?.quilate || '').trim().toLowerCase();
+      const banho = String(item?.banho || '').trim();
+      if (!grupoOriginal.valores.includes(valorOriginal) || usados.has(valorOriginal) || !banho || banho.length > 80) return null;
+      if (!/^\d+(?:\.\d+)?ct$/.test(quilate) || quilateNoTexto(valorOriginal) !== quilate) return null;
+      usados.add(valorOriginal);
+      combos.push({ valorOriginal, quilate, banho });
+    }
+    if (usados.size !== grupoOriginal.valores.length) return null;
+    return { modo, grupoOriginal, combos, origem: 'ia', motivo: String(resultado.motivo || '').slice(0, 180) };
+  }
+  return null;
+}
+
+export async function interpretarVariacoesComIA({ nomeProduto, variacoes }, chaveApi){
+  if (!chaveApi || !Array.isArray(variacoes) || !variacoes.length) return null;
+  const grupos = variacoes.map(g => ({ nome: String(g.nome || '').slice(0, 100), valores: (g.valores || []).map(v => String(v).slice(0, 120)).slice(0, 30) }));
+  const prompt = `Você é a etapa de interpretação de variações da Pavan & Co., loja de joias. Um anúncio do AliExpress pode chamar as opções de qualquer jeito: por exemplo, "1ct gold", "gold 2ct", "925 Gold Plated 1CT", ou separar cor e quilate em grupos diferentes.
+
+Produto: ${String(nomeProduto || '').slice(0, 500)}
+Grupos extraídos literalmente da página (não invente nenhum nome/opção):
+${JSON.stringify(grupos)}
+
+Decida apenas quando tiver certeza ALTA. Ignore grupos de tamanho de aro. Você pode devolver:
+- "separado": há um grupo de quilates e, opcionalmente, um grupo separado de cor/banho;
+- "combinado": cada opção de UM grupo mistura CT e cor/banho; separe cada opção em quilate e banho;
+- "nenhum": não é seguro decidir.
+
+Regras obrigatórias:
+- Cada valorOriginal de combos deve ser copiado idêntico da lista recebida.
+- quilate deve ser somente "1ct", "2ct", etc. e já existir dentro daquele valorOriginal.
+- banho é só a parte de cor/material da mesma opção; não invente 14k/18k se a opção só disser gold.
+- Use confianca "alta" somente se todos os valores do grupo combinado forem explicados. Se houver dúvida, use "baixa" e modo "nenhum".
+
+Responda SOMENTE JSON válido em um destes formatos:
+{"modo":"separado","confianca":"alta","grupoQuilate":"nome exato","grupoBanho":"nome exato ou null","motivo":"curto"}
+{"modo":"combinado","confianca":"alta","grupoCombinado":"nome exato","combos":[{"valorOriginal":"texto exato","quilate":"1ct","banho":"gold"}],"motivo":"curto"}
+{"modo":"nenhum","confianca":"baixa","motivo":"curto"}`;
+  try {
+    return validarClassificacaoIA(variacoes, await chamarGroqJSON(prompt, chaveApi));
+  } catch {
+    return null;
+  }
 }
 
 // Converte um preço no formato brasileiro ("R$149,14", "R$1.234,56") pro
@@ -237,10 +327,29 @@ async function lerPrecoAtual(page){
 // por isso lê o imposto de verdade que o próprio AliExpress mostra pra
 // CADA combinação clicada, em vez de aproximar pela proporção do produto
 // base (isso já rendeu um valor errado pra menos num teste real).
-async function lerImpostoAtual(page){
+async function lerTextoImposto(page){
   try {
     const t = await page.locator('[class*="vat-installment--item"]').first().textContent({ timeout: 2000 });
-    return extrairValorReais(t);
+    return t?.replace(/\s+/g, ' ').trim() || null;
+  } catch { return null; }
+}
+
+// O preço do AliExpress muda antes do bloco de imposto. Espera o texto do
+// imposto trocar depois de cada clique para não salvar o imposto do CT
+// anterior (precisão vale mais que alguns milissegundos na importação).
+async function lerImpostoAtual(page, textoAnterior = null){
+  let ultimoTexto = null;
+  const limite = Date.now() + (textoAnterior ? 4500 : 2000);
+  do {
+    const texto = await lerTextoImposto(page);
+    if (texto){
+      ultimoTexto = texto;
+      if (!textoAnterior || texto !== textoAnterior) return extrairValorReais(texto);
+    }
+    if (Date.now() < limite) await page.waitForTimeout(220);
+  } while (Date.now() < limite);
+  try {
+    return extrairValorReais(ultimoTexto);
   } catch { return null; }
 }
 
@@ -264,8 +373,8 @@ async function fotoAtualDaVariante(page){
 // momento). Devolve null quando não dá pra separar quilate de banho com
 // segurança (quem chama cai pro modo antigo: mostra tudo cru pro admin
 // decidir na mão nesse caso).
-async function capturarMatrizVariacoes(page, variacoes){
-  const classificacao = classificarGruposVariacao(variacoes);
+async function capturarMatrizVariacoes(page, variacoes, classificacaoPronta = null){
+  const classificacao = classificacaoPronta || classificarGruposVariacao(variacoes);
   const avisos = [];
 
   if (classificacao.modo === 'nenhum') return null;
@@ -275,11 +384,12 @@ async function capturarMatrizVariacoes(page, variacoes){
     // completa, um clique único seleciona ela.
     const resultados = [];
     for (const combo of classificacao.combos){
+      const impostoAntes = await lerTextoImposto(page);
       const clicou = await clicarOpcaoVariacao(page, combo.valorOriginal);
       if (!clicou){ avisos.push(`Não consegui clicar em "${combo.valorOriginal}"`); continue; }
       const preco = await lerPrecoAtual(page);
       if (preco === null){ avisos.push(`Não consegui ler o preço de "${combo.valorOriginal}"`); continue; }
-      const imposto = await lerImpostoAtual(page);
+      const imposto = await lerImpostoAtual(page, impostoAntes);
       const foto = await fotoAtualDaVariante(page);
       resultados.push({ ...combo, preco, foto, custoComImposto: imposto !== null ? preco + imposto : null });
     }
@@ -336,11 +446,12 @@ async function capturarMatrizVariacoes(page, variacoes){
   const { grupoQuilate, grupoBanho } = classificacao;
 
   async function precoEImpostoNoQuilate(valorQuilate){
+    const impostoAntes = await lerTextoImposto(page);
     const clicou = await clicarOpcaoVariacao(page, valorQuilate);
     if (!clicou) return { preco: null, custoComImposto: null };
     const preco = await lerPrecoAtual(page);
     if (preco === null) return { preco: null, custoComImposto: null };
-    const imposto = await lerImpostoAtual(page);
+    const imposto = await lerImpostoAtual(page, impostoAntes);
     return { preco, custoComImposto: imposto !== null ? preco + imposto : null };
   }
 
@@ -631,7 +742,7 @@ async function modoLogin(){
    tentativas daquele campo falharem (uma tentativa que dá certo depois de
    outra falhar não deixa rastro de erro).
    ============================================================ */
-export async function extrairDadosProduto(page){
+export async function extrairDadosProduto(page, { chaveGroq = null } = {}){
   const avisos = [];
 
   // A página do AliExpress é montada por JavaScript DEPOIS que ela abre
@@ -821,7 +932,19 @@ export async function extrairDadosProduto(page){
   // como quilate/banho no produto). Quando não dá pra separar com
   // segurança, cai num modo mais simples: só clica em cada opção de cada
   // grupo (sem cruzar) e reporta os preços crus, pra revisão manual.
-  const matrizVariacoes = await capturarMatrizVariacoes(page, variacoes);
+  let classificacaoVariacoes = classificarGruposVariacao(variacoes);
+  let interpretacaoVariacoes = null;
+  // As regras cobrem os formatos já conhecidos e são instantâneas. Quando
+  // o vendedor misturou tudo num nome estranho, a IA recebe o anúncio cru
+  // ANTES de qualquer dado ir pro formulário e tenta montar a leitura.
+  if (classificacaoVariacoes.modo === 'nenhum' && chaveGroq){
+    const leituraIA = await interpretarVariacoesComIA({ nomeProduto: nome, variacoes }, chaveGroq);
+    if (leituraIA){
+      classificacaoVariacoes = leituraIA;
+      interpretacaoVariacoes = { origem: 'ia', modo: leituraIA.modo, motivo: leituraIA.motivo || 'A IA separou as opções do fornecedor.' };
+    }
+  }
+  const matrizVariacoes = await capturarMatrizVariacoes(page, variacoes, classificacaoVariacoes);
   const precosPorVariacao = [];
   if (!matrizVariacoes){
     for (const grupo of variacoes){
@@ -855,7 +978,7 @@ export async function extrairDadosProduto(page){
     } catch { /* isso é só um extra, não pode travar a importação por causa disso */ }
   }
 
-  return { nome, descricao, fotos, preco, variacoes, avisos, impostoEstimado, estoque, precosPorVariacao, matrizVariacoes };
+  return { nome, descricao, fotos, preco, variacoes, avisos, impostoEstimado, estoque, precosPorVariacao, matrizVariacoes, interpretacaoVariacoes };
 }
 
 /* ============================================================
@@ -1013,18 +1136,20 @@ async function modoImportar(url){
     }
   }
 
+  // Se a chave já está salva, a IA também participa da interpretação das
+  // variações enquanto a página ainda está aberta. No primeiro uso sem
+  // chave, ela é pedida mais abaixo e passa a valer nas próximas buscas.
+  const credenciais = await carregarCredenciais();
   console.log('Abrindo a página do produto...');
   const { browser, context } = await abrirNavegador({ headless: true, storageState: ARQUIVO_SESSAO });
   const page = await context.newPage();
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await page.waitForTimeout(2500); // dá tempo do JS da página terminar de montar tudo
 
-  let { nome, descricao, fotos, preco, variacoes, avisos, impostoEstimado, estoque, precosPorVariacao, matrizVariacoes } = await extrairDadosProduto(page);
+  let { nome, descricao, fotos, preco, variacoes, avisos, impostoEstimado, estoque, precosPorVariacao, matrizVariacoes } = await extrairDadosProduto(page, { chaveGroq: credenciais.chaveGroq });
   await browser.close();
 
   console.log(`\nNome (como veio do fornecedor): ${nome || '(não encontrado)'}`);
-
-  const credenciais = await carregarCredenciais();
 
   // Passo opcional: reescreve nome/descrição com IA (Groq), seguindo o
   // padrão de título da loja. Se já tem chave salva de uma vez anterior,
