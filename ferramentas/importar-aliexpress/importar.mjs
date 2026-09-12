@@ -134,6 +134,7 @@ function traduzirNomeBanho(nomeOriginal){
   if (/925/.test(n) && /(gold|dourad|ouro|plated|banhad)/.test(n)) return 'Prata 925 banhada a ouro';
   if (/14\s*k|14k|au\s*585|585/.test(n)) return 'Ouro 14k';
   if (/18\s*k|18k|au\s*750|750/.test(n)) return 'Ouro 18k';
+  if (/yellow|amarel/.test(n)) return 'Ouro Amarelo';
   if (/rose|rosé|rosa/.test(n)) return 'Ouro Rosé';
   if (/white|branco/.test(n)) return 'Ouro Branco';
   if (/(black|negro|preto).*(rhod|ródio|rodio)|(rhod|ródio|rodio).*(black|negro|preto)/.test(n)) return 'Ródio negro';
@@ -400,7 +401,18 @@ async function capturarMatrizVariacoes(page, variacoes){
       foto: porBanho[nomeBanho].foto
     });
   }
-  return { quilatesCustos, banhosCustos, avisos };
+  // Aqui a página tem cor e quilate em controles separados. Mesmo assim,
+  // lê cada cruzamento de verdade: imposto pode mudar com a cor, mesmo
+  // quando o valor anunciado parece igual. Essa lista é a fonte de
+  // verdade na publicação; os deltas acima ficam só como referência.
+  const combosExatos = nomesBanho.flatMap(nomeBanho => porBanho[nomeBanho].itens.map(item => ({
+    quilate: inicioQuilate(item.quilate) || item.quilate,
+    banho: traduzirNomeBanho(nomeBanho),
+    custo: item.preco,
+    custoComImposto: item.custoComImposto,
+    foto: porBanho[nomeBanho].foto
+  })));
+  return { quilatesCustos, banhosCustos, combosExatos, avisos };
 }
 
 // Monta a matriz preço/custo por combinação de quilate × banho — é o
