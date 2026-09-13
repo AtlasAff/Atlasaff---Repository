@@ -1645,6 +1645,20 @@ function cardProdutoHTML(p){
     p.temPedra ? p.pedra : null,
     p.temBanho ? p.banho : null
   ].filter(Boolean).map(escaparHtml);
+  // Mostra CT no card, onde ajuda a comparar peças, sem poluir o nome de
+  // coleção. Aceita tanto os objetos novos ({ valor, preco }) quanto os
+  // produtos antigos que guardam o valor como texto simples.
+  const valoresQuilate = (p.quilates || []).map(item => typeof item === 'string' ? item : item?.valor)
+    .concat(p.quilate || [])
+    .map(valor => String(valor || '').replace(',', '.').match(/(\d+(?:\.\d+)?)\s*ct\b/i))
+    .filter(Boolean)
+    .map(encontrado => Number(encontrado[1]))
+    .filter(numero => Number.isFinite(numero) && numero > 0);
+  const quilatesOrdenados = [...new Set(valoresQuilate)].sort((a, b) => a - b);
+  const formatarCt = numero => `${Number.isInteger(numero) ? numero : numero.toFixed(1)}ct`;
+  const faixaQuilates = quilatesOrdenados.length > 1
+    ? `${formatarCt(quilatesOrdenados[0])} — ${formatarCt(quilatesOrdenados.at(-1))} disponíveis`
+    : quilatesOrdenados.length === 1 ? `${formatarCt(quilatesOrdenados[0])} disponível` : null;
   return `
     <div class="prod-card reveal ${esgotado ? 'esgotado' : ''}">
       ${esgotado ? '<span class="badge-esgotado-card">Esgotado</span>' : ''}
@@ -1653,6 +1667,7 @@ function cardProdutoHTML(p){
         <div class="prod-img" style="background-image:url('${p.image}')"></div>
         <div class="prod-card-content">
           <div class="prod-name">${escaparHtml(p.nome)}</div>
+          ${faixaQuilates ? `<p class="prod-variacao-ct">${escaparHtml(faixaQuilates)}</p>` : ''}
           <div class="prod-price-row">
             <span class="prod-price" data-produto-id="${p.id}" data-preco-original="${p.preco}">${formatarPreco(p.preco)}</span>
             <span class="prod-view-detail" aria-hidden="true">↗</span>
