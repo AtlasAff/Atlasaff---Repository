@@ -155,6 +155,21 @@
         </div>
       </div>
 
+      <div class="grid3">
+        <div class="campo">
+          <label for="fMaterialAro">Material <small class="dica">aparece no card e nos filtros</small></label>
+          <input type="text" id="fMaterialAro" placeholder="Ex: Prata 925">
+        </div>
+        <div class="campo">
+          <label for="fPedraCentral">Pedra central <small class="dica">aparece no card e nos filtros</small></label>
+          <input type="text" id="fPedraCentral" placeholder="Ex: Moissanite">
+        </div>
+        <div class="campo">
+          <label for="fBanho">Banho / acabamento <small class="dica">aparece no card</small></label>
+          <input type="text" id="fBanho" placeholder="Ex: Ouro 18k">
+        </div>
+      </div>
+
       <div class="campo">
         <label for="descricaoEdit">Descrição</label>
         <div class="toolbar">
@@ -685,6 +700,9 @@ function preencherFormulario(dados){
   $('fTaxaPagamento').value = 0;
   $('fMargem').value = '';
   $('fPreco').value = 0;
+  $('fMaterialAro').value = dados.detalhesTecnicos?.materialAro || '';
+  $('fPedraCentral').value = dados.detalhesTecnicos?.pedraCentral || '';
+  $('fBanho').value = dados.detalhesTecnicos?.banho || '';
 
   const estoqueNum = (dados.estoque || '').match(/\d+/);
   $('fEstoque').value = estoqueNum ? estoqueNum[0] : '';
@@ -987,6 +1005,9 @@ $('btnPublicar').addEventListener('click', async () => {
     linkFornecedor: $('fLinkFornecedor').value.trim(),
     observacoes: $('fObservacoes').value.trim(),
     categoria: $('fCategoria').value,
+    materialAro: $('fMaterialAro').value.trim(),
+    pedraCentral: $('fPedraCentral').value.trim(),
+    banho: $('fBanho').value.trim(),
     ativo: $('fAtivo').checked,
     preco: $('fPreco').value,
     custoPeca: $('fCustoPeca').value,
