@@ -246,6 +246,7 @@ let itensCarrinho = [];
 let freteEscolhido = null; // { transportadora, servico, preco, prazoConfeccaoDias, prazoEntregaDiasMin, prazoEntregaDias }
 let opcoesFreteAtuais = [];
 let cupomAtualCheckout = null; // { codigo, tipo, valor, desconto }
+const PEDIDO_EMAIL_STORAGE_PREFIX = 'pavan_pedido_email_';
 
 // Se a URL tem ?pedido=ID, o cliente tá voltando do Mercado Pago (aprovado,
 // recusado ou pendente) — nesse caso a tela é só de resultado, nem olha
@@ -312,7 +313,14 @@ async function tratarRetornoMercadoPago(pedidoId){
 }
 
 async function buscarStatusPedido(pedidoId){
-  const { data, error } = await sb.rpc('status_pedido_publico', { p_id: pedidoId }).maybeSingle();
+  // O ID do pedido aparece na URL de retorno do Mercado Pago. Para não
+  // transformar esse link em uma chave de leitura pública, o banco também
+  // exige o e-mail usado na compra. Ele fica só nesta sessão do navegador;
+  // fora dela, a página de rastreio pede os dois dados normalmente.
+  let emailPedido = '';
+  try { emailPedido = sessionStorage.getItem(PEDIDO_EMAIL_STORAGE_PREFIX + pedidoId) || ''; } catch {}
+  if (!emailPedido) return null;
+  const { data, error } = await sb.rpc('status_pedido_publico', { p_id: pedidoId, p_email: emailPedido }).maybeSingle();
   if (error || !data) return null;
   return data;
 }
@@ -763,6 +771,8 @@ document.getElementById('formCheckout').addEventListener('submit', async (e) => 
   try {
     const { data, error } = await sb.rpc('criar_pedido', { payload: pedido }).single();
     if (error) throw new Error(error.message);
+
+    try { sessionStorage.setItem(PEDIDO_EMAIL_STORAGE_PREFIX + data.id, emailCliente); } catch {}
 
     // Aviso de pedido novo pra loja — best-effort (.catch vazio: se e-mail
     // falhar, o pedido já tá gravado e o checkout não pode travar por
