@@ -21,7 +21,7 @@ import {
   carregarCredenciais, salvarCredenciais, obterNomesModeloRegistrados, registrarNomeModelo,
   abrirNavegador, extrairDadosProduto, formatarComIA, revisarComIA,
   converterTamanhosParaBR, paraNumero, extrairValorReais, baixarESubirFoto,
-  montarMatrizes, buscarProdutoExistente, sugerirCategoria,
+  montarMatrizes, buscarProdutoExistente, sugerirCategoria, inferirDetalhesTecnicos,
   urlExternaPublicaPermitida, linkAliExpressPermitido
 } from './importar.mjs';
 
@@ -190,6 +190,11 @@ async function handleBuscar(req, res){
     const custoPecaNumero = paraNumero(dados.preco) ?? 0;
     const custoImpostoNumero = extrairValorReais(dados.impostoEstimado);
     const { tamanhosBR, avisoTamanho } = converterTamanhosParaBR(dados.variacoes);
+    const detalhesTecnicos = inferirDetalhesTecnicos({
+      nome: nomeIA || dados.nome,
+      descricao: descricaoIA || dados.descricao,
+      variacoes: dados.variacoes
+    });
 
     responderJSON(res, 200, {
       nomeOriginal: dados.nome,
@@ -211,6 +216,7 @@ async function handleBuscar(req, res){
       avisos: dados.avisos,
       avisosMatriz: dados.matrizVariacoes?.avisos || [],
       interpretacaoVariacoes: dados.interpretacaoVariacoes,
+      detalhesTecnicos,
       categoriaSugerida,
       produtoExistente,
       link
@@ -473,6 +479,9 @@ async function handlePublicar(req, res){
     link_fornecedor: corpo.linkFornecedor || null,
     observacoes_internas: observacoesFinal,
     categoria: corpo.categoria,
+    material_aro: String(corpo.materialAro || '').trim().slice(0, 80) || null,
+    pedra_central: String(corpo.pedraCentral || '').trim().slice(0, 80) || null,
+    banho: String(corpo.banho || '').trim().slice(0, 80) || null,
     ativo: Boolean(corpo.ativo),
     // O card do catálogo precisa de um valor inicial. Se não houve preço
     // manual, usa o menor CT já calculado (custo + imposto, com a margem
