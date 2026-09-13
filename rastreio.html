@@ -120,21 +120,20 @@
 <script>
 initBuscaForm('searchFormHeader', true);
 
-// Aceita o UUID completo (link do e-mail, busca sozinho — mesma função
-// pública que o checkout já usa) ou número curto + e-mail digitados à
-// mão (rastrear_pedido_publico exige os dois juntos, senão qualquer um
-// conseguiria varrer todos os pedidos só tentando prefixos de 8 chars).
+// Exige o número do pedido e o e-mail da compra em qualquer formato. O UUID
+// não é senha: ele pode aparecer em um link ou histórico do navegador.
 async function buscarPedidoPorEntrada(numero, email){
   const valorNumero = numero.trim();
   if (!valorNumero) return { erro: 'Digite o número do pedido.' };
+  if (!email.trim()) return { erro: 'Digite o e-mail usado na compra.' };
 
   if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(valorNumero)){
-    const { data, error } = await sb.rpc('status_pedido_publico', { p_id: valorNumero }).maybeSingle();
+    const { data, error } = await sb.rpc('status_pedido_publico', { p_id: valorNumero, p_email: email.trim() }).maybeSingle();
     if (error || !data) return { erro: 'Pedido não encontrado. Confira o número e tente de novo.' };
     return { pedido: data };
   }
 
-  if (!/^[0-9a-f]{6,8}$/i.test(valorNumero) || !email.trim()){
+  if (!/^[0-9a-f]{6,8}$/i.test(valorNumero)){
     return { erro: 'Preencha o número do pedido e o e-mail usado na compra.' };
   }
 
