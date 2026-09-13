@@ -117,6 +117,14 @@ nav.main-nav a { font-size: .8125rem; font-weight: 400; letter-spacing: .11em; }
 .prod-card:hover { transform: none; border-color: #69172250; box-shadow: 0 8px 24px #3027250d; }
 .prod-img { margin: 0 0 20px; aspect-ratio: 4 / 5; background-size: cover; background-color: #e9e5dc; }
 .prod-card:hover .prod-img { background-size: cover; }
+.prod-color-picker { position: absolute; z-index: 3; top: 13px; right: 13px; display: flex; flex-direction: column; align-items: flex-end; gap: 7px; pointer-events: auto; }
+.prod-color-swatches { display: flex; align-items: center; gap: 5px; padding: 5px; background: rgba(255, 252, 245, .88); border: 1px solid rgba(105, 23, 34, .18); border-radius: 3px; box-shadow: 0 5px 18px rgba(48, 39, 37, .13); backdrop-filter: blur(8px); }
+.prod-color-swatch { appearance: none; display: grid; place-items: center; width: 23px; height: 16px; padding: 2px; border: 1px solid transparent; border-radius: 2px; background: transparent; cursor: pointer; transition: transform .24s cubic-bezier(.16,1,.3,1), border-color .24s ease, box-shadow .24s ease; }
+.prod-color-swatch span { display: block; width: 100%; height: 100%; border-radius: 1px; background: var(--tom-banho); box-shadow: inset 0 0 0 1px rgba(32, 24, 19, .13); }
+.prod-color-swatch:hover, .prod-color-swatch:focus-visible, .prod-color-swatch.ativo { transform: translateY(-2px) scale(1.08); border-color: rgba(105, 23, 34, .7); outline: none; box-shadow: 0 2px 7px rgba(67, 35, 30, .18); }
+.prod-color-name { min-height: 0; max-width: 150px; padding: 0; overflow: hidden; color: transparent; font-size: .61rem; font-weight: 700; line-height: 1; letter-spacing: .09em; text-transform: uppercase; background: transparent; border-radius: 2px; transform: translateY(3px); opacity: 0; transition: opacity .2s ease, transform .24s cubic-bezier(.16,1,.3,1), padding .2s ease, color .2s ease; }
+.prod-color-picker.mostrando-cor .prod-color-name { padding: 6px 8px; color: var(--bordo); background: rgba(255, 252, 245, .94); border: 1px solid rgba(105, 23, 34, .14); box-shadow: 0 4px 15px rgba(48, 39, 37, .11); transform: translateY(0); opacity: 1; }
+.prod-img { transition: background-size .5s cubic-bezier(.16,1,.3,1), opacity .18s ease; }
 .prod-card-content { padding: 2px 16px 0; }
 .prod-name { font-family: var(--serif); font-style: italic; font-weight: 400; font-size: 1.1rem; text-align: left; line-height: 1.35; min-height: 2.7em; margin: 0 0 14px; }
 .prod-variacao-ct { margin: -9px 0 12px; color: var(--texto-suave); font-size: .67rem; letter-spacing: .075em; text-transform: uppercase; }
@@ -197,6 +205,9 @@ footer { background: var(--creme); color: var(--texto); padding-top: 65px; }
   .vitrine-inner h3 { font-size: 2.7rem; }
   .prod-grid { gap: 30px 14px; }
   .prod-img { margin-bottom: 14px; }
+  .prod-color-picker { top: 10px; right: 10px; }
+  .prod-color-swatches { gap: 4px; padding: 4px; }
+  .prod-color-swatch { width: 21px; height: 14px; }
   .prod-card-content { padding-inline: 10px; }
   .prod-name { font-size: 1rem; margin-bottom: 11px; }
   .prod-variacao-ct { margin-top: -7px; font-size: .61rem; }
