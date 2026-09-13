@@ -1579,7 +1579,9 @@ function abrirVarianteModal(produto, { tamanhos, quilates, banhos = [] }){
   // 14k/3ct), não deixa o cliente montar uma combinação que não existe.
   function sincronizarOpcoesModal(){
     const matriz = produto.matrizPrecos || [];
-    if (!matriz.length || !quilates.length || !banhos.length) return;
+    // Matriz com banho nulo significa que as cores não alteram o valor:
+    // cada cor continua selecionável, apenas o CT decide o preço.
+    if (!matriz.length || !quilates.length || !banhos.length || !matriz.some(m => m.banho)) return;
     document.querySelectorAll('#varianteModalQuilatePills [data-quilate]').forEach(btn => {
       const valor = btn.getAttribute('data-quilate');
       btn.disabled = !matriz.some(m => m.quilate === valor && (!produtoAguardandoVariante.banho || m.banho === produtoAguardandoVariante.banho));
@@ -2390,7 +2392,9 @@ async function renderProdutoPage(){
   // em vez de mostrar/preçar uma variante que não existe.
   function sincronizarCombinacoesDisponiveis(){
     const matriz = p.matrizPrecos || [];
-    if (!matriz.length || !p.quilates.length || !p.banhos.length) return;
+    // Quando só há uma linha por CT (banho nulo), toda cor é compatível
+    // com todo quilate e trocar a cor não deve bloquear botão algum.
+    if (!matriz.length || !p.quilates.length || !p.banhos.length || !matriz.some(m => m.banho)) return;
     quilateWrap.querySelectorAll('[data-quilate]').forEach(btn => {
       const valor = btn.getAttribute('data-quilate');
       btn.disabled = !matriz.some(m => m.quilate === valor && (!banhoSelecionado || m.banho === banhoSelecionado));
