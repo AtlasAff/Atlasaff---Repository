@@ -616,6 +616,12 @@ export function montarMatrizes({ quilatesCustos, banhosCustos, custoPecaBase, ta
   if (!quilatesCustos.length && !banhosCustos.length) return { matrizPrecos: [], matrizCustos: [] };
   const quilates = quilatesCustos.length ? quilatesCustos : [{ valor: null, custo: custoPecaBase }];
   const banhos = banhosCustos.length ? banhosCustos : [{ nome: null, custo: 0 }];
+  // Se todas as cores custam exatamente o mesmo, elas seguem disponíveis
+  // para escolha e trocam a foto, mas não precisam multiplicar a tabela
+  // de preços. Uma linha por CT é suficiente nesse caso.
+  const banhosParaPrecificar = banhos.length > 1 && banhos.every(b => Math.abs(Number(b.custo) || 0) < 0.005)
+    ? [{ nome: null, custo: 0 }]
+    : banhos;
   // Frete e operação (embalagem, reenvio no Brasil etc.) não variam por
   // quilate/banho — são custos fixos por unidade e entram antes da margem.
   const frete = Number(freteNumero) || 0;
@@ -633,10 +639,10 @@ export function montarMatrizes({ quilatesCustos, banhosCustos, custoPecaBase, ta
     const custoQuilateComImposto = q.custoComImposto != null
       ? Number(q.custoComImposto)
       : (Number(q.custo) || 0) * (1 + (taxaImposto || 0));
-    for (const b of banhos){
+    for (const b of banhosParaPrecificar){
       const custoBanhoComImposto = (Number(b.custo) || 0) * (1 + (taxaImposto || 0));
       const custoTotal = Math.round((custoQuilateComImposto + custoBanhoComImposto + frete + operacao) * 100) / 100;
-      const preco = margemNumero ? Math.round((custoTotal * (1 + margemNumero / 100) / (1 - taxaPagamento)) * 100) / 100 : 0;
+      const preco = Math.round((custoTotal * (1 + (Number(margemNumero) || 0) / 100) / (1 - taxaPagamento)) * 100) / 100;
       matrizCustos.push({ quilate: q.valor ?? null, banho: b.nome ?? null, custo: custoTotal });
       matrizPrecos.push({ quilate: q.valor ?? null, banho: b.nome ?? null, preco });
     }
