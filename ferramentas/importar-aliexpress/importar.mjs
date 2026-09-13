@@ -197,6 +197,42 @@ function traduzirNomeBanho(nomeOriginal){
   return nomeOriginal;
 }
 
+// Além das variações, o catálogo precisa dos três campos-base que aparecem
+// no card e nos filtros: material, pedra e banho/acabamento. A leitura é
+// conservadora e só usa expressões que vieram do próprio anúncio; a tela
+// da ferramenta deixa todos os três campos editáveis antes de publicar.
+export function inferirDetalhesTecnicos({ nome = '', descricao = '', variacoes = [] } = {}){
+  const opcoes = (variacoes || []).flatMap(grupo => grupo?.valores || []);
+  const texto = `${nome}\n${descricao}\n${opcoes.join(' ')}`.toLowerCase();
+
+  let materialAro = '';
+  if (/prata\s*(esterlina|925)|sterling\s*silver|\b925\b/.test(texto)) materialAro = 'Prata 925';
+  else if (/ouro\s*18\s*k|18\s*k|au\s*750|\b750\b/.test(texto)) materialAro = 'Ouro 18k';
+  else if (/ouro\s*14\s*k|14\s*k|au\s*585|\b585\b/.test(texto)) materialAro = 'Ouro 14k';
+  else if (/a[cç]o\s*inox|stainless\s*steel/.test(texto)) materialAro = 'Aço inox';
+
+  let pedraCentral = '';
+  if (/moissanit/.test(texto)) pedraCentral = 'Moissanite';
+  else if (/zirc[oô]nia|cubic\s*zirconia|\bcz\b/.test(texto)) pedraCentral = 'Zircônia';
+  else if (/diamante|diamond/.test(texto)) pedraCentral = 'Diamante';
+  else if (/safira|sapphire/.test(texto)) pedraCentral = 'Safira';
+  else if (/esmeralda|emerald/.test(texto)) pedraCentral = 'Esmeralda';
+  else if (/rubi|ruby/.test(texto)) pedraCentral = 'Rubi';
+
+  let banho = '';
+  // Em prata 925, “gold plated”/“banho de ouro 18k” é acabamento da
+  // peça. Ele vem antes das cores das variações, para uma lista com ouro
+  // branco/rosé/amarelo não escolher arbitrariamente uma delas como base.
+  if (/(banho|banhad|plated).{0,28}(ouro|gold)|(?:ouro|gold).{0,18}(banho|banhad|plated)/.test(texto)) banho = 'Ouro 18k';
+  else if (/r[oó]dio\s*(negro|preto)|black\s*rhod/.test(texto)) banho = 'Ródio negro';
+  else if (/r[oó]dio|rhodium/.test(texto)) banho = 'Ródio';
+  else if (/ouro\s*ros[eé]|rose\s*gold/.test(texto)) banho = 'Ouro Rosé';
+  else if (/ouro\s*branco|white\s*gold/.test(texto)) banho = 'Ouro Branco';
+  else if (/yellow\s*gold|ouro\s*amarel/.test(texto)) banho = 'Ouro 18k';
+
+  return { materialAro, pedraCentral, banho };
+}
+
 // Separa as variações encontradas em "quilate" (tamanho da pedra) e
 // "banho" (cor/acabamento) — os dois eixos que o admin já sabe cadastrar
 // com preço próprio por combinação:
@@ -1578,6 +1614,7 @@ async function modoImportar(url){
   // como já estavam (nunca reseta uma peça ativa pra rascunho, nem troca
   // a categoria que você já tinha escolhido à toa).
   const categoriaFinal = produtoExistenteAtual?.categoria || categoriaProvisoria;
+  const detalhesTecnicos = inferirDetalhesTecnicos({ nome, descricao, variacoes });
 
   // Preço de venda: pular a margem (Enter) é seguro num produto NOVO (fica
   // zerado de propósito, você confere depois no admin antes de ativar) —
@@ -1598,6 +1635,9 @@ async function modoImportar(url){
     link_fornecedor: url,
     observacoes_internas: observacoesInternas,
     categoria: categoriaFinal,
+    material_aro: detalhesTecnicos.materialAro || null,
+    pedra_central: detalhesTecnicos.pedraCentral || null,
+    banho: detalhesTecnicos.banho || null,
     preco: precoFinal ?? 0,
     custo_peca: custoPecaNumero,
     custo_frete: custoFreteNumero,
