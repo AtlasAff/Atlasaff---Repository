@@ -398,14 +398,27 @@ async function handlePublicar(req, res){
   const taxaImpostoAprox = (custoPecaNumero > 0 && custoImpostoNumero) ? custoImpostoNumero / custoPecaNumero : 0;
   const margemNumero = Number(corpo.margemLucro) || null;
   const precificarCustoExato = (custoComImposto) => {
-    if (!margemNumero) return 0;
     const taxaPagamento = taxaPagamentoNumero / 100;
     const custoTotal = Number(custoComImposto) + custoFreteNumero + custoOperacaoNumero;
-    return Math.round(custoTotal * (1 + margemNumero / 100) / (1 - taxaPagamento) * 100) / 100;
+    return Math.round(custoTotal * (1 + (margemNumero || 0) / 100) / (1 - taxaPagamento) * 100) / 100;
   };
+  // Compara as opções reais do fornecedor. Quando cada cor tem o mesmo
+  // custo total para o mesmo CT, guardamos só um preço por CT; as cores e
+  // suas fotos continuam normalmente no seletor da página do produto.
+  const coresComMesmoPreco = combosExatos.length > 1
+    && new Set(combosExatos.map(c => c.banho)).size > 1
+    && [...new Set(combosExatos.map(c => c.quilate))].every(quilate => {
+      const valores = combosExatos
+        .filter(c => c.quilate === quilate)
+        .map(c => c.custoComImposto ?? (c.custo * (1 + taxaImpostoAprox)));
+      return valores.length > 1 && valores.every(valor => Math.abs(valor - valores[0]) < 0.005);
+    });
+  const combosParaPreco = coresComMesmoPreco
+    ? [...new Map(combosExatos.map(c => [c.quilate, { ...c, banho: null }])).values()]
+    : combosExatos;
   const matrizDeCombosExatos = combosExatos.length ? {
-    matrizPrecos: combosExatos.map(c => ({ quilate: c.quilate, banho: c.banho, preco: precificarCustoExato(c.custoComImposto ?? (c.custo * (1 + taxaImpostoAprox)))})),
-    matrizCustos: combosExatos.map(c => ({ quilate: c.quilate, banho: c.banho, custo: Math.round(((c.custoComImposto ?? (c.custo * (1 + taxaImpostoAprox))) + custoFreteNumero + custoOperacaoNumero) * 100) / 100 }))
+    matrizPrecos: combosParaPreco.map(c => ({ quilate: c.quilate, banho: c.banho, preco: precificarCustoExato(c.custoComImposto ?? (c.custo * (1 + taxaImpostoAprox)))})),
+    matrizCustos: combosParaPreco.map(c => ({ quilate: c.quilate, banho: c.banho, custo: Math.round(((c.custoComImposto ?? (c.custo * (1 + taxaImpostoAprox))) + custoFreteNumero + custoOperacaoNumero) * 100) / 100 }))
   } : null;
   const { matrizPrecos, matrizCustos } = matrizDeCombosExatos || montarMatrizes({
     quilatesCustos: (corpo.quilates || []).map(q => ({
@@ -422,7 +435,7 @@ async function handlePublicar(req, res){
     taxaPagamentoNumero
   });
   const quilatesParaSalvar = combosExatos.length
-    ? [...new Map(combosExatos.map(c => [c.quilate, { valor: c.quilate, preco: precificarCustoExato(c.custoComImposto ?? (c.custo * (1 + taxaImpostoAprox))), descricao: '' }])).values()]
+    ? [...new Map(combosParaPreco.map(c => [c.quilate, { valor: c.quilate, preco: precificarCustoExato(c.custoComImposto ?? (c.custo * (1 + taxaImpostoAprox))), descricao: '' }])).values()]
     : (corpo.quilates || []).map(q => ({ valor: q.valor, preco: Number(q.preco) || 0, descricao: q.descricao || '' }));
   const quilatesCustosParaSalvar = combosExatos.length
     ? [...new Map(combosExatos.map(c => [c.quilate, { valor: c.quilate, custo: c.custo, taxa: Math.round(((c.custoComImposto ?? (c.custo * (1 + taxaImpostoAprox))) - c.custo) * 100) / 100 }])).values()]
@@ -435,7 +448,8 @@ async function handlePublicar(req, res){
     });
   if (combosExatos.length){
     const precoPorBanho = new Map(matrizPrecos.map(m => [m.banho, m.preco]));
-    banhosFinal.forEach(b => { b.preco = precoPorBanho.get(b.nome) || 0; });
+    const menorPreco = Math.min(...matrizPrecos.map(m => m.preco));
+    banhosFinal.forEach(b => { b.preco = coresComMesmoPreco ? menorPreco : (precoPorBanho.get(b.nome) || 0); });
   }
 
   // Atualizando: acrescenta a observação nova embaixo da que já existia,
@@ -460,7 +474,10 @@ async function handlePublicar(req, res){
     observacoes_internas: observacoesFinal,
     categoria: corpo.categoria,
     ativo: Boolean(corpo.ativo),
-    preco: Number(corpo.preco) || 0,
+    // O card do catálogo precisa de um valor inicial. Se não houve preço
+    // manual, usa o menor CT já calculado (custo + imposto, com a margem
+    // escolhida quando houver), nunca R$ 0,00.
+    preco: Number(corpo.preco) || (matrizPrecos.length ? Math.min(...matrizPrecos.map(m => m.preco)) : 0),
     custo_peca: custoPecaNumero,
     custo_frete: custoFreteNumero,
     ...(custoImpostoNumero !== null ? { custo_imposto: custoImpostoNumero } : {}),
