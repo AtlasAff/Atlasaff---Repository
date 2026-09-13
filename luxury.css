@@ -119,6 +119,7 @@ nav.main-nav a { font-size: .8125rem; font-weight: 400; letter-spacing: .11em; }
 .prod-card:hover .prod-img { background-size: cover; }
 .prod-card-content { padding: 2px 16px 0; }
 .prod-name { font-family: var(--serif); font-style: italic; font-weight: 400; font-size: 1.1rem; text-align: left; line-height: 1.35; min-height: 2.7em; margin: 0 0 14px; }
+.prod-variacao-ct { margin: -9px 0 12px; color: var(--texto-suave); font-size: .67rem; letter-spacing: .075em; text-transform: uppercase; }
 .prod-price-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid #6917221a; padding-top: 13px; }
 .prod-price { font-family: var(--sans); color: var(--bordo); font-size: 1.05rem; font-weight: 700; }
 .prod-view-detail { display: flex; align-items: center; justify-content: center; color: var(--bordo); width: 28px; height: 28px; border: 1px solid #6917222a; border-radius: 50%; font-size: .875rem; transition: background .2s ease, color .2s ease; }
@@ -198,6 +199,7 @@ footer { background: var(--creme); color: var(--texto); padding-top: 65px; }
   .prod-img { margin-bottom: 14px; }
   .prod-card-content { padding-inline: 10px; }
   .prod-name { font-size: 1rem; margin-bottom: 11px; }
+  .prod-variacao-ct { margin-top: -7px; font-size: .61rem; }
   .prod-price-row { padding-top: 10px; }
   .prod-price { font-size: .95rem; }
   .prod-view-detail { width: 24px; height: 24px; }
@@ -248,7 +250,8 @@ footer { background: var(--creme); color: var(--texto); padding-top: 65px; }
 .checkout-secao { padding: 30px; background: #fffdf8; border: 1px solid var(--borda); margin-bottom: 24px; }
 .checkout-secao h2, .checkout-resumo h2 { font-size: 1.8rem; font-weight: 400; }
 .checkout-resumo { background: #efeae1; border: 1px solid var(--borda); padding: 30px; }
-/* Mantém foto, detalhes e preço alinhados no topo no resumo do pedido. */
+/* No resumo, foto, detalhes e preço começam na mesma linha. Assim o valor
+   não fica "flutuando" no meio da descrição quando a peça tem variações. */
 .checkout-resumo .carrinho-item { align-items: flex-start; }
 .checkout-resumo .carrinho-preco { padding-top: 2px; }
 .checkout-aviso-fabrica { display: flex; align-items: flex-start; gap: 6px; font-size: .82rem; color: var(--texto-suave); margin: 12px 0 14px; line-height: 1.45; }
