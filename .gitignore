@@ -10,9 +10,18 @@ ferramentas/importar-aliexpress/.sessao-aliexpress.json
 # perguntar toda hora — nunca deve ir pro repositório.
 ferramentas/importar-aliexpress/.credenciais.json
 
+# Histórico local de nomes-modelo da ferramenta. É criado automaticamente
+# na primeira importação e não faz parte do código do site.
+ferramentas/importar-aliexpress/.nomes-modelo.json
+
 # Arquivos de "raio-x" de página gerados quando algum campo não é
 # encontrado na importação — só servem pra depurar localmente.
 ferramentas/importar-aliexpress/debug/
 
 # Arquivos de sistema comuns
 .DS_Store
+
+# Capturas de conferência local do layout
+.preview/
+__pycache__/
+
