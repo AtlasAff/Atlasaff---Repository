@@ -1661,10 +1661,29 @@ function cardProdutoHTML(p){
   const faixaQuilates = quilatesOrdenados.length > 1
     ? `${formatarCt(quilatesOrdenados[0])} — ${formatarCt(quilatesOrdenados.at(-1))} disponíveis`
     : quilatesOrdenados.length === 1 ? `${formatarCt(quilatesOrdenados[0])} disponível` : null;
+  // As cores existem como pequenas amostras sobre a foto. Só aparecem
+  // quando há pelo menos duas opções com imagem própria — isso evita criar
+  // enfeite falso para peças que têm apenas um banho.
+  const coresComFoto = (p.banhos || []).filter(b => b?.nome && b?.foto_url).slice(0, 4);
+  const tomDaAmostra = (nome) => {
+    const valor = String(nome).toLowerCase();
+    if (/ros[eé]|rosa/.test(valor)) return '#c99382';
+    if (/branco|prata|silver|r[oó]dio|rhod/.test(valor)) return '#c6c8c8';
+    if (/preto|negro/.test(valor)) return '#343236';
+    return '#c9a04d';
+  };
+  const seletorCores = coresComFoto.length > 1 ? `
+      <div class="prod-color-picker" aria-label="Cores disponíveis para ${escaparHtml(p.nome)}">
+        <span class="prod-color-name" aria-live="polite"></span>
+        <div class="prod-color-swatches">
+          ${coresComFoto.map((cor, indice) => `<button type="button" class="prod-color-swatch" data-cor-nome="${escaparHtml(cor.nome)}" data-cor-foto="${escaparHtml(cor.foto_url)}" style="--tom-banho:${tomDaAmostra(cor.nome)}" aria-label="Ver ${escaparHtml(cor.nome)}" title="${escaparHtml(cor.nome)}"><span></span></button>`).join('')}
+        </div>
+      </div>` : '';
   return `
-    <div class="prod-card reveal ${esgotado ? 'esgotado' : ''}">
+    <div class="prod-card reveal ${esgotado ? 'esgotado' : ''}" data-imagem-original="${escaparHtml(p.image)}">
       ${esgotado ? '<span class="badge-esgotado-card">Esgotado</span>' : ''}
       ${temFreteGratis ? seloFreteGratisHTML('selo-frete-gratis--foto') : ''}
+      ${seletorCores}
       <a href="/produto/${p.slug}" class="prod-card-link" aria-label="Ver ${escaparHtml(p.nome)}">
         <div class="prod-img" style="background-image:url('${p.image}')"></div>
         <div class="prod-card-content">
@@ -1692,6 +1711,60 @@ function cardProdutoHTML(p){
     </div>
   `;
 }
+
+// A troca é intencionalmente só no card: na página da peça as opções
+// completas continuam sendo a fonte de verdade para preço e carrinho.
+function trocarImagemPeloBanho(botao){
+  const card = botao.closest('.prod-card');
+  const picker = botao.closest('.prod-color-picker');
+  const foto = botao.dataset.corFoto;
+  if (!card || !picker || !foto) return;
+  const imagem = card.querySelector('.prod-img');
+  if (!imagem) return;
+  imagem.style.opacity = '0.38';
+  requestAnimationFrame(() => {
+    imagem.style.backgroundImage = `url("${foto.replace(/["\\\n\r]/g, '\\$&')}")`;
+    imagem.style.opacity = '';
+  });
+  picker.querySelectorAll('.prod-color-swatch').forEach(item => item.classList.toggle('ativo', item === botao));
+  picker.querySelector('.prod-color-name').textContent = botao.dataset.corNome || '';
+  picker.classList.add('mostrando-cor');
+}
+
+function restaurarImagemDoCard(picker){
+  if (picker.dataset.fixado === 'sim') return;
+  const card = picker.closest('.prod-card');
+  const imagem = card?.querySelector('.prod-img');
+  const original = card?.dataset.imagemOriginal;
+  if (imagem && original) imagem.style.backgroundImage = `url("${original.replace(/["\\\n\r]/g, '\\$&')}")`;
+  picker.querySelectorAll('.prod-color-swatch').forEach(item => item.classList.remove('ativo'));
+  picker.querySelector('.prod-color-name').textContent = '';
+  picker.classList.remove('mostrando-cor');
+}
+
+document.addEventListener('pointerover', event => {
+  if (event.pointerType === 'touch') return;
+  const botao = event.target.closest('.prod-color-swatch');
+  if (botao) trocarImagemPeloBanho(botao);
+});
+document.addEventListener('pointerout', event => {
+  if (event.pointerType === 'touch') return;
+  const picker = event.target.closest('.prod-color-picker');
+  if (picker && !picker.contains(event.relatedTarget)) restaurarImagemDoCard(picker);
+});
+document.addEventListener('focusin', event => {
+  const botao = event.target.closest('.prod-color-swatch');
+  if (botao) trocarImagemPeloBanho(botao);
+});
+document.addEventListener('click', event => {
+  const botao = event.target.closest('.prod-color-swatch');
+  if (!botao) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const picker = botao.closest('.prod-color-picker');
+  if (picker) picker.dataset.fixado = 'sim';
+  trocarImagemPeloBanho(botao);
+});
 
 function skeletonGridHTML(qtd = 6){
   return Array.from({ length: qtd }).map(() => `
