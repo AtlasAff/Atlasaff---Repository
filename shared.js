@@ -1674,7 +1674,6 @@ function cardProdutoHTML(p){
   };
   const seletorCores = coresComFoto.length > 1 ? `
       <div class="prod-color-picker" aria-label="Cores disponíveis para ${escaparHtml(p.nome)}">
-        <span class="prod-color-name" aria-live="polite"></span>
         <div class="prod-color-swatches">
           ${coresComFoto.map((cor, indice) => `<button type="button" class="prod-color-swatch" data-cor-nome="${escaparHtml(cor.nome)}" data-cor-foto="${escaparHtml(cor.foto_url)}" style="--tom-banho:${tomDaAmostra(cor.nome)}" aria-label="Ver ${escaparHtml(cor.nome)}" title="${escaparHtml(cor.nome)}"><span></span></button>`).join('')}
         </div>
@@ -1727,7 +1726,8 @@ function trocarImagemPeloBanho(botao){
     imagem.style.opacity = '';
   });
   picker.querySelectorAll('.prod-color-swatch').forEach(item => item.classList.toggle('ativo', item === botao));
-  picker.querySelector('.prod-color-name').textContent = botao.dataset.corNome || '';
+  const nomeCor = picker.querySelector('.prod-color-name');
+  if (nomeCor) nomeCor.textContent = botao.dataset.corNome || '';
   picker.classList.add('mostrando-cor');
 }
 
@@ -1738,7 +1738,8 @@ function restaurarImagemDoCard(picker){
   const original = card?.dataset.imagemOriginal;
   if (imagem && original) imagem.style.backgroundImage = `url("${original.replace(/["\\\n\r]/g, '\\$&')}")`;
   picker.querySelectorAll('.prod-color-swatch').forEach(item => item.classList.remove('ativo'));
-  picker.querySelector('.prod-color-name').textContent = '';
+  const nomeCor = picker.querySelector('.prod-color-name');
+  if (nomeCor) nomeCor.textContent = '';
   picker.classList.remove('mostrando-cor');
 }
 
