@@ -710,6 +710,31 @@
   }
   .link-fornecedor-btn:hover{ background: var(--petroleo-bg); }
 
+  /* ---------- CENTRAL TIKTOK SHOP ---------- */
+  .tiktok-preparo{
+    border:1px solid var(--cinza-borda); background:var(--cinza-card);
+    padding:20px; border-radius:var(--radius); margin-bottom:18px;
+  }
+  .tiktok-produto-grid{ display:grid; grid-template-columns:minmax(0,1fr) minmax(280px,.75fr); gap:18px; }
+  .tiktok-bloco{ border:1px solid var(--cinza-borda); background:var(--superficie); padding:18px; border-radius:var(--radius); }
+  .tiktok-bloco h3{ margin:0 0 5px; font-size:.9rem; }
+  .tiktok-ajuda{ margin:0 0 15px; color:var(--texto-suave); font-size:.8rem; line-height:1.5; }
+  .tiktok-campo{ border-top:1px solid var(--cinza-borda); padding:12px 0; }
+  .tiktok-campo:first-of-type{ border-top:0; padding-top:0; }
+  .tiktok-campo-titulo{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:6px; color:var(--texto-suave); font-size:.72rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
+  .tiktok-campo-texto{ white-space:pre-wrap; font-size:.87rem; line-height:1.55; }
+  .tiktok-copiar{ color:var(--bordo); border:1px solid var(--bordo-claro); border-radius:999px; padding:4px 9px; font-size:.7rem; white-space:nowrap; }
+  .tiktok-copiar:hover{ background:var(--bordo-bg); }
+  .tiktok-fotos{ display:grid; grid-template-columns:repeat(auto-fill,minmax(94px,1fr)); gap:9px; }
+  .tiktok-foto{ position:relative; aspect-ratio:1; border:1px solid var(--cinza-borda); overflow:hidden; background:var(--cinza-bg); }
+  .tiktok-foto img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .tiktok-foto button{ position:absolute; inset:auto 5px 5px; background:rgba(35,28,25,.86); color:#fff; padding:5px 4px; font-size:.65rem; width:calc(100% - 10px); }
+  .tiktok-chip-list{ display:flex; flex-wrap:wrap; gap:7px; }
+  .tiktok-chip{ padding:6px 8px; background:var(--creme); color:var(--texto-suave); border:1px solid var(--cinza-borda); font-size:.76rem; }
+  .tiktok-vazio{ padding:32px; text-align:center; border:1px dashed var(--cinza-borda); color:var(--texto-suave); font-size:.88rem; }
+  .tiktok-aviso{ font-size:.76rem; color:var(--texto-suave); background:var(--creme); padding:10px 12px; margin:12px 0 0; line-height:1.45; }
+  @media (max-width:760px){ .tiktok-produto-grid{ grid-template-columns:1fr; } .tiktok-preparo{ padding:15px; } }
+
   /* ---------- MODAL DE CATEGORIAS ---------- */
   .categoria-linha{
     display:flex; align-items:center; gap:10px;
@@ -798,6 +823,11 @@
         Financeiro
       </button>
 
+      <button type="button" class="admin-nav-item" data-pagina="tiktok-shop">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 5v14"/><path d="M8 7.5c2.3-1.8 4.7-1.8 7 0v8c-2.3-1.8-4.7-1.8-7 0"/><path d="M8 11.5c-2.2-1.6-4.3-1.6-5.5-.9v7.4c1.3-.7 3.3-.7 5.5.9"/><circle cx="17.5" cy="7" r="3.5"/></svg>
+        TikTok Shop
+      </button>
+
       <div class="admin-nav-grupo-titulo">Atendimento</div>
       <button type="button" class="admin-nav-item" data-pagina="mensagens">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
@@ -873,6 +903,19 @@
           </table>
           </div>
           <div class="carregar-mais-wrap" id="produtosCarregarMaisWrap" style="margin-bottom:0;"></div>
+        </div>
+
+        <!-- ============ TIKTOK SHOP ============ -->
+        <div class="admin-pagina" id="paginaTikTokShop" data-pagina="tiktok-shop" style="display:none;">
+          <div class="admin-page-titulo"><div><h1>TikTok Shop</h1><p>Escolha uma peça e deixe as fotos e as informações prontas para cadastrar no TikTok.</p></div></div>
+          <div class="tiktok-preparo">
+            <div class="form-campo" style="margin:0;max-width:650px;">
+              <label for="tiktokProdutoSelect">Peça do catálogo</label>
+              <select id="tiktokProdutoSelect"><option value="">Carregando catálogo…</option></select>
+            </div>
+            <p class="tiktok-aviso">O TikTok pede imagens quadradas de 600 × 600 px, até 5 MB e no máximo 9 arquivos. Esta central baixa as fotos já cadastradas e deixa os textos prontos; antes de publicar, confira esses limites no próprio TikTok.</p>
+          </div>
+          <div id="tiktokProdutoConteudo" class="tiktok-vazio">Selecione uma peça para preparar o anúncio.</div>
         </div>
 
         <!-- ============ FINANCEIRO ============ -->
@@ -1722,6 +1765,7 @@ const CARREGADORES_PAGINA_ADMIN = {
   trocas: () => renderTrocas(),
   clientes: () => renderTabelaClientes(),
   financeiro: () => renderFinanceiro(),
+  'tiktok-shop': () => carregarTikTokShop(),
   loja: () => {}
 };
 
@@ -3340,6 +3384,176 @@ async function carregarProdutosAdmin(){
     return [];
   }
   return data;
+}
+
+/* ============================================================
+   TIKTOK SHOP — prepara o anúncio sem duplicar produto nem foto.
+   Nada aqui publica no TikTok: deixa a peça revisável e copiável.
+   ============================================================ */
+function categoriaTikTokShop(categoria){
+  const mapa = {
+    aliancas: 'Moda > Joias e acessórios > Anéis',
+    aneis: 'Moda > Joias e acessórios > Anéis',
+    brincos: 'Moda > Joias e acessórios > Brincos',
+    colares: 'Moda > Joias e acessórios > Colares',
+    pulseiras: 'Moda > Joias e acessórios > Pulseiras',
+    joias: 'Moda > Joias e acessórios > Joias finas'
+  };
+  return mapa[categoria] || 'Moda > Joias e acessórios';
+}
+
+function textoLimpoTikTokShop(html){
+  const caixa = document.createElement('div');
+  caixa.innerHTML = html || '';
+  return (caixa.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+function tituloTikTokShop(produto){
+  // O TikTok aceita títulos longos, mas deixamos margem para não cortar
+  // uma palavra importante caso a plataforma reduza o limite no cadastro.
+  return (produto.nome || 'Joia Pavan & Co.').trim().slice(0, 180);
+}
+
+function descricaoTikTokShop(produto){
+  const textoCadastrado = textoLimpoTikTokShop(produto.descricao);
+  if (textoCadastrado) return textoCadastrado;
+  const detalhes = [produto.material_aro, produto.pedra_central, produto.banho]
+    .filter(valor => valor && valor !== 'Sem pedra' && valor !== 'Sem banho');
+  return `${produto.nome || 'Joia Pavan & Co.'}${detalhes.length ? ` — ${detalhes.join(', ')}.` : '.'}`;
+}
+
+function copiarTextoTikTokShop(texto, botao){
+  const concluir = () => {
+    const original = botao.textContent;
+    botao.textContent = 'Copiado ✓';
+    setTimeout(() => { botao.textContent = original; }, 1400);
+  };
+  if (navigator.clipboard && window.isSecureContext){
+    navigator.clipboard.writeText(texto).then(concluir).catch(() => {});
+    return;
+  }
+  const area = document.createElement('textarea');
+  area.value = texto;
+  area.style.position = 'fixed';
+  area.style.opacity = '0';
+  document.body.appendChild(area);
+  area.select();
+  try { document.execCommand('copy'); concluir(); } finally { area.remove(); }
+}
+
+async function baixarImagemTikTokShop(url, nomeArquivo){
+  try {
+    const resposta = await fetch(url);
+    if (!resposta.ok) throw new Error('A imagem não pôde ser baixada.');
+    const blob = await resposta.blob();
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = nomeArquivo;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1200);
+  } catch (erro) {
+    window.open(url, '_blank', 'noopener');
+  }
+}
+
+function renderTikTokProdutoSelecionado(produto){
+  const destino = document.getElementById('tiktokProdutoConteudo');
+  if (!produto){
+    destino.className = 'tiktok-vazio';
+    destino.textContent = 'Selecione uma peça para preparar o anúncio.';
+    return;
+  }
+
+  const fotos = Array.isArray(produto.fotos) ? produto.fotos.filter(Boolean).slice(0, 9) : [];
+  const titulo = tituloTikTokShop(produto);
+  const descricao = descricaoTikTokShop(produto);
+  const categoria = categoriaTikTokShop(produto.categoria);
+  const detalhes = [
+    produto.material_aro && `Material: ${produto.material_aro}`,
+    produto.pedra_central && produto.pedra_central !== 'Sem pedra' && `Pedra: ${produto.pedra_central}`,
+    produto.banho && produto.banho !== 'Sem banho' && `Banho: ${produto.banho}`,
+    produto.formato_pedra && `Formato: ${produto.formato_pedra}`,
+    produto.cravacao && `Cravação: ${produto.cravacao}`,
+    produto.grau_cor && `Cor: ${produto.grau_cor}`,
+    produto.grau_clareza && `Clareza: ${produto.grau_clareza}`,
+    produto.largura_mm && `Largura do aro: ${produto.largura_mm} mm`
+  ].filter(Boolean);
+  const variacoes = [
+    ...(Array.isArray(produto.tamanhos_disponiveis) && produto.tamanhos_disponiveis.length ? [`Tamanhos: ${produto.tamanhos_disponiveis.join(', ')}`] : []),
+    ...(Array.isArray(produto.quilates_disponiveis) && produto.quilates_disponiveis.length ? [`Pedra: ${produto.quilates_disponiveis.map(q => q.valor).filter(Boolean).join(', ')}`] : []),
+    ...(Array.isArray(produto.banhos_disponiveis) && produto.banhos_disponiveis.length ? [`Banhos: ${produto.banhos_disponiveis.map(b => b.nome || b).filter(Boolean).join(', ')}`] : [])
+  ];
+  const vendas = `Preço inicial: ${formatarPreco(produto.preco)}\nEstoque: ${produto.estoque ?? 0} unidade(s)\n${produto.frete_gratis_sempre ? 'Frete grátis: sim' : 'Frete: configurar no TikTok Shop'}`;
+  const envio = 'Prazo sugerido para informar ao cliente: 3 a 7 dias úteis para preparo + 8 a 14 dias úteis de entrega.';
+  const campo = (tituloCampo, texto, chave) => `
+    <div class="tiktok-campo">
+      <div class="tiktok-campo-titulo"><span>${tituloCampo}</span><button type="button" class="tiktok-copiar" data-tiktok-copiar="${chave}">Copiar</button></div>
+      <div class="tiktok-campo-texto">${escaparHtml(texto)}</div>
+    </div>`;
+
+  destino.className = '';
+  destino.innerHTML = `
+    <div class="tiktok-produto-grid">
+      <div class="tiktok-bloco">
+        <h3>Informações básicas</h3>
+        <p class="tiktok-ajuda">Copie cada campo e cole no local correspondente do TikTok Shop.</p>
+        ${campo('Nome do produto', titulo, 'titulo')}
+        ${campo('Categoria sugerida', categoria, 'categoria')}
+        ${campo('Detalhes do produto', detalhes.join('\n') || 'Revise os detalhes da peça antes de publicar.', 'detalhes')}
+        ${campo('Descrição', descricao, 'descricao')}
+        ${campo('Vídeo', produto.video_url ? produto.video_url : 'Nenhum vídeo cadastrado para esta peça.', 'video')}
+        ${campo('Informações de vendas', vendas, 'vendas')}
+        ${campo('Envio', envio, 'envio')}
+        ${variacoes.length ? `<div class="tiktok-campo"><div class="tiktok-campo-titulo"><span>Variações</span></div><div class="tiktok-chip-list">${variacoes.map(item => `<span class="tiktok-chip">${escaparHtml(item)}</span>`).join('')}</div></div>` : ''}
+      </div>
+      <div class="tiktok-bloco">
+        <h3>Imagens</h3>
+        <p class="tiktok-ajuda">${fotos.length} de até 9 foto(s) do catálogo. Baixe individualmente ou todas de uma vez.</p>
+        ${fotos.length ? `<button type="button" class="btn-admin btn-admin-primary" id="btnTikTokBaixarTodas" style="margin:0 0 12px;">Baixar todas as imagens</button><div class="tiktok-fotos">${fotos.map((url, indice) => `<div class="tiktok-foto"><img src="${escaparHtml(url)}" alt="Imagem ${indice + 1} de ${escaparHtml(produto.nome || 'produto')}"><button type="button" data-tiktok-baixar="${indice}">Baixar ${indice + 1}</button></div>`).join('')}</div>` : '<p class="tiktok-aviso">Esta peça ainda não tem fotos cadastradas.</p>'}
+        ${Array.isArray(produto.fotos) && produto.fotos.length > 9 ? '<p class="tiktok-aviso">O produto tem mais de 9 fotos; a central deixou só as 9 primeiras porque esse é o limite informado pelo TikTok.</p>' : ''}
+      </div>
+    </div>`;
+
+  const textos = { titulo, categoria, detalhes: detalhes.join('\n'), descricao, video: produto.video_url || 'Nenhum vídeo cadastrado para esta peça.', vendas, envio };
+  destino.querySelectorAll('[data-tiktok-copiar]').forEach(botao => {
+    botao.addEventListener('click', () => copiarTextoTikTokShop(textos[botao.dataset.tiktokCopiar] || '', botao));
+  });
+  destino.querySelectorAll('[data-tiktok-baixar]').forEach(botao => {
+    botao.addEventListener('click', () => {
+      const indice = Number(botao.dataset.tiktokBaixar);
+      baixarImagemTikTokShop(fotos[indice], `${(produto.slug || produto.nome || 'pavan').toLowerCase().replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'pavan'}-${indice + 1}.jpg`);
+    });
+  });
+  const baixarTodas = document.getElementById('btnTikTokBaixarTodas');
+  if (baixarTodas){
+    baixarTodas.addEventListener('click', async () => {
+      baixarTodas.disabled = true;
+      baixarTodas.textContent = 'Preparando imagens…';
+      for (let indice = 0; indice < fotos.length; indice++){
+        await baixarImagemTikTokShop(fotos[indice], `${(produto.slug || produto.nome || 'pavan').toLowerCase().replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'pavan'}-${indice + 1}.jpg`);
+      }
+      baixarTodas.disabled = false;
+      baixarTodas.textContent = 'Baixar todas as imagens';
+    });
+  }
+}
+
+async function carregarTikTokShop(){
+  const seletor = document.getElementById('tiktokProdutoSelect');
+  if (!seletor) return;
+  const selecionadoAntes = seletor.value;
+  const produtos = await carregarProdutosAdmin();
+  produtosAdmin = produtos;
+  seletor.innerHTML = '<option value="">Selecione uma peça…</option>' + produtos
+    .slice()
+    .sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR'))
+    .map(p => `<option value="${p.id}">${escaparHtml(p.nome)}${p.ativo ? '' : ' — rascunho'}</option>`)
+    .join('');
+  if (selecionadoAntes && produtos.some(p => p.id === selecionadoAntes)) seletor.value = selecionadoAntes;
+  renderTikTokProdutoSelecionado(produtos.find(p => p.id === seletor.value));
+  seletor.onchange = () => renderTikTokProdutoSelecionado(produtos.find(p => p.id === seletor.value));
 }
 
 // Igual ao "carregar mais" da loja pública — evita jogar a tabela
